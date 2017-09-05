@@ -46,7 +46,10 @@
 #ifndef MUELU_UTILITIESBASE_DECL_HPP
 #define MUELU_UTILITIESBASE_DECL_HPP
 
-#include <unistd.h> //necessary for "sleep" function in debugging methods
+#ifndef _WIN32
+#include <unistd.h> //necessary for "sleep" function in debugging methods (PauseForDebugging)
+#endif
+
 #include <string>
 
 #include "MueLu_ConfigDefs.hpp"
@@ -352,7 +355,6 @@ namespace MueLu {
     }
 
 #ifndef _WIN32
-#include <unistd.h>
     static void PauseForDebugger() {
       RCP<const Teuchos::Comm<int> > comm = Teuchos::DefaultComm<int>::getComm();
       int myPID = comm->getRank();
@@ -535,7 +537,7 @@ namespace MueLu {
         A.getLocalRowView(row, indices, vals);
         size_t nnz = 0; // collect nonzeros in row (excluding the diagonal)
         bool bHasDiag = false;
-        for (size_t col = 0; col < nnz; col++) {
+        for (decltype(indices.size()) col = 0; col < indices.size(); col++) {
           if ( indices[col] != row) {
             if (STS::magnitude(vals[col] / sqrt(STS::magnitude(diagVecData[row]) * STS::magnitude(diagVecData[col]))   ) > tol) {
               nnz++;

@@ -149,6 +149,7 @@ public:
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
 
+#if 1
    /** Instantiate a workset object with a specified factory and input physics block
      * map.
      *
@@ -197,6 +198,7 @@ public:
    inline std::map<unsigned,Workset>::iterator end(const BC & bc)
    { WorksetDescriptor desc = bcDescriptor(bc);
      return getSideWorksets(desc)->end(); }
+#endif
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -222,6 +224,9 @@ private:
                           std::map<unsigned,Workset> & worksets) const;
 #endif
 
+   typedef std::unordered_map<WorksetDescriptor,Teuchos::RCP<std::vector<Workset> > > WorksetMap;
+   typedef std::unordered_map<WorksetDescriptor,Teuchos::RCP<std::map<unsigned,Workset> > > SideMap;
+
    /** Using the stored global indexer, set the orientations for a volume workset on a
      * specified element block.
      */
@@ -231,9 +236,19 @@ private:
      */
    void applyOrientations(const WorksetDescriptor & desc,std::map<unsigned,Workset> & worksets) const;
 
-   // typedef std::map<std::string,Teuchos::RCP<std::vector<Workset> > > VolumeMap;
-   typedef std::unordered_map<WorksetDescriptor,Teuchos::RCP<std::vector<Workset> > > WorksetMap;
-   typedef std::unordered_map<WorksetDescriptor,Teuchos::RCP<std::map<unsigned,Workset> > > SideMap;
+   /** Set all the workset identifier in a vector.
+     *
+     * \param[in] wd       Workset descriptor, this defines the base point for the identifiers
+     * \param[in] worksets Set the unique identifiers on these worksets
+     */
+   void setIdentifiers(const WorksetDescriptor & wd,std::vector<Workset> & worksets);
+
+   /** Set all the workset identifier in a vector.
+     *
+     * \param[in] wd       Workset descriptor, this defines the base point for the identifiers
+     * \param[in] worksets Set the unique identifiers on these worksets
+     */
+   void setIdentifiers(const WorksetDescriptor & wd,std::map<unsigned,Workset> & wkstMap);
 
    Teuchos::RCP<const WorksetFactoryBase> wkstFactory_;      //! How to construct worksets
    std::map<std::string,WorksetNeeds> ebToNeeds_; //! Maps element blocks to input physics block objects

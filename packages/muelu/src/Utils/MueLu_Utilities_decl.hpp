@@ -46,7 +46,6 @@
 #ifndef MUELU_UTILITIES_DECL_HPP
 #define MUELU_UTILITIES_DECL_HPP
 
-#include <unistd.h> //necessary for "sleep" function in debugging methods
 #include <string>
 
 #include "MueLu_ConfigDefs.hpp"
@@ -592,7 +591,6 @@ namespace MueLu {
 
         default:
           throw Exceptions::RuntimeError("Only Epetra and Tpetra matrices can be scaled.");
-          break;
       }
     }
 
@@ -742,7 +740,6 @@ namespace MueLu {
 #else
             throw Exceptions::RuntimeError("Utilities::Transpose: Tpetra is not compiled!");
 #endif
-            break;
           }
         case Xpetra::UseEpetra:
           {
@@ -766,14 +763,12 @@ namespace MueLu {
 #else
             throw Exceptions::RuntimeError("Epetra (Err. 2)");
 #endif
-            break;
           }
         default:
           throw Exceptions::RuntimeError("Only Epetra and Tpetra matrices can be transposed.");
-          break;
       }
 
-      return Teuchos::null;
+      TEUCHOS_UNREACHABLE_RETURN(Teuchos::null);
     }
 
     /*! @brief Extract coordinates from parameter list and return them in a Xpetra::MultiVector
@@ -834,6 +829,12 @@ namespace MueLu {
         TEUCHOS_TEST_FOR_EXCEPT(doubleEpCoords->NumVectors() != Teuchos::as<int>(coordinates->getNumVectors()));
       }
   #endif
+
+      // check for Xpetra coordinates vector
+      if(paramList.isType<decltype(coordinates)>("Coordinates")) {
+        coordinates = paramList.get<decltype(coordinates)>("Coordinates");
+      }
+
       TEUCHOS_TEST_FOR_EXCEPT(Teuchos::is_null(coordinates));
       return coordinates;
     }

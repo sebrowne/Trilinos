@@ -102,9 +102,9 @@ PHX_EVALUATOR_CTOR(DummyFieldEvaluator,p)
   std::string n = "DummyFieldEvaluator: " + name;
   this->setName(n);
 }
-PHX_POST_REGISTRATION_SETUP(DummyFieldEvaluator,sd,fm)
+PHX_POST_REGISTRATION_SETUP(DummyFieldEvaluator, /* sd */, fm)
 { this->utils.setFieldData(fieldValue,fm); }
-PHX_EVALUATE_FIELDS(DummyFieldEvaluator,workset)
+PHX_EVALUATE_FIELDS(DummyFieldEvaluator, /* workset */)
 { 
   int i = 0;
   for(int cell=0;cell<fieldValue.extent_int(0);cell++) {
@@ -137,9 +137,9 @@ PHX_EVALUATOR_CTOR(RefCoordEvaluator,p)
   std::string n = "RefCoordEvaluator: " + name;
   this->setName(n);
 }
-PHX_POST_REGISTRATION_SETUP(RefCoordEvaluator,sd,fm)
+PHX_POST_REGISTRATION_SETUP(RefCoordEvaluator, /* sd */, fm)
 { this->utils.setFieldData(fieldValue,fm); }
-PHX_EVALUATE_FIELDS(RefCoordEvaluator,workset)
+PHX_EVALUATE_FIELDS(RefCoordEvaluator, /* workset */)
 { 
   for(int cell=0;cell<fieldValue.extent_int(0);cell++)
     for(int pt=0;pt<fieldValue.extent_int(1);pt++)
@@ -325,9 +325,9 @@ TEUCHOS_UNIT_TEST_TEMPLATE_1_DECL(dof_pointfield,value,EvalType)
   fm->evaluateFields<EvalType>(*workset);
   fm->postEvaluate<EvalType>(0);
 
-  fm->getFieldData<typename EvalType::ScalarT,EvalType>(refField);
-  fm->getFieldData<typename EvalType::ScalarT,EvalType>(dofPointField0);
-  fm->getFieldData<typename EvalType::ScalarT,EvalType>(dofPointField1);
+  fm->getFieldData<EvalType>(refField);
+  fm->getFieldData<EvalType>(dofPointField0);
+  fm->getFieldData<EvalType>(dofPointField1);
 
   // check names to make sure they are still correct
   TEST_EQUALITY(refField.fieldTag().name(),"TestField");

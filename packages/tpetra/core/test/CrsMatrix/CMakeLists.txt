@@ -1,11 +1,6 @@
-
+ADD_SUBDIRECTORIES(Regression)
 
 SET(ARGS "--filedir=${CMAKE_CURRENT_BINARY_DIR}/")
-
-IF (SITE STREQUAL "gabriel.sandia.gov")
-  SET(ARGS
-    "${ARGS} --not-unit-test=CrsMatrix_int_ComplexFloat_FullMatrixComplex_UnitTest")
-ENDIF()
 
 #
 # We break up CrsMatrix's unit tests into several files, to reduce
@@ -305,27 +300,25 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   STANDARD_PASS_OUTPUT
   )
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
+# I want this test to _build_ in either MPI or non-MPI ("serial"),
+# but I only want it to _run_ in an MPI build with exactly 1 MPI
+# process.
+TRIBITS_ADD_EXECUTABLE(
   CrsMatrix_PackUnpack
   SOURCES
-    CrsMatrix_PackUnpack
+    CrsMatrix_PackUnpack.cpp
     ${TEUCHOS_STD_UNIT_TEST_MAIN}
-  ARGS
-    COMM mpi
-    NUM_MPI_PROCS 2
-  STANDARD_PASS_OUTPUT
-  )
+  COMM serial mpi
+)
 
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  CrsMatrix_PackError
-  SOURCES
-    CrsMatrix_PackUnpack
-    ${TEUCHOS_STD_UNIT_TEST_MAIN}
-  ARGS
-    COMM mpi
-    NUM_MPI_PROCS 2
+TRIBITS_ADD_TEST(
+  CrsMatrix_PackUnpack
+  NAME CrsMatrix_PackUnpack_MPI_1
+  ARGS ""
+  COMM mpi
+  NUM_MPI_PROCS 1
   STANDARD_PASS_OUTPUT
-  )
+)
 
 TRIBITS_ADD_EXECUTABLE_AND_TEST(
   assembleElement
@@ -337,18 +330,6 @@ TRIBITS_ADD_EXECUTABLE_AND_TEST(
   NUM_MPI_PROCS 1
   STANDARD_PASS_OUTPUT
   )
-
-TRIBITS_ADD_EXECUTABLE_AND_TEST(
-  Albany182
-  SOURCES
-    Albany182
-    ${TEUCHOS_STD_UNIT_TEST_MAIN}
-  COMM mpi
-  ARGS "--globally-reduce-test-result"
-  NUM_MPI_PROCS 4
-  STANDARD_PASS_OUTPUT
-  )
-# --output-show-proc-rank --output-to-root-rank-only=-1
 
 SET(TIMING_INSTALLS "")
 

@@ -76,6 +76,8 @@ namespace Tacho {
     ordinal_type _small_problem_thres;  // smaller than this, use lapack
     ordinal_type _serial_thres_size;    // serialization threshold size
     ordinal_type _mb;                   // block size for byblocks algorithms
+    ordinal_type _nb;                   // panel size for panel algorithms
+    ordinal_type _front_update_mode;    // front update mode 0 - lock, 1 - atomic
 
     // parallelism and memory constraint is made via this parameter
     ordinal_type _max_num_superblocks;  // # of superblocks in the memoyrpool
@@ -88,7 +90,9 @@ namespace Tacho {
         _verbose(0),
         _small_problem_thres(1024),
         _serial_thres_size(-1),
-        _mb(-1) {}
+        _mb(-1),
+        _nb(-1),
+        _front_update_mode(-1) {}
 
     Solver(const Solver &b) = default;
 
@@ -103,6 +107,12 @@ namespace Tacho {
     }
     void setBlocksize(const ordinal_type mb = -1) {
       _mb = mb;
+    }
+    void setPanelsize(const ordinal_type nb = -1) {
+      _nb = nb;
+    }
+    void setFrontUpdateMode(const ordinal_type front_update_mode = 1) {
+      _front_update_mode = front_update_mode;
     }
     void setMaxNumberOfSuperblocks(const ordinal_type max_num_superblocks = -1) {
       _max_num_superblocks = max_num_superblocks;
@@ -245,26 +255,50 @@ namespace Tacho {
         _N.setSerialThresholdSize(_serial_thres_size);
 
         if (_max_num_superblocks < 0) { // set default values
-          _max_num_superblocks = 4;
+          _max_num_superblocks = 16;
         }
         _N.setMaxNumberOfSuperblocks(_max_num_superblocks);
 
+        if (_front_update_mode < 0) { // set default values
+          _front_update_mode = 1; // atomic is default
+        }
+        _N.setFrontUpdateMode(_front_update_mode);
+
         const ordinal_type nthreads = device_exec_space::thread_pool_size(0);
         if (nthreads == 1) {
-          _N.factorizeCholesky_Serial(ax, _verbose);
+          if (_nb < 0) 
+            _N.factorizeCholesky_Serial(ax, _verbose);
+          else 
+            _N.factorizeCholesky_SerialPanel(ax, _nb, _verbose);
         } else {
-          if (_mb < 0) {
-            const ordinal_type max_dense_size = max(_N.getMaxSupernodeSize(),_N.getMaxSchurSize());
-            if      (max_dense_size < 256)  _mb =  -1;
-            else if (max_dense_size < 512)  _mb =  96;
-            else if (max_dense_size < 1024) _mb = 128;
-            else if (max_dense_size < 4096) _mb = 256;
-            else                            _mb = 512;
+          const ordinal_type max_dense_size = max(_N.getMaxSupernodeSize(),_N.getMaxSchurSize());
+          if (_nb < 0) { 
+	    _nb = 64;
+            // if      (max_dense_size < 256)  _nb =  -1;
+            // else if (max_dense_size < 512)  _nb =  64;
+            // else if (max_dense_size < 1024) _nb = 128;
+            // else if (max_dense_size < 8192) _nb = 256;
+            // else                            _nb = 256;
           }
-          if (_mb > 0)
-            _N.factorizeCholesky_ParallelByBlocks(ax, _mb, _verbose);
-          else
-            _N.factorizeCholesky_Parallel(ax, _verbose);
+          if (_mb < 0) {
+            if      (max_dense_size < 256)  _mb =  -1;
+            else if (max_dense_size < 512)  _mb =  64;
+            else if (max_dense_size < 1024) _mb = 128;
+            else if (max_dense_size < 8192) _mb = 256;
+            else                            _mb = 256;
+          }
+
+          if (_nb <= 0) {
+            if (_mb > 0)
+              _N.factorizeCholesky_ParallelByBlocks(ax, _mb, _verbose);
+            else
+              _N.factorizeCholesky_Parallel(ax, _verbose);
+          } else {
+            if (_mb > 0) 
+              _N.factorizeCholesky_ParallelByBlocksPanel(ax, _mb, _nb, _verbose);
+            else
+              _N.factorizeCholesky_ParallelPanel(ax, _nb, _verbose);
+          }
         }
       }
       return 0;

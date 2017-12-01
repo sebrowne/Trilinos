@@ -69,6 +69,7 @@
 #include "KokkosSparse_sor_sequential_impl.hpp"
 
 namespace Tpetra {
+
   /// \class CrsMatrix
   /// \brief Sparse matrix that presents a row-oriented interface that
   ///   lets users read or modify entries.
@@ -2925,8 +2926,8 @@ namespace Tpetra {
     /// \param D [in] Inverse of diagonal entries of the matrix A.
     /// \param omega [in] SOR damping factor.  omega = 1 results in
     ///   Gauss-Seidel.
-    /// \param direction [in] Sweep direction: KokkosClassic::Forward or
-    ///   KokkosClassic::Backward.  ("Symmetric" requires interprocess
+    /// \param direction [in] Sweep direction: Tpetra::Forward or
+    ///   Tpetra::Backward.  ("Symmetric" requires interprocess
     ///   communication (before each sweep), which is not part of the
     ///   local kernel.)
     template <class DomainScalar, class RangeScalar>
@@ -2935,7 +2936,7 @@ namespace Tpetra {
                       MultiVector<RangeScalar, LocalOrdinal, GlobalOrdinal, Node, classic> &X,
                       const MultiVector<Scalar, LocalOrdinal, GlobalOrdinal, Node, classic> &D,
                       const RangeScalar& dampingFactor,
-                      const KokkosClassic::ESweepDirection direction) const
+                      const ESweepDirection direction) const
     {
       typedef LocalOrdinal LO;
       typedef GlobalOrdinal GO;
@@ -2987,7 +2988,7 @@ namespace Tpetra {
       const LO* const indRaw = ind.ptr_on_device ();
       const impl_scalar_type* const valRaw = val.ptr_on_device ();
 
-      const std::string dir ((direction == KokkosClassic::Forward) ? "F" : "B");
+      const std::string dir ((direction == Forward) ? "F" : "B");
       // NOTE (mfh 28 Aug 2017) This assumes UVM.  We can't get around
       // that on GPUs without using a GPU-based sparse triangular
       // solve to implement Gauss-Seidel.  This exists in cuSPARSE,
@@ -3028,8 +3029,8 @@ namespace Tpetra {
     /// \param rowIndices [in] Ordered list of indices on which to execute GS.
     /// \param omega [in] SOR damping factor.  omega = 1 results in
     ///   Gauss-Seidel.
-    /// \param direction [in] Sweep direction: KokkosClassic::Forward or
-    ///   KokkosClassic::Backward.  ("Symmetric" requires interprocess
+    /// \param direction [in] Sweep direction: Tpetra::Forward or
+    ///   Tpetra::Backward.  ("Symmetric" requires interprocess
     ///   communication (before each sweep), which is not part of the
     ///   local kernel.)
     template <class DomainScalar, class RangeScalar>
@@ -3039,7 +3040,7 @@ namespace Tpetra {
                                const MultiVector<Scalar, LocalOrdinal, GlobalOrdinal, Node, classic>& D,
                                const Teuchos::ArrayView<LocalOrdinal>& rowIndices,
                                const RangeScalar& dampingFactor,
-                               const KokkosClassic::ESweepDirection direction) const
+                               const ESweepDirection direction) const
     {
       typedef LocalOrdinal LO;
       typedef GlobalOrdinal GO;
@@ -3096,7 +3097,7 @@ namespace Tpetra {
       const LO* const indRaw = ind.ptr_on_device ();
       const impl_scalar_type* const valRaw = val.ptr_on_device ();
 
-      const std::string dir = (direction == KokkosClassic::Forward) ? "F" : "B";
+      const std::string dir = (direction == Forward) ? "F" : "B";
       // NOTE (mfh 28 Aug 2017) This assumes UVM.  We can't get around
       // that on GPUs without using a GPU-based sparse triangular
       // solve to implement Gauss-Seidel, and also handling the
@@ -3759,13 +3760,22 @@ namespace Tpetra {
 
     /// \brief Pack data for the current row to send.
     ///
-    /// \param numEntOut [out] Where to write the number of entries in
-    ///   the row.
-    /// \param valOut [out] Output (packed) array of matrix values.
-    /// \param indOut [out] Output (packed) array of matrix column
-    ///   indices (as global indices).
+    /// \param exports [out] The entire array of packed data to
+    ///   "export," that is, to send out from this process.
+    /// \param offset [in] Offset into \c exports (which see), at
+    ///   which to begin writing this row's packed data.
     /// \param numEnt [in] Number of entries in the row.
-    /// \param lclRow [in] Local index of the row.
+    /// \param gidsIn [in] Array of global column indices in the row,
+    ///   to pack into the \c exports output buffer.
+    /// \param valsIn [in] Array of values in the row, to pack into
+    ///   the \c exports output buffer.
+    /// \param numBytesPerValue [in] Number of bytes to use for the
+    ///   packed representation of a single \c impl_scalar_type matrix
+    ///   value.
+    ///
+    /// This method, like the rest of Tpetra, assumes that all values
+    /// of the same type have the same number of bytes in their packed
+    /// representation.
     ///
     /// This method does not allocate temporary storage.  We intend
     /// for this to be safe to call in a thread-parallel way at some
@@ -3773,7 +3783,10 @@ namespace Tpetra {
     /// with Teuchos::RCP (always) and Teuchos::ArrayView (in a debug
     /// build).
     ///
-    /// \return \c true if the method succeeded, else \c false.
+    /// \return The number of bytes used in the row's packed
+    ///   representation.  If numEnt is zero, then the row always uses
+    ///   zero bytes (we don't even pack the number of entries in that
+    ///   case).
     size_t
     packRow (char exports[],
              const size_t offset,
@@ -3814,26 +3827,29 @@ namespace Tpetra {
 
     /// \brief Unpack and combine received data for the current row.
     ///
-    /// \pre <tt>tmpSize >= numEnt</tt>
-    ///
-    /// \param valInTmp [out] Temporary storage for values.  Has
-    ///   tmpSize entries.
-    /// \param indInTmp [out] Temporary storage for indices.  Has
-    ///   tmpSize entries.
-    /// \param tmpNumEnt [in] Number of entries (not bytes!) in each
-    ///   of valInTmp and indInTmp.
-    /// \param valIn [in] Pointer to where values live in receive
-    ///   buffer.  Not necessarily aligned to sizeof(Scalar) (so must
-    ///   memcpy into temporary storage).
-    /// \param indIn [out] Pointer to where indices live in receive
-    ///   buffer.  Not necessarily aligned to sizeof(GlobalOrdinal)
-    ///   (so must memcpy into temporary storage).
+    /// \param gidsOut [out] On output: The row's global column indices.
+    /// \param valsOut [out] On output: The row's values.  valsOut[k]
+    ///   is the value corresponding to global column index gidsOut[k]
+    ///   in this row.
+    /// \param imports [in] The entire array of "imported" packed
+    ///   data; that is, all the data received from other processes.
+    /// \param offset [in] Offset into \c imports (which see), at
+    ///   which to begin reading this row's packed data.
+    /// \param numBytes [in] Number of bytes of data available to
+    ///   unpack for this row.
     /// \param numEnt [in] Number of entries in the row.
-    /// \param lclRow [in] Local index of the row.
-    /// \param combineMode [in] Combine mode (how to merge entries in
-    ///   the same row with the same column index).
+    /// \param numBytesPerValue [in] Number of bytes to use for the
+    ///   packed representation of a single \c impl_scalar_type matrix
+    ///   value.
     ///
-    /// \return \c true if the method succeeded, else \c false.
+    /// This method, like the rest of Tpetra, assumes that all values
+    /// of the same type have the same number of bytes in their packed
+    /// representation.
+    ///
+    /// \return The number of bytes used in the row's packed
+    ///   representation.  If numEnt is zero, then the row always uses
+    ///   zero bytes (we don't even pack the number of entries in that
+    ///   case).
     size_t
     unpackRow (GlobalOrdinal gidsOut[],
                impl_scalar_type valsOut[],

@@ -36,7 +36,12 @@
 namespace Tacho {
 
   extern double g_time_per_thread[2048];
-
+  void resetTimePerThread();
+  void getTimePerThread(const int nthreads,
+                        double &t_total,
+                        double &t_avg,
+                        double &t_min,
+                        double &t_max);
   const char* Version();
 
   namespace Experimental {
@@ -205,10 +210,10 @@ namespace Tacho {
       value_type val;
 
       Coo() = default;
-      Coo(const ordinal_type i,
-          const ordinal_type j,
-          const value_type val)
-        : i(i), j(j), val(val) {}
+      Coo(const ordinal_type ii,
+          const ordinal_type jj,
+          const value_type vval)
+        : i(ii), j(jj), val(vval) {}
       Coo(const Coo& b) = default;
 
       /// \brief Compare "less" index i and j only.
@@ -579,7 +584,8 @@ namespace Tacho {
       struct ByBlocks { enum : int { tag = 1003 }; };
 
       struct Workflow {
-        struct Serial { enum : int { tag = 2001 }; };
+        struct Serial      { enum : int { tag = 2001 }; };
+        struct SerialPanel { enum : int { tag = 2002 }; };
       };
     };
 

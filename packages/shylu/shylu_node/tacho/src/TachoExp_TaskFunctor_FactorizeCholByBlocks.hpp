@@ -190,8 +190,7 @@ namespace Tacho {
                 TACHO_TEST_FOR_ABORT(dep == NULL, "sched memory pool allocation fails");
                 clear((char*)dep, depsize);
                 
-                ordinal_type k = 0;
-                for (ordinal_type j=0;j<bn;++j)
+                for (ordinal_type j=0,k=0;j<bn;++j)
                   for (ordinal_type i=0;i<=j;++i,++k) {
                     dep[k] = hbr(i,j).future();
                     hbr(i,j).set_future();

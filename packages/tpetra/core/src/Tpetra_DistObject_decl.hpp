@@ -54,7 +54,6 @@
 #include "Tpetra_Import.hpp"
 #include "Tpetra_Export.hpp"
 #include "Tpetra_SrcDistObject.hpp"
-#include "Kokkos_NodeAPIConfigDefs.hpp" // enum KokkosClassic::ReadWriteOption
 #include "Kokkos_ArithTraits.hpp"
 #include <type_traits>
 
@@ -66,6 +65,16 @@
 #  undef HAVE_TPETRA_TRANSFER_TIMERS
 #endif // HAVE_TPETRA_TRANSFER_TIMERS
 
+namespace KokkosClassic {
+  /// \brief Read/write options for non-const views.
+  ///
+  /// \warning This is NOT for users!  This only exists for backwards
+  ///   compatibility.
+  enum ReadWriteOption {
+    ReadWrite = 0, /*!< Indicates that the view may be safely read and written. */
+    WriteOnly = 1 /*!< Indicates that the contents of the view are undefined until set on the host. */
+  };
+} // namespace KokkosClassic
 
 namespace Tpetra {
 
@@ -503,33 +512,26 @@ namespace Tpetra {
     /// \param src [in] The source object, to redistribute into
     ///   the target object, which is <tt>*this</tt> object.
     ///
-    /// \param CM [in] The combine mode that describes how to combine
-    ///   values that map to the same global ID on the same process.
+    /// \param transfer [in] The Export or Import object representing
+    ///   the communication pattern.  (Details::Transfer is the common
+    ///   base class of these two objects.)
     ///
-    /// \param permuteToLIDs [in] See copyAndPermute().
-    ///
-    /// \param permuteFromLIDs [in] See copyAndPermute().
-    ///
-    /// \param remoteLIDs [in] List of entries (as local IDs) in the
-    ///   destination object to receive from other processes.
-    ///
-    /// \param exportLIDs [in] See packAndPrepare().
-    ///
-    /// \param distor [in/out] The Distributor object that knows how
-    ///   to redistribute data.
+    /// \param modeString [in] Human-readable string, for verbose
+    ///   debugging output and error output, explaining what function
+    ///   called this method.  Example: "doImport (forward)",
+    ///   "doExport (reverse)".
     ///
     /// \param revOp [in] Whether to do a forward or reverse mode
     ///   redistribution.
+    ///
+    /// \param CM [in] The combine mode that describes how to combine
+    ///   values that map to the same global ID on the same process.
     virtual void
     doTransfer (const SrcDistObject& src,
-                CombineMode CM,
-                size_t numSameIDs,
-                const Teuchos::ArrayView<const local_ordinal_type> &permuteToLIDs,
-                const Teuchos::ArrayView<const local_ordinal_type> &permuteFromLIDs,
-                const Teuchos::ArrayView<const local_ordinal_type> &remoteLIDs,
-                const Teuchos::ArrayView<const local_ordinal_type> &exportLIDs,
-                Distributor &distor,
-                ReverseOption revOp);
+                const Details::Transfer<local_ordinal_type, global_ordinal_type, node_type>& transfer,
+                const char modeString[],
+                const ReverseOption revOp,
+                const CombineMode CM);
 
     /// \brief Reallocate numExportPacketsPerLID_ and/or
     ///   numImportPacketsPerLID_, if necessary.
@@ -883,13 +885,6 @@ namespace Tpetra {
     /// Unfortunately, I had to declare this protected, because
     /// CrsMatrix uses them at one point.  Please, nobody else use it.
     Kokkos::DualView<size_t*, buffer_device_type> numExportPacketsPerLID_;
-
-#ifdef KOKKOS_HAVE_CUDA
-    /// \brief Whether to allow CUDA allocations for communication buffers.
-    ///
-    /// See #1088 and #1571 for discussion.
-    bool allowCudaCommBuffers_;
-#endif // KOKKOS_HAVE_CUDA
 
 #ifdef HAVE_TPETRA_TRANSFER_TIMERS
   private:

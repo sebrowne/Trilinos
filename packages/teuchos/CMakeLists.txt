@@ -127,11 +127,14 @@ TRIBITS_ADD_EXPLICIT_INSTANTIATION_OPTION()
 
 TRIBITS_SET_ST_FOR_DEV_MODE(ST_FOR_DEV_PT_FOR_RELEASE)
 
-IF (Trilinos_ENABLE_COMPLEX_DOUBLE)
+ASSERT_DEFINED(Trilinos_ENABLE_COMPLEX_DOUBLE)
+ASSERT_DEFINED(Trilinos_ENABLE_COMPLEX_FLOAT)
+IF (Trilinos_ENABLE_COMPLEX_DOUBLE OR Trilinos_ENABLE_COMPLEX_FLOAT)
   SET(${PACKAGE_NAME}_ENABLE_COMPLEX_DEFAULT  TRUE)
 ELSE()
+  # If Teuchos is configured as its own CMake project, independent of
+  # Trilinos, then Teuchos_ENABLE_COMPLEX could be OFF by default.
   SET(${PACKAGE_NAME}_ENABLE_COMPLEX_DEFAULT  FALSE)
-  # ABove will be set in case Teuchos is confiugred as its own CMake project!
 ENDIF()
 
 TRIBITS_ADD_OPTION_AND_DEFINE(
@@ -321,6 +324,19 @@ TRIBITS_ADD_OPTION_AND_DEFINE(
   "Set the Teuchos::UnitTestRepository to globally reduce test pass/fail results across all MPI ranks."
   OFF
   )
+
+ASSERT_DEFINED(TPL_ENABLE_Valgrind)
+IF(TPL_ENABLE_Valgrind)
+  # Heap profiling using massif
+  TRIBITS_ADD_OPTION_AND_DEFINE(${PACKAGE_NAME}_TIME_MASSIF_SNAPSHOTS
+    HAVE_TEUCHOS_TIME_MASSIF_SNAPSHOTS
+    "Enable memory profiling using massif."
+    OFF)
+  IF (${PACKAGE_NAME}_TIME_MASSIF_SNAPSHOTS)
+    MESSAGE(STATUS "Enabling memory profiling using massif")
+  ENDIF()
+ENDIF()
+
 
 #
 # D) Process the subpackages for Teuchos

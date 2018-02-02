@@ -129,6 +129,8 @@ cmake \
    -D Trilinos_ENABLE_STKTopology=OFF \
    -D Trilinos_ENABLE_Pamgen=OFF \
    \
+   -D Trilinos_ENABLE_Intrepid2=OFF \
+   \
    -D Trilinos_ENABLE_ShyLU=OFF \
    -D Trilinos_ENABLE_ShyLUCore=OFF \
    -D Trilinos_ENABLE_ShyLUHTS=OFF \

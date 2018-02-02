@@ -105,7 +105,7 @@ cmake \
    -D Trilinos_ENABLE_Ifpack=ON \
    -D Trilinos_ENABLE_ML=ON \
    -D Trilinos_ENABLE_Teko=ON \
-   -D Trilinos_ENABLE_NOX=ON \
+   -D Trilinos_ENABLE_NOX=OFF \
    -D Trilinos_ENABLE_Thyra=ON \
    -D Trilinos_ENABLE_Rythmos=OFF \
    -D Trilinos_ENABLE_Sacado=ON \

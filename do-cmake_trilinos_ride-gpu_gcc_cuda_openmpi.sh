@@ -15,7 +15,7 @@ METIS_DIR=${METIS_ROOT}
 PARMETIS_DIR=${PARMETIS_ROOT}
 SUPERLUDIST_DIR=${SUPERLUDIST_ROOT}
 
-EXTRA_C_FLAGS=
+EXTRA_C_FLAGS=""
 EXTRA_CXX_FLAGS="-arch=sm_60"
 EXTRA_F_FLAGS=""
 LINK_FLAGS=""
@@ -105,7 +105,7 @@ cmake \
    -D Trilinos_ENABLE_Ifpack=ON \
    -D Trilinos_ENABLE_ML=ON \
    -D Trilinos_ENABLE_Teko=ON \
-   -D Trilinos_ENABLE_NOX=OFF \
+   -D Trilinos_ENABLE_NOX=ON \
    -D Trilinos_ENABLE_Thyra=ON \
    -D Trilinos_ENABLE_Rythmos=OFF \
    -D Trilinos_ENABLE_Sacado=ON \

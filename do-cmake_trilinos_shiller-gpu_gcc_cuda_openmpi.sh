@@ -29,14 +29,23 @@ if [[ ${1} == 'static' || ${2} == 'static' ]]
 then
   LINK_SHARED=OFF
   LINK_SUFFIX=static
+  EXTRA_C_FLAGS="-fPIC"
+  EXTRA_CXX_FLAGS="-fPIC"
+  EXTRA_F_FLAGS="-fPIC"
 elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
 then
   LINK_SHARED=ON
   LINK_SUFFIX=shared
+  EXTRA_C_FLAGS=""
+  EXTRA_CXX_FLAGS=""
+  EXTRA_F_FLAGS=""
 else
   echo " *** Warning: 'static' or 'shared' LINK_TYPE is an optional argument to this script.  Defaulting to 'static'."
   LINK_SHARED=OFF
   LINK_SUFFIX=static
+  EXTRA_C_FLAGS="-fPIC"
+  EXTRA_CXX_FLAGS="-fPIC"
+  EXTRA_F_FLAGS="-fPIC"
 fi
 
 if [[ ${1} == 'opt' || ${2} == 'opt' ]]
@@ -47,6 +56,7 @@ elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
+  EXTRA_CXX_FLAGS="$EXTRA_CXX_FLAGS -lineinfo"
 else
   echo " *** Warning: 'opt' or 'dbg' BUILD_TYPE is an optional argument to this script.  Defaulting to 'opt'."
   BUILD_TYPE=RELEASE
@@ -56,6 +66,7 @@ fi
 rm -f CMakeCache.txt; rm -rf CMakeFiles
 
 cmake \
+   \
    -D CMAKE_VERBOSE_MAKEFILE=FALSE \
    -D CMAKE_INSTALL_PREFIX:PATH=${TRILINOS_HOME}/${BUILD}_${LINK_SUFFIX}_${BUILD_SUFFIX} \
    -D CMAKE_BUILD_TYPE:STRING=${BUILD_TYPE} \
@@ -77,6 +88,7 @@ cmake \
    \
    -D Trilinos_ENABLE_TESTS=OFF \
    -D DART_TESTING_TIMEOUT:STRING="600" \
+   -D KOKKOS_ARCH="HSW;Kepler37" \
    \
    -D Trilinos_ENABLE_EXPLICIT_INSTANTIATION=ON \
    -D Tpetra_INST_FLOAT=OFF \
@@ -212,3 +224,5 @@ cmake \
    \
    ${EXTRA_ARGS} \
    ${TRILINOS_HOME}
+
+

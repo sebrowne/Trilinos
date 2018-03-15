@@ -117,13 +117,12 @@ cmake \
    -D Trilinos_ENABLE_Ifpack=ON \
    -D Trilinos_ENABLE_ML=ON \
    -D Trilinos_ENABLE_Teko=ON \
-   -D Trilinos_ENABLE_NOX=OFF \
+   -D Trilinos_ENABLE_NOX=ON \
    -D Trilinos_ENABLE_Thyra=ON \
    -D Trilinos_ENABLE_Rythmos=OFF \
    -D Trilinos_ENABLE_Sacado=ON \
    -D Trilinos_ENABLE_Stokhos=OFF \
    -D Trilinos_ENABLE_Panzer=OFF \
-   -D Trilinos_ENABLE_Intrepid2=OFF \
    -D Trilinos_ENABLE_Tpetra=ON \
    -D Tpetra_INST_SERIAL=ON \
    -D Tpetra_INST_OPENMP=OFF \

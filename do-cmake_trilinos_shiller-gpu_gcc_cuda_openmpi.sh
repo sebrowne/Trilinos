@@ -66,7 +66,6 @@ fi
 rm -f CMakeCache.txt; rm -rf CMakeFiles
 
 cmake \
-   \
    -D CMAKE_VERBOSE_MAKEFILE=FALSE \
    -D CMAKE_INSTALL_PREFIX:PATH=${TRILINOS_HOME}/${BUILD}_${LINK_SUFFIX}_${BUILD_SUFFIX} \
    -D CMAKE_BUILD_TYPE:STRING=${BUILD_TYPE} \
@@ -88,7 +87,6 @@ cmake \
    \
    -D Trilinos_ENABLE_TESTS=OFF \
    -D DART_TESTING_TIMEOUT:STRING="600" \
-   -D KOKKOS_ARCH="HSW;Kepler37" \
    \
    -D Trilinos_ENABLE_EXPLICIT_INSTANTIATION=ON \
    -D Tpetra_INST_FLOAT=OFF \
@@ -157,6 +155,7 @@ cmake \
    -D Kokkos_ENABLE_Cuda_UVM=ON \
    -D Kokkos_ENABLE_Cuda_Lambda=ON \
    -D TPL_ENABLE_CUDA=ON \
+   -D KOKKOS_ARCH="Kepler37" \
    \
    -D Trilinos_ENABLE_SEACAS=ON \
    -D SEACAS_SOURCE_DIR_OVERRIDE:STRING=seacas/packages/seacas \
@@ -223,5 +222,3 @@ cmake \
    \
    ${EXTRA_ARGS} \
    ${TRILINOS_HOME}
-
-

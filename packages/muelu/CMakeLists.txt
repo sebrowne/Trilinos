@@ -9,9 +9,9 @@ TRIBITS_PACKAGE(MueLu ENABLE_SHADOWING_WARNINGS)
 #
 # B) Set up package-specific options
 #
-IF ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7"))
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-local-typedefs")
-ENDIF()
+#IF ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7"))
+#  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-local-typedefs")
+#ENDIF()
 
 IF (NOT ${PACKAGE_NAME}_ENABLE_Epetra AND NOT ${PACKAGE_NAME}_ENABLE_Tpetra)
   MESSAGE(FATAL_ERROR "Neither Epetra nor Tpetra are enabled.  MueLu requires at least one of them to be enabled.")

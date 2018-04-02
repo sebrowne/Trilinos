@@ -179,8 +179,6 @@ namespace search {
   template<typename T>
   void threadedSort(std::vector<T>& inputVec) {
 #ifdef _OPENMP
-    typename std::vector<T>::iterator beginIter = inputVec.begin();
-    typename std::vector<T>::iterator endIter   = inputVec.end();
     unsigned maxNumThread = omp_get_max_threads();
     if(maxNumThread == 1 || inputVec.size()<10) {
       std::sort(inputVec.begin(), inputVec.end());

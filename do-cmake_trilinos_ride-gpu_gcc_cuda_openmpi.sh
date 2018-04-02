@@ -101,7 +101,7 @@ cmake \
    -D Trilinos_ENABLE_Amesos=ON \
    -D Trilinos_ENABLE_Stratimikos=ON \
    -D Trilinos_ENABLE_Anasazi=ON \
-   -D Anasazi_ENABLE_RBGen=ON \
+   -D Anasazi_ENABLE_RBGen=OFF \
    -D Trilinos_ENABLE_Ifpack=ON \
    -D Trilinos_ENABLE_ML=ON \
    -D Trilinos_ENABLE_Teko=ON \
@@ -144,6 +144,7 @@ cmake \
    -D Kokkos_ENABLE_Cuda=ON \
    -D Kokkos_ENABLE_Cuda_UVM=ON \
    -D Kokkos_ENABLE_Cuda_Lambda=ON \
+   -D Kokkos_ENABLE_Cuda_Relocatable_Device_Code=ON \
    -D TPL_ENABLE_CUDA=ON \
    \
    -D Trilinos_ENABLE_SEACAS=ON \

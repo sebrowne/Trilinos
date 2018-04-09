@@ -142,9 +142,10 @@ cmake \
    -D Trilinos_ENABLE_Intrepid2=OFF \
    \
    -D Trilinos_ENABLE_ShyLU=OFF \
-   -D Trilinos_ENABLE_ShyLUCore=OFF \
-   -D Trilinos_ENABLE_ShyLUHTS=OFF \
-   -D ShyLUHTS_ENABLE_TESTS=OFF \
+   -D Trilinos_ENABLE_ShyLU_DD=OFF \
+   -D Trilinos_ENABLE_ShyLU_Node=OFF \
+   -D Trilinos_ENABLE_ShyLU_NodeHTS=OFF \
+   -D Trilinos_ENABLE_ShyLU_NodeTacho=OFF \
    \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
@@ -154,7 +155,7 @@ cmake \
    -D Kokkos_ENABLE_Cuda=ON \
    -D Kokkos_ENABLE_Cuda_UVM=ON \
    -D Kokkos_ENABLE_Cuda_Lambda=ON \
-   -D Kokkos_ENABLE_Cuda_Relocatable_Device_Code=ON \
+   -D Kokkos_ENABLE_Cuda_Relocatable_Device_Code=OFF \
    -D TPL_ENABLE_CUDA=ON \
    -D KOKKOS_ARCH="Kepler37" \
    \

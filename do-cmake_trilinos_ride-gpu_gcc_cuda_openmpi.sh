@@ -16,7 +16,7 @@ PARMETIS_DIR=${PARMETIS_ROOT}
 SUPERLUDIST_DIR=${SUPERLUDIST_ROOT}
 
 EXTRA_C_FLAGS=""
-EXTRA_CXX_FLAGS="-arch=sm_60"
+EXTRA_CXX_FLAGS=""
 EXTRA_F_FLAGS=""
 LINK_FLAGS=""
 
@@ -29,14 +29,23 @@ if [[ ${1} == 'static' || ${2} == 'static' ]]
 then
   LINK_SHARED=OFF
   LINK_SUFFIX=static
+  EXTRA_C_FLAGS="-fPIC"
+  EXTRA_CXX_FLAGS="-fPIC"
+  EXTRA_F_FLAGS="-fPIC"
 elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
 then
   LINK_SHARED=ON
   LINK_SUFFIX=shared
+  EXTRA_C_FLAGS=""
+  EXTRA_CXX_FLAGS=""
+  EXTRA_F_FLAGS=""
 else
   echo " *** Warning: 'static' or 'shared' LINK_TYPE is an optional argument to this script.  Defaulting to 'static'."
   LINK_SHARED=OFF
   LINK_SUFFIX=static
+  EXTRA_C_FLAGS="-fPIC"
+  EXTRA_CXX_FLAGS="-fPIC"
+  EXTRA_F_FLAGS="-fPIC"
 fi
 
 if [[ ${1} == 'opt' || ${2} == 'opt' ]]
@@ -47,6 +56,7 @@ elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
+  EXTRA_CXX_FLAGS="$EXTRA_CXX_FLAGS -lineinfo"
 else
   echo " *** Warning: 'opt' or 'dbg' BUILD_TYPE is an optional argument to this script.  Defaulting to 'opt'."
   BUILD_TYPE=RELEASE
@@ -132,9 +142,10 @@ cmake \
    -D Trilinos_ENABLE_Intrepid2=OFF \
    \
    -D Trilinos_ENABLE_ShyLU=OFF \
-   -D Trilinos_ENABLE_ShyLUCore=OFF \
-   -D Trilinos_ENABLE_ShyLUHTS=OFF \
-   -D ShyLUHTS_ENABLE_TESTS=OFF \
+   -D Trilinos_ENABLE_ShyLU_DD=OFF \
+   -D Trilinos_ENABLE_ShyLU_Node=OFF \
+   -D Trilinos_ENABLE_ShyLU_NodeHTS=OFF \
+   -D Trilinos_ENABLE_ShyLU_NodeTacho=OFF \
    \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
@@ -144,8 +155,9 @@ cmake \
    -D Kokkos_ENABLE_Cuda=ON \
    -D Kokkos_ENABLE_Cuda_UVM=ON \
    -D Kokkos_ENABLE_Cuda_Lambda=ON \
-   -D Kokkos_ENABLE_Cuda_Relocatable_Device_Code=ON \
+   -D Kokkos_ENABLE_Cuda_Relocatable_Device_Code=OFF \
    -D TPL_ENABLE_CUDA=ON \
+   -D KOKKOS_ARCH="Pascal60" \
    \
    -D Trilinos_ENABLE_SEACAS=ON \
    -D SEACAS_SOURCE_DIR_OVERRIDE:STRING=seacas/packages/seacas \

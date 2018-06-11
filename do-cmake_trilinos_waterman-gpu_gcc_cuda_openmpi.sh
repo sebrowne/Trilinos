@@ -139,6 +139,8 @@ cmake \
    -D Trilinos_ENABLE_STKTopology=OFF \
    -D Trilinos_ENABLE_Pamgen=OFF \
    \
+   -D Ifpack2_ENABLE_TESTS=ON \
+   \
    -D Trilinos_ENABLE_Intrepid2=OFF \
    \
    -D Trilinos_ENABLE_ShyLU=OFF \
@@ -215,7 +217,7 @@ cmake \
    -D ParMETIS_INCLUDE_DIRS:PATH=${PARMETIS_DIR}/include \
    -D ParMETIS_LIBRARY_DIRS:PATH=${PARMETIS_DIR}/lib \
    \
-   -D TPL_ENABLE_SuperLUDist=OFF \
+   -D TPL_ENABLE_SuperLUDist=ON \
    -D SuperLUDist_INCLUDE_DIRS:PATH=${SUPERLUDIST_DIR}/include \
    -D SuperLUDist_LIBRARY_DIRS:PATH=${SUPERLUDIST_DIR}/lib \
    -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist" \

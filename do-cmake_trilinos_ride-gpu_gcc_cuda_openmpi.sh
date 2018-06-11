@@ -139,6 +139,8 @@ cmake \
    -D Trilinos_ENABLE_STKTopology=OFF \
    -D Trilinos_ENABLE_Pamgen=OFF \
    \
+   -D Ifpack2_ENABLE_TESTS=ON \
+   \
    -D Trilinos_ENABLE_Intrepid2=OFF \
    \
    -D Trilinos_ENABLE_ShyLU=OFF \

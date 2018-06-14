@@ -133,9 +133,9 @@ cmake \
    -D Trilinos_ENABLE_Zoltan2=ON \
    -D Trilinos_ENABLE_STKMesh=OFF \
    -D Trilinos_ENABLE_STKIO=OFF \
-   -D Trilinos_ENABLE_STKTransfer=OFF \
-   -D Trilinos_ENABLE_STKSearch=OFF \
-   -D Trilinos_ENABLE_STKUtil=OFF \
+   -D Trilinos_ENABLE_STKTransfer=ON \
+   -D Trilinos_ENABLE_STKSearch=ON \
+   -D Trilinos_ENABLE_STKUtil=ON \
    -D Trilinos_ENABLE_STKTopology=OFF \
    -D Trilinos_ENABLE_Pamgen=OFF \
    \
@@ -216,9 +216,9 @@ cmake \
    -D ParMETIS_LIBRARY_DIRS:PATH=${PARMETIS_DIR}/lib \
    \
    -D TPL_ENABLE_SuperLUDist=ON \
-   -D SuperLUDist_INCLUDE_DIRS:PATH=${SUPERLUDIST_DIR}/SRC \
+   -D SuperLUDist_INCLUDE_DIRS:PATH=${SUPERLUDIST_DIR}/include \
    -D SuperLUDist_LIBRARY_DIRS:PATH=${SUPERLUDIST_DIR}/lib \
-   -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist_4.2" \
+   -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist" \
    \
    -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi -ldl -lgomp" \
    \

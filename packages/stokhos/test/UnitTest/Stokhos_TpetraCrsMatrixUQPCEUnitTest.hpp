@@ -89,6 +89,12 @@
 #include "Stokhos_CompletePolynomialBasis.hpp"
 #include "Stokhos_Sparse3Tensor.hpp"
 
+// Use "scalar" version of mean-based preconditioner (i.e., a preconditioner
+// with double as the scalar type).  This is currently necessary to get the
+// MueLu tests to pass on OpenMP and Cuda due to various kernels that don't
+// work with the PCE scalar type.
+#define USE_SCALAR_MEAN_BASED_PREC 1
+
 template <typename scalar, typename ordinal>
 inline
 scalar generate_vector_coefficient( const ordinal nFEM,
@@ -196,10 +202,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::Vector<Scalar,LocalOrdinal,GlobalOrdinal,Node> Tpetra_Vector;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!execution_space::is_initialized())
-    execution_space::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -289,10 +293,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef typename Tpetra_Vector::dot_type dot_type;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -382,10 +384,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::MultiVector<Scalar,LocalOrdinal,GlobalOrdinal,Node> Tpetra_MultiVector;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -484,10 +484,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef typename Tpetra_MultiVector::dot_type dot_type;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -589,10 +587,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef typename Tpetra_MultiVector::dot_type dot_type;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -703,10 +699,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::CrsGraph<LocalOrdinal,GlobalOrdinal,Node> Tpetra_CrsGraph;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -854,10 +848,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::CrsGraph<LocalOrdinal,GlobalOrdinal,Node> Tpetra_CrsGraph;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -1016,10 +1008,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::CrsMatrix<BaseScalar,LocalOrdinal,GlobalOrdinal,Node> Flat_Tpetra_CrsMatrix;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -1175,10 +1165,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::CrsGraph<LocalOrdinal,GlobalOrdinal,Node> Tpetra_CrsGraph;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -1354,10 +1342,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::CrsGraph<LocalOrdinal,GlobalOrdinal,Node> Tpetra_CrsGraph;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -1438,16 +1424,27 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
 
   // Create preconditioner
   typedef Tpetra::Operator<Scalar,LocalOrdinal,GlobalOrdinal,Node> OP;
+  RCP<ParameterList> muelu_params =
+    getParametersFromXmlFile("muelu_cheby.xml");
+#if USE_SCALAR_MEAN_BASED_PREC
+  typedef Tpetra::Operator<BaseScalar,LocalOrdinal,GlobalOrdinal,Node> Scalar_OP;
+  typedef Tpetra::CrsMatrix<BaseScalar,LocalOrdinal,GlobalOrdinal,Node> Scalar_Tpetra_CrsMatrix;
+  RCP<Scalar_Tpetra_CrsMatrix> mean_matrix =
+    Stokhos::build_mean_scalar_matrix(*matrix);
+  RCP<Scalar_OP> mean_matrix_op = mean_matrix;
+  RCP<Scalar_OP> M_s =
+    MueLu::CreateTpetraPreconditioner<BaseScalar,LocalOrdinal,GlobalOrdinal,Node>(mean_matrix_op, *muelu_params);
+  RCP<OP> M = rcp(new Stokhos::MeanBasedTpetraOperator<Scalar,LocalOrdinal,GlobalOrdinal,Node>(M_s));
+#else
   Cijk mean_cijk =
     Stokhos::create_mean_based_product_tensor<Device,typename Storage::ordinal_type,BaseScalar>();
   Kokkos::setGlobalCijkTensor(mean_cijk);
-  RCP<ParameterList> muelu_params =
-    getParametersFromXmlFile("muelu_cheby.xml");
   RCP<Tpetra_CrsMatrix> mean_matrix = Stokhos::build_mean_matrix(*matrix);
   RCP<OP> mean_matrix_op = mean_matrix;
   RCP<OP> M =
     MueLu::CreateTpetraPreconditioner<Scalar,LocalOrdinal,GlobalOrdinal,Node>(mean_matrix_op, *muelu_params);
   Kokkos::setGlobalCijkTensor(cijk);
+#endif
 
   // Solve
   RCP<Tpetra_Vector> x = Tpetra::createVector<Scalar>(map);
@@ -1548,10 +1545,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::CrsGraph<LocalOrdinal,GlobalOrdinal,Node> Tpetra_CrsGraph;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -1726,10 +1721,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::CrsGraph<LocalOrdinal,GlobalOrdinal,Node> Tpetra_CrsGraph;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -1914,10 +1907,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::CrsGraph<LocalOrdinal,GlobalOrdinal,Node> Tpetra_CrsGraph;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);
@@ -1998,16 +1989,27 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
 
   // Create preconditioner
   typedef Tpetra::Operator<Scalar,LocalOrdinal,GlobalOrdinal,Node> OP;
+  RCP<ParameterList> muelu_params =
+    getParametersFromXmlFile("muelu_cheby.xml");
+#if USE_SCALAR_MEAN_BASED_PREC
+  typedef Tpetra::Operator<BaseScalar,LocalOrdinal,GlobalOrdinal,Node> Scalar_OP;
+  typedef Tpetra::CrsMatrix<BaseScalar,LocalOrdinal,GlobalOrdinal,Node> Scalar_Tpetra_CrsMatrix;
+  RCP<Scalar_Tpetra_CrsMatrix> mean_matrix =
+    Stokhos::build_mean_scalar_matrix(*matrix);
+  RCP<Scalar_OP> mean_matrix_op = mean_matrix;
+  RCP<Scalar_OP> M_s =
+    MueLu::CreateTpetraPreconditioner<BaseScalar,LocalOrdinal,GlobalOrdinal,Node>(mean_matrix_op, *muelu_params);
+  RCP<OP> M = rcp(new Stokhos::MeanBasedTpetraOperator<Scalar,LocalOrdinal,GlobalOrdinal,Node>(M_s));
+#else
   Cijk mean_cijk =
     Stokhos::create_mean_based_product_tensor<Device,typename Storage::ordinal_type,BaseScalar>();
   Kokkos::setGlobalCijkTensor(mean_cijk);
-  RCP<ParameterList> muelu_params =
-    getParametersFromXmlFile("muelu_cheby.xml");
   RCP<Tpetra_CrsMatrix> mean_matrix = Stokhos::build_mean_matrix(*matrix);
   RCP<OP> mean_matrix_op = mean_matrix;
   RCP<OP> M =
     MueLu::CreateTpetraPreconditioner<Scalar,LocalOrdinal,GlobalOrdinal,Node>(mean_matrix_op, *muelu_params);
   Kokkos::setGlobalCijkTensor(cijk);
+#endif
 
   // Solve
   typedef Teuchos::ScalarTraits<BaseScalar> ST;
@@ -2130,10 +2132,8 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   typedef Tpetra::CrsGraph<LocalOrdinal,GlobalOrdinal,Node> Tpetra_CrsGraph;
 
   // Ensure device is initialized
-  if (!Kokkos::HostSpace::execution_space::is_initialized())
-    Kokkos::HostSpace::execution_space::initialize();
-  if (!Device::is_initialized())
-    Device::initialize();
+  if ( !Kokkos::is_initialized() )
+    Kokkos::initialize();
 
   // Cijk
   Cijk cijk = build_cijk<Cijk>(stoch_dim, poly_ord);

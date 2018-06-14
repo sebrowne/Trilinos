@@ -51,7 +51,7 @@
 #include "ROL_StdVector.hpp"
 #include "ROL_NonlinearLeastSquaresObjective.hpp"
 #include "ROL_Algorithm.hpp"
-#include "Teuchos_oblackholestream.hpp"
+#include "ROL_Stream.hpp"
 #include "Teuchos_GlobalMPISession.hpp"
 
 #include <iostream>
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
   // This little trick lets us print to std::cout only if a (dummy) command-line argument is provided.
   int iprint     = argc - 1;
   ROL::Ptr<std::ostream> outStream;
-  Teuchos::oblackholestream bhs; // outputs nothing
+  ROL::nullstream bhs; // outputs nothing
   if (iprint > 0)
     outStream = ROL::makePtrFromRef(std::cout);
   else
@@ -80,13 +80,15 @@ int main(int argc, char *argv[]) {
 
     ROL::Ptr<ROL::Objective<RealT> > obj;
     ROL::Ptr<ROL::Constraint<RealT> > constr;
-    ROL::Ptr<std::vector<RealT> > x_ptr = ROL::makePtr<std::vector<RealT>>(0, 0.0);
-    ROL::Ptr<std::vector<RealT> > sol_ptr = ROL::makePtr<std::vector<RealT>>(0, 0.0);
-    ROL::StdVector<RealT> x(x_ptr);      // Iteration vector.
-    ROL::StdVector<RealT> sol(sol_ptr);  // Reference solution vector.
+    ROL::Ptr<ROL::Vector<RealT> > x;
+    ROL::Ptr<ROL::Vector<RealT> > sol;
 
     // Retrieve objective, constraint, iteration vector, solution vector.
-    ROL::ZOO::getSimpleEqConstrained <RealT, ROL::StdVector<RealT>, ROL::StdVector<RealT>, ROL::StdVector<RealT>, ROL::StdVector<RealT> > (obj, constr, x, sol);
+    ROL::ZOO::getSimpleEqConstrained<RealT> SEC;
+    obj    = SEC.getObjective();
+    constr = SEC.getEqualityConstraint();
+    x      = SEC.getInitialGuess();
+    sol    = SEC.getSolution();
 
     // Inititalize vectors
     int dim = 5;
@@ -116,11 +118,11 @@ int main(int argc, char *argv[]) {
       (*vl_ptr)[i] = ( (RealT)rand() / (RealT)RAND_MAX ) * (right - left) + left;
     }
 
-    xtest.set(x);
+    xtest.set(*x);
 
     // Initialize nonlinear least squares objectives
-    ROL::NonlinearLeastSquaresObjective<RealT> nlls(constr,x,vc,false);
-    ROL::NonlinearLeastSquaresObjective<RealT> gnnlls(constr,x,vc,true);
+    ROL::NonlinearLeastSquaresObjective<RealT> nlls(constr,*x,vc,false);
+    ROL::NonlinearLeastSquaresObjective<RealT> gnnlls(constr,*x,vc,true);
 
     // Check derivatives
     constr->checkApplyJacobian(xtest, v, vc, true, *outStream);                 *outStream << "\n";
@@ -131,7 +133,7 @@ int main(int argc, char *argv[]) {
     nlls.checkHessSym(xtest, d, v, true, *outStream);                           *outStream << "\n";
     
     // Define algorithm.
-    Teuchos::ParameterList parlist;
+    ROL::ParameterList parlist;
     std::string stepname = "Trust Region";
     parlist.sublist("Step").sublist(stepname).set("Subproblem Solver","Truncated CG");
     parlist.sublist("Status Test").set("Gradient Tolerance",1.e-10);
@@ -142,12 +144,12 @@ int main(int argc, char *argv[]) {
 
     // Run Algorithm
     *outStream << "\nSOLVE USING FULL HESSIAN\n";
-    x.set(xtest);
-    algo.run(x, nlls, true, *outStream);
+    x->set(xtest);
+    algo.run(*x, nlls, true, *outStream);
     algo.reset();
     *outStream << "\nSOLVE USING GAUSS-NEWTON HESSIAN\n";
-    x.set(xtest);
-    algo.run(x, gnnlls, true, *outStream);
+    x->set(xtest);
+    algo.run(*x, gnnlls, true, *outStream);
   }
   catch (std::logic_error err) {
     *outStream << err.what() << "\n";

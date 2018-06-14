@@ -46,7 +46,7 @@
 */
 
 #include "Teuchos_Comm.hpp"
-#include "Teuchos_oblackholestream.hpp"
+#include "ROL_Stream.hpp"
 #include "Teuchos_GlobalMPISession.hpp"
 #include "Teuchos_XMLParameterListHelpers.hpp"
 
@@ -68,6 +68,8 @@
 #include "pde_thermal-fluids.hpp"
 #include "obj_thermal-fluids.hpp"
 
+#include "ROL_OptimizationSolver.hpp"
+
 typedef double RealT;
 
 int main(int argc, char *argv[]) {
@@ -76,7 +78,7 @@ int main(int argc, char *argv[]) {
   // This little trick lets us print to std::cout only if a (dummy) command-line argument is provided.
   int iprint     = argc - 1;
   ROL::Ptr<std::ostream> outStream;
-  Teuchos::oblackholestream bhs; // outputs nothing
+  ROL::nullstream bhs; // outputs nothing
 
   /*** Initialize communicator. ***/
   Teuchos::GlobalMPISession mpiSession (&argc, &argv, &bhs);
@@ -210,11 +212,28 @@ int main(int argc, char *argv[]) {
     con->solve(*rp,*up,*zp,tol);
     pdecon->outputTpetraVector(u_ptr,"state_uncontrolled.txt");
 
-    bool useCompositeStep = parlist->sublist("Problem").get("Full space",false);
+    bool useFullSpace = parlist->sublist("Problem").get("Full space",false);
     ROL::Ptr<ROL::Algorithm<RealT> > algo;
-    if ( useCompositeStep ) {
-      algo = ROL::makePtr<ROL::Algorithm<RealT>>("Composite Step",*parlist,false);
-      algo->run(x,*rp,*obj,*con,true,*outStream);
+    if ( useFullSpace ) {
+      std::string step = parlist->sublist("Step").get("Type", "Composite Step");
+      ROL::EStep els = ROL::StringToEStep(step);
+      switch( els ) {
+        case ROL::STEP_COMPOSITESTEP: {
+          algo = ROL::makePtr<ROL::Algorithm<RealT>>("Composite Step",*parlist,false);
+          algo->run(x,*rp,*obj,*con,true,*outStream);
+          break; 
+        }
+        case ROL::STEP_FLETCHER: {
+          ROL::OptimizationProblem<RealT> optProb(obj, makePtrFromRef(x), con, rp);
+          ROL::OptimizationSolver<RealT> optSolver(optProb, *parlist);
+          optSolver.solve(*outStream);
+          break;
+        }
+        default: {
+          *outStream << "ERROR: Unsupported step." << std::endl;      
+          errorFlag = 1; 
+        }
+      }
     }
     else {
       algo = ROL::makePtr<ROL::Algorithm<RealT>>("Trust Region",*parlist,false);

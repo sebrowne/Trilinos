@@ -282,7 +282,8 @@ void mult_A_B_newmatrix_LowThreadGustavsonKernel(CrsMatrixStruct<Scalar, LocalOr
     MM = rcp(new TimeMonitor (*TimeMonitor::getNewTimer(prefix_mmm + std::string("MMM Newmatrix OpenMPSort"))));
 #endif    
     // Sort & set values
-    Import_Util::sortCrsEntries(row_mapC, entriesC, valuesC);
+    if (params.is_null() || params->get("sort entries",true))
+      Import_Util::sortCrsEntries(row_mapC, entriesC, valuesC);
     C.setAllValues(row_mapC,entriesC,valuesC);
 
 }
@@ -680,7 +681,8 @@ void jacobi_A_B_newmatrix_LowThreadGustavsonKernel(Scalar omega,
     MM = rcp(new TimeMonitor (*TimeMonitor::getNewTimer(prefix_mmm + std::string("Jacobi Newmatrix OpenMPSort"))));
 #endif    
     // Sort & set values
-    Import_Util::sortCrsEntries(row_mapC, entriesC, valuesC);
+    if (params.is_null() || params->get("sort entries",true))
+      Import_Util::sortCrsEntries(row_mapC, entriesC, valuesC);
     C.setAllValues(row_mapC,entriesC,valuesC);
 
 }
@@ -879,7 +881,7 @@ void copy_out_from_thread_memory(const InRowptrArrayType & Inrowptr, const InCol
   size_t c_nnz_size=0;
   lno_view_t thread_start_nnz("thread_nnz",thread_max+1);
   Kokkos::parallel_scan("LTG::Scan",range_type(0,thread_max).set_chunk_size(1), [=] (const size_t i, size_t& update, const bool final) {
-      size_t mynnz = Inrowptr(i)(Inrowptr(i).dimension(0)-1);
+      size_t mynnz = Inrowptr(i)(Inrowptr(i).extent(0)-1);
       if(final) thread_start_nnz(i) = update;
       update+=mynnz;
       if(final && i+1==thread_max) thread_start_nnz(i+1)=update;

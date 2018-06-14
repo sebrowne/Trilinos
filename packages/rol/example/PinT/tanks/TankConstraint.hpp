@@ -49,124 +49,169 @@
 #include "Teuchos_ParameterList.hpp"
 #include "ROL_Constraint_TimeSimOpt.hpp"
 #include "ROL_StdVector.hpp"
-
 #include "TankState.hpp"
-
 #include <utility>
 
 /** \class TankConstraint
     \brief Compute time-step for the coupled tank network
-
 */
-
 namespace details {
 
-using namespace std;
-
-using ROL::Vector;
+using std::vector;
 
 template<typename Real>
 class TankConstraint : public ROL::Constraint_TimeSimOpt<Real> {
-private:
 
- // Tank Array Numbers
- int numRows_;          // Number of tank rows
- int numCols_;          // Number of tank columns
- vector<int> pt_rows_;  // Pass-through rows
- vector<int> pt_cols_;  // Pass-through columns
-
- //---------- Physical Parameters ---------------------------------------------
- Real Cv_;              // Valve constant 
- Real rho_;             // Density of fluid
- Real h0_;              // Initial fluid level
- Real H_;               // Height of tanks
- Real A_;               // Cross-sectional area of tanks
- Real g_;               // Gravity constant
- Real Qin00_;           // Corner inflow 
-
-
- //---------- Time Discretization ---------------------------------------------
- Real T_;               // Total time
- Real dt_;              // Time step size
- Real theta_;           // Implicit/Explicit splitting factor
- int  Nt_;              // Number of Time steps
-
-
- //---------- Lumped Coefficients ---------------------------------------------
- Real a1_;              // dt*(1-theta)/A
- Real a2_;              // dt*theta/A
- Real b_;               // Cv*rho*g
+  using Vector    = ROL::Vector<Real>;
+  using StdVector = ROL::StdVector<Real>;
  
+  using StateVector = TankStateVector<Real>;
+  using ControlVector = TankControlVector<Real>;
+ 
+  using size_type = typename std::vector<Real>::size_type;
+
 private:
+  ROL::Ptr<TankState<Real>> tankState_;
 
-  auto tank_state( const Vector<Real>& x ) -> TankState<Real,true> {
-    return move( make_tank_state( x, numRows_, numCols_ ) );
-  }
+  StateVector&   to_state  ( Vector& x ) { return static_cast<StateVector&>(x); }
+  ControlVector& to_control( Vector& x ) { return static_cast<ControlVector&>(x); }
+  const StateVector&   to_state  ( const Vector& x ) const { return static_cast<const StateVector&>(x);   }
+  const ControlVector& to_control( const Vector& x ) const { return static_cast<const ControlVector&>(x); }
 
-  auto tank_state( Vector<Real>& x ) -> TankState<Real,false> {
-    return move( make_tank_state( x, numRows_, numCols_, pt_rows_, pt_cols_ ) );
-  }
+  size_type rows_, cols_;
+
+  StateVector   zero_state_;
+  ControlVector zero_ctrl_;
+
+  bool has_applyJacobian_1_old_;
+  bool has_applyJacobian_1_new_;
+  bool has_applyJacobian_2_;
 
 public:
-
-  TankConstraint( Teuchos::ParameterList& pl ) :
-    // ---------------- Initializer List -----------------//
-    numRows_( pl.get( "Number of Rows",          3      ) ),
-    numCols_( pl.get( "Number of Columns",       3      ) ),
-    Cv_     ( pl.get( "Valve Constant",          1.0e-2 ) ),
-    rho_    ( pl.get( "Density of Fluid",        1.0e3  ) ),
-    h0_     ( pl.get( "Initial Fluid Level",     2.0    ) ),
-    H_      ( pl.get( "Height of Tank",          10.0   ) ),
-    A_      ( pl.get( "Cross-sectional Area",    10.0   ) ),
-    g_      ( pl.get( "Gravity Constant",        9.8    ) ),
-    Qin00_  ( pl.get( "Corner Inflow",           100.0  ) ),
-    T_      ( pl.get( "Total Time",              20.0   ) ),
-    theta_  ( pl.get( "Theta",                   0.5    ) ),
-    Nt_     ( pl.get( "Number of Time Steps",    100    ) ) {
-    //----------------------------------------------------//
-
-    auto& ptrows = Teuchos::getArrayFromStringParameter<int>( pl, "Pass-Through Rows"    );
-    auto& ptcols = Teuchos::getArrayFromStringParameter<int>( pl, "Pass-Through Columns" );
-
-    pt_rows_ = ptrows.toVector();
-    pt_cols_ = ptcols.toVector();
-
-    dt_ = T_/Nt_;
-    a1_ = dt_*(1.0-theta_)/A_;
-    a2_ = dt_*theta_/A_;
-    b_  = Cv_*rho_*g_;
-
-  } // end Constructor
-
-
-  void value(Vector<Real> &c, const Vector<Real> &u_old,
-             const Vector<Real> &u_new, const Vector<Real> &z,
-             Real &tol) override {
-
-    auto c_s  = tank_state(c);
-    auto uo_s = tank_state(u_old);
-    auto un_s = tank_state(u_new);
-
-
-   
-
+  TankConstraint( const ROL::Ptr<TankState<Real>>& tankState, 
+                  ROL::ParameterList& pl ) : tankState_(tankState), 
+    rows_(pl.get("Number of Rows", 3)), cols_(pl.get("Number of Columns", 3)),
+    zero_state_(rows_,cols_,"Zero State"), zero_ctrl_(rows_,cols_,"Zero Control"),
+    has_applyJacobian_1_old_( pl.get("Has applyJacobian_1_old", false ) ),
+    has_applyJacobian_1_new_( pl.get("Has applyJacobian_1_new", false ) ),
+    has_applyJacobian_2_( pl.get("Has applyJacobian_2", false ) ) {
   }
 
-  void solve(Vector<Real> &c, const Vector<Real> &u_old, 
-             Vector<Real> &u_new, const Vector<Real> &z, 
-                     Real &tol) override {
+  void print_tankstate_parameters( std::ostream& os ) { tankState_->print_members(os); }
 
-    auto c_s  = tank_state(c);
-    auto uo_s = tank_state(u_old);
-    auto un_s = tank_state(u_new);
+  void value( Vector& c, const Vector& u_old, const Vector& u_new, 
+              const Vector& z, Real& tol ) override {
 
-
-
-
+    auto& c_state  = to_state(c); 
+    auto& uo_state = to_state(u_old);
+    auto& un_state = to_state(u_new);
+    auto& z_ctrl   = to_control(z);
+    c.zero();
+    tankState_->value( c_state, uo_state, un_state, z_ctrl ) ;
   }
 
 
+  void solve( Vector& c, const Vector& u_old, Vector& u_new, 
+              const Vector& z, Real& tol ) override {
+  
+    u_new.zero();  
+    auto& c_state  = to_state(c);      
+    auto& un_state = to_state(u_new);
+    auto& uo_state = to_state(u_old);
+    auto& z_ctrl   = to_control(z);
+    tankState_->solve( c_state, un_state, uo_state, z_ctrl );
+  }
 
+  //----------------------------------------------------------------------------
+
+  void applyJacobian_1_old( Vector& jv, const Vector& v_old,
+                            const Vector& u_old, const Vector& u_new,
+                            const Vector& z, Real& tol ) override {
+    jv.zero();
+    auto& jv_state = to_state(jv);
+    auto& vo_state = to_state(v_old);
+    tankState_->applyJacobian_1_old(jv_state,vo_state);
+  }
+
+  void applyAdjointJacobian_1_old( Vector &ajv_old, const Vector &dualv,
+                                   const Vector &u_old, const Vector &u_new,
+                                   const Vector &z, Real& tol) override { 
+    ajv_old.zero();
+    auto& ajv_state = to_state(ajv_old);
+    auto& dv_state  = to_state(dualv);
+    tankState_->applyAdjointJacobian_1_old( ajv_state, dv_state );
+  }
+
+  //----------------------------------------------------------------------------
+
+  void applyJacobian_1_new( Vector& jv, const Vector& v_new,
+                            const Vector& u_old, const Vector& u_new,
+                            const Vector& z, Real& tol ) override {
+    jv.zero();
+    auto& jv_state = to_state(jv);
+    auto& vn_state = to_state(v_new);
+    tankState_->applyJacobian_1_new(jv_state,vn_state);
+  }
+ 
+  void applyAdjointJacobian_1_new( Vector& ajv_new, const Vector &dualv,
+                                   const Vector &u_old, const Vector& u_new,
+                                   const Vector &z, Real& tol) override {
+    ajv_new.zero();
+    auto& ajv_state = to_state(ajv_new);
+    auto& dv_state  = to_state(dualv);
+    tankState_->applyAdjointJacobian_1_new( ajv_state, dv_state );
+  }
+
+  void applyInverseJacobian_1_new( Vector &ijv, const Vector &v_new,
+                                   const Vector &u_old, const Vector &u_new,
+                                   const Vector &z, Real& tol ) override {
+    ijv.zero();
+    auto& ijv_state = to_state(ijv);      
+    auto& vn_state  = to_state(v_new);
+    tankState_->applyInverseJacobian_1_new(ijv_state,vn_state);
+ }
+
+  void applyInverseAdjointJacobian_1_new( Vector& iajv, const Vector& v_new,
+                                          const Vector& u_old, const Vector& u_new,
+                                          const Vector& z, Real& tol) override {
+    iajv.zero();
+    auto& iajv_state = to_state(iajv);      
+    auto& vn_state  = to_state(v_new);
+    tankState_->applyInverseAdjointJacobian_1_new(iajv_state,vn_state);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void applyJacobian_2( Vector &jv, const Vector &v,
+                        const Vector &u_old, const Vector &u_new,
+                        const Vector &z, Real &tol ) override {
+    jv.zero();
+    auto& jv_state = to_state(jv);
+    auto& v_ctrl   = to_control(v);
+    tankState_->applyJacobian_2( jv_state, v_ctrl );
+}
+
+  void applyAdjointJacobian_2_time( Vector& ajv, const Vector &dualv,
+                                    const Vector &u_old, const Vector& u_new,
+                                    const Vector &z, Real &tol) override {
+    ajv.zero();
+    auto& ajv_ctrl = to_control(ajv);
+    auto& v_state  = to_state(dualv);
+    tankState_->applyAdjointJacobian_2( ajv_ctrl, v_state );
+  }
+
+
+  //-----------------------------------------------------------------------------
+
+  void applyAdjointHessian_11_old( Vector& ahwv_old, const Vector& w,
+                                   const Vector& v_new, const Vector& u_old, 
+                                   const Vector& u_new, const Vector& z,
+                                   Real &tol) override { ahwv_old.zero(); }
+
+  void applyAdjointHessian_11_new( Vector& ahwv_new, const Vector &w,
+                                   const Vector &v_new, const Vector &u_old, 
+                                   const Vector &u_new, const Vector &z,
+                                   Real &tol) override { ahwv_new.zero(); }
 
 
 }; // class TankConstraint

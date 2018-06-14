@@ -50,7 +50,7 @@
 #include "ROL_Algorithm.hpp"
 #include "ROL_ConstraintStatusTest.hpp"
 #include "ROL_CompositeStep.hpp"
-#include "Teuchos_oblackholestream.hpp"
+#include "ROL_Stream.hpp"
 #include "Teuchos_GlobalMPISession.hpp"
 
 #include <iostream>
@@ -453,7 +453,7 @@ int main(int argc, char *argv[]) {
   // This little trick lets us print to std::cout only if a (dummy) command-line argument is provided.
   int iprint     = argc - 1;
   ROL::Ptr<std::ostream> outStream;
-  Teuchos::oblackholestream bhs; // outputs nothing
+  ROL::nullstream bhs; // outputs nothing
   if (iprint > 0)
     outStream = ROL::makePtrFromRef(std::cout);
   else
@@ -465,19 +465,23 @@ int main(int argc, char *argv[]) {
 
   try {
 
+    uint dim = 5;
+    uint nc = 3;
     ROL::Ptr<ROL::Objective<RealT> > obj;
     ROL::Ptr<ROL::Constraint<RealT> > constr;
-    ROL::Ptr<vector> x_ptr = ROL::makePtr<vector>(0, 0.0);
-    ROL::Ptr<vector> sol_ptr = ROL::makePtr<vector>(0, 0.0);
+    ROL::Ptr<vector> x_ptr = ROL::makePtr<vector>(dim, 0.0);
+    ROL::Ptr<vector> sol_ptr = ROL::makePtr<vector>(dim, 0.0);
     OptStdVector<RealT> x(x_ptr);      // Iteration vector.
     OptStdVector<RealT> sol(sol_ptr);  // Reference solution vector.
 
     // Retrieve objective, constraint, iteration vector, solution vector.
-    ROL::ZOO::getSimpleEqConstrained <RealT, OptStdVector<RealT>, OptDualStdVector<RealT>, ConStdVector<RealT>, ConDualStdVector<RealT> > (obj, constr, x, sol);
+    ROL::ZOO::getSimpleEqConstrained <RealT, OptStdVector<RealT>, OptDualStdVector<RealT>, ConStdVector<RealT>, ConDualStdVector<RealT> > SEC;
+    obj = SEC.getObjective();
+    constr = SEC.getEqualityConstraint();
+    x.set(*SEC.getInitialGuess());
+    sol.set(*SEC.getSolution());
 
     // Run derivative checks, etc.
-    uint dim = 5;
-    uint nc = 3;
     RealT left = -1e0, right = 1e0;
     ROL::Ptr<vector> xtest_ptr = ROL::makePtr<vector>(dim, 0.0);
     ROL::Ptr<vector> g_ptr  = ROL::makePtr<vector>(dim, 0.0);
@@ -521,7 +525,7 @@ int main(int argc, char *argv[]) {
     
 
     // Define algorithm.
-    Teuchos::ParameterList parlist;
+    ROL::ParameterList parlist;
     std::string stepname = "Composite Step";
     parlist.sublist("Step").sublist(stepname).sublist("Optimality System Solver").set("Nominal Relative Tolerance",1.e-4);
     parlist.sublist("Step").sublist(stepname).sublist("Optimality System Solver").set("Fix Tolerance",true);

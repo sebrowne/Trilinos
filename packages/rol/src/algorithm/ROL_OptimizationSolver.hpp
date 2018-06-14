@@ -48,7 +48,7 @@
 #include "ROL_OptimizationProblem.hpp"
 #include "ROL_CombinedStatusTest.hpp"
 
-#include "Teuchos_oblackholestream.hpp"
+#include "ROL_Stream.hpp"
 
 /** \class ROL::OptimizationSolver
     \brief Provides a simplified interface for solving a wide range of
@@ -94,7 +94,8 @@ public:
       ---
   */
   OptimizationSolver( OptimizationProblem<Real> &opt,
-                      Teuchos::ParameterList &parlist ) {
+                      ROL::ParameterList &parlist ) {
+
     // Get optimization problem type: U, E, B, EB
     problemType_ = opt.getProblemType();
 
@@ -143,7 +144,7 @@ public:
     }
 
     // Create modified objectives if needed
-    const Real ten(10);
+    const Real one(1), ten(10);
     if( stepType_ == STEP_AUGMENTEDLAGRANGIAN ) {
       ROL::Ptr<Objective<Real> > raw_obj = opt.getObjective();
       con_ = opt.getConstraint();
@@ -167,6 +168,18 @@ public:
       // TODO: Provide access to change initial penalty
       obj_ = ROL::makePtr<InteriorPoint::PenalizedObjective<Real>>(raw_obj,bnd_,*x_,parlist);
       pen_ = parlist.sublist("Step").sublist("Interior Point").get("Initial Barrier Parameter",ten);
+    }
+    else if( stepType_ == STEP_FLETCHER ) {
+      ROL::Ptr<Objective<Real> > raw_obj = opt.getObjective();
+      bnd_ = opt.getBoundConstraint();
+      con_ = opt.getConstraint();
+      if( bnd_->isActivated() ) {
+        obj_ = ROL::makePtr<BoundFletcher<Real> >(raw_obj,con_,bnd_,*x_,*c_,parlist);
+      }
+      else {
+        obj_ = ROL::makePtr<Fletcher<Real> >(raw_obj,con_,*x_,*c_,parlist);
+      }
+      pen_ = parlist.sublist("Step").sublist("Fletcher").get("Penalty Parameter",one);
     }
     else {
       obj_   = opt.getObjective();
@@ -194,7 +207,7 @@ public:
       ---
   */
   int solve(void) {
-    Teuchos::oblackholestream bhs;
+    ROL::nullstream bhs;
     return solve(bhs);
   }
 
@@ -234,7 +247,7 @@ public:
         output_ = algo_->run(*x_,*g_,*l_,*c_,*obj_,*con_,*bnd_,true,outStream);
       break;
       case TYPE_LAST:
-        TEUCHOS_TEST_FOR_EXCEPTION(true,std::invalid_argument,
+        ROL_TEST_FOR_EXCEPTION(true,std::invalid_argument,
           "Error in OptimizationSolver::solve() : Unsupported problem type");
       break;
     }

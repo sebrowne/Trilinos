@@ -54,11 +54,11 @@
 #include "ROL_RiskBoundConstraint.hpp"
 // Objective includes
 #include "ROL_RiskNeutralObjective.hpp" 
-#include "ROL_RiskAverseObjective.hpp"
+#include "ROL_StochasticObjective.hpp"
 #include "ROL_RiskLessObjective.hpp"
 // Constraint includes
 #include "ROL_RiskNeutralConstraint.hpp" 
-#include "ROL_RiskAverseConstraint.hpp" 
+#include "ROL_StochasticConstraint.hpp" 
 #include "ROL_RiskLessConstraint.hpp"
 // Almost sure constraint includes
 #include "ROL_AlmostSureConstraint.hpp"
@@ -99,8 +99,8 @@ private:
   std::vector<ROL::Ptr<SampleGenerator<Real> > > ixsampler_;
   std::vector<ROL::Ptr<BatchManager<Real> > >    icbman_;
 
-  Teuchos::RCP<Teuchos::ParameterList>               parlistObj_;
-  std::vector<Teuchos::RCP<Teuchos::ParameterList> > parlistCon_;
+  ROL::Ptr<ROL::ParameterList>               parlistObj_;
+  std::vector<ROL::Ptr<ROL::ParameterList> > parlistCon_;
 
   ROL::Ptr<Objective<Real> >       obj_;
   ROL::Ptr<Vector<Real> >          sol_;
@@ -619,7 +619,7 @@ public:
       @param[in]    gsampler  is the SampleGenerator defining the distribution of the auxiliary parameter for the gradient
       @param[in]    hsampler  is the SampleGenerator defining the distribution of the auxiliary parameter for the Hessian
   */
-  void setRiskAverseObjective(Teuchos::ParameterList &parlist,
+  void setRiskAverseObjective(ROL::ParameterList &parlist,
                               const ROL::Ptr<SampleGenerator<Real> > &vsampler,
                               const ROL::Ptr<SampleGenerator<Real> > &gsampler = ROL::nullPtr,
                               const ROL::Ptr<SampleGenerator<Real> > &hsampler = ROL::nullPtr) {
@@ -642,7 +642,7 @@ public:
       needRiskLessObj_ = false;
       parlistObj_      = ROL::makePtrFromRef(parlist);
       INTERMEDIATE_obj_
-        = ROL::makePtr<RiskAverseObjective<Real>>(INPUT_obj_,parlist,vsampler_,gsampler_,hsampler_);
+        = ROL::makePtr<StochasticObjective<Real>>(INPUT_obj_,parlist,vsampler_,gsampler_,hsampler_);
     }
     // Set vector and bound constraint
     buildRiskVec(INPUT_sol_);
@@ -651,7 +651,7 @@ public:
     isInitialized_ = false;
   }
 
-  void setStochasticObjective(Teuchos::ParameterList &parlist,
+  void setStochasticObjective(ROL::ParameterList &parlist,
                               const ROL::Ptr<SampleGenerator<Real> > &vsampler,
                               const ROL::Ptr<SampleGenerator<Real> > &gsampler = ROL::nullPtr,
                               const ROL::Ptr<SampleGenerator<Real> > &hsampler = ROL::nullPtr) {
@@ -661,7 +661,11 @@ public:
       bool storage = parlist.sublist("SOL").get("Store Sampled Value and Gradient",true);
       setRiskNeutralObjective(vsampler,gsampler,hsampler,storage);
     }
-    else if ( type == "Risk Averse" ) {
+    else if ( type == "Risk Averse" ||
+              type == "Deviation"   ||
+              type == "Error"       ||
+              type == "Regret"      ||
+              type == "Probability" ) {
       setRiskAverseObjective(parlist,vsampler,gsampler,hsampler);
     }
     else if ( type == "Mean Value" ) {
@@ -747,7 +751,7 @@ public:
   }
 
 
-  void setStochasticEquality(std::vector<Teuchos::ParameterList> &parlist,
+  void setStochasticEquality(std::vector<ROL::ParameterList> &parlist,
                              const std::vector<ROL::Ptr<SampleGenerator<Real> > > &xsampler,
                              const std::vector<ROL::Ptr<BatchManager<Real> > > &cbman) {
     initStochastic();
@@ -783,10 +787,10 @@ public:
     isInitialized_ = false;
   }
 
-  void setStochasticEquality(Teuchos::ParameterList &parlist,
+  void setStochasticEquality(ROL::ParameterList &parlist,
                              const ROL::Ptr<SampleGenerator<Real> > &xsampler,
                              const ROL::Ptr<BatchManager<Real> > &cbman) {
-    std::vector<Teuchos::ParameterList> cparlist(1,parlist);
+    std::vector<ROL::ParameterList> cparlist(1,parlist);
     std::vector<ROL::Ptr<SampleGenerator<Real> > > cxsampler(1,xsampler);
     std::vector<ROL::Ptr<BatchManager<Real> > > ccbman(1,cbman);
     setStochasticEquality(cparlist,cxsampler,ccbman);
@@ -838,7 +842,7 @@ public:
     isInitialized_ = false;
   }
 
-  void setRiskAverseInequality(Teuchos::ParameterList &parlist,
+  void setRiskAverseInequality(ROL::ParameterList &parlist,
                                const ROL::Ptr<SampleGenerator<Real> > &sampler,
                                const int index = 0) {
     initStochastic();
@@ -847,7 +851,7 @@ public:
       needRiskLessIcon_[index] = false;
       parlistCon_[index]       = ROL::makePtrFromRef(parlist);
       INTERMEDIATE_icon_[index]
-        = ROL::makePtr<RiskAverseConstraint<Real>>(INPUT_icon_[index],sampler,parlist,index);
+        = ROL::makePtr<StochasticConstraint<Real>>(INPUT_icon_[index],sampler,parlist,index);
       INTERMEDIATE_ibnd_[index] = INPUT_ibnd_[index];
       INTERMEDIATE_imul_[index] = INPUT_imul_[index];
     }
@@ -889,7 +893,7 @@ public:
     isInitialized_ = false;
   }
 
-  void setStochasticInequality(std::vector<Teuchos::ParameterList> &parlist,
+  void setStochasticInequality(std::vector<ROL::ParameterList> &parlist,
                                const std::vector<ROL::Ptr<SampleGenerator<Real> > > &xsampler,
                                const std::vector<ROL::Ptr<BatchManager<Real> > >    &cbman) {
     initStochastic();
@@ -903,7 +907,11 @@ public:
         if ( type == "Risk Neutral" ) {
           setRiskNeutralInequality(xsampler[i],cbman[i],i);
         }
-        else if ( type == "Risk Averse" ) {
+        else if ( type == "Risk Averse" ||
+                  type == "Deviation"   ||
+                  type == "Error"       ||
+                  type == "Regret"      ||
+                  type == "Probability" ) {
           setRiskAverseInequality(parlist[i],xsampler[i],i);
         }
         else if ( type == "Almost Sure" ) {
@@ -929,10 +937,10 @@ public:
     isInitialized_ = false;
   }
 
-  void setStochasticInequality(Teuchos::ParameterList &parlist,
+  void setStochasticInequality(ROL::ParameterList &parlist,
                                const ROL::Ptr<SampleGenerator<Real> > &xsampler,
                                const ROL::Ptr<BatchManager<Real> > &cbman) {
-    std::vector<Teuchos::ParameterList> cparlist(1,parlist);
+    std::vector<ROL::ParameterList> cparlist(1,parlist);
     std::vector<ROL::Ptr<SampleGenerator<Real> > > cxsampler(1,xsampler);
     std::vector<ROL::Ptr<BatchManager<Real> > > ccbman(1,cbman);
     setStochasticInequality(cparlist,cxsampler,ccbman);
@@ -944,67 +952,31 @@ public:
       @param[in]    index  is the inequality constraint index
   */
   Real getSolutionStatistic(int comp = 0, int index = 0) {
-    Teuchos::RCP<Teuchos::ParameterList> parlist;
+    Real val(0);
     if (comp == 0) {
-      parlist = parlistObj_;
+      try {
+        val = dynamicPtrCast<StochasticObjective<Real>>(INTERMEDIATE_obj_)->computeStatistic(*INTERMEDIATE_sol_);
+      }
+      catch (std::exception &e) {
+        throw Exception::NotImplemented(">>> ROL::OptimizationProblem::getSolutionStatistic: Objective does not have computeStatistic function!");
+      }
     }
     else if (comp == 1) {
-      int np = parlistCon_.size();
+      int np = INTERMEDIATE_icon_.size();
       if (np <= index || index < 0) {
         throw Exception::NotImplemented(">>> ROL::OptimizationProblem::getSolutionStatistic: Index out of bounds!");
       }
-      parlist = parlistCon_[index];
+      try {
+        val = dynamicPtrCast<StochasticConstraint<Real>>(INTERMEDIATE_icon_[index])->computeStatistic(*INTERMEDIATE_sol_);
+      }
+      catch (std::exception &e) {
+        throw Exception::NotImplemented(">>> ROL::OptimizationProblem::getSolutionStatistic: Constraint does not have computeStatistic function!");
+      }
     }
     else {
       throw Exception::NotImplemented(">>> ROL::OptimizationProblem::getSolutionStatistic: Component must be either 0 or 1!");
     }
-    if (parlist != ROL::nullPtr) {
-      const RiskVector<Real> x
-        = dynamic_cast<const RiskVector<Real>&>(
-          dynamic_cast<const Vector<Real>&>(*INTERMEDIATE_sol_));
-      std::string type = parlist->sublist("SOL").get("Stochastic Component Type","Risk Neutral");
-      Real val(0);
-      if ( type == "Risk Averse" ) {
-        Teuchos::ParameterList &list
-          = parlist->sublist("SOL").sublist("Risk Measure");
-        std::string risk = list.get("Name","CVaR");
-        if ( risk == "Mixed-Quantile Quadrangle" ) {
-          Teuchos::ParameterList &MQQlist = list.sublist("Mixed-Quantile Quadrangle");
-          Teuchos::Array<Real> coeff
-            = Teuchos::getArrayFromStringParameter<Real>(MQQlist,"Coefficient Array");
-          for (int i = 0; i < coeff.size(); i++) {
-            val += coeff[i]*(*x.getStatistic(comp,index))[i];
-          }
-        }
-        else if ( risk == "Super Quantile Quadrangle" ) {
-          SuperQuantileQuadrangle<Real> sqq(*parlist);
-          val = sqq.computeStatistic(*INTERMEDIATE_sol_);
-        }
-        else if ( risk == "Chebyshev-Kusuoka" ) {
-          ChebyshevKusuoka<Real> sqq(*parlist);
-          val = static_cast<SpectralRisk<Real> >(sqq).computeStatistic(*INTERMEDIATE_sol_);
-        }
-        else if ( risk == "Spectral Risk" ) {
-          SpectralRisk<Real> sqq(*parlist);
-          val = sqq.computeStatistic(*INTERMEDIATE_sol_);
-        }
-        else if ( risk == "Quantile-Radius Quadrangle" ) {
-          Real half(0.5);
-          val = half*((*x.getStatistic(comp,index))[0] + (*x.getStatistic(comp,index))[1]);
-        }
-        else {
-          val = (*x.getStatistic(comp,index))[0];
-        }
-      }
-      else {
-        val = (*x.getStatistic(comp,index))[0];
-      }
-      return val;
-    }
-//    else {
-//      throw Exception::NotImplemented(">>> ROL::OptimizationProblem::getSolutionStatistic: ParameterList is NULL!");
-//    }
-    return 0;
+    return val;
   }
 
   void reset(void) {

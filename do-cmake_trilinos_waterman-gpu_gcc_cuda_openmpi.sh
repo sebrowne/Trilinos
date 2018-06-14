@@ -133,9 +133,9 @@ cmake \
    -D Trilinos_ENABLE_Zoltan2=ON \
    -D Trilinos_ENABLE_STKMesh=OFF \
    -D Trilinos_ENABLE_STKIO=OFF \
-   -D Trilinos_ENABLE_STKTransfer=OFF \
-   -D Trilinos_ENABLE_STKSearch=OFF \
-   -D Trilinos_ENABLE_STKUtil=OFF \
+   -D Trilinos_ENABLE_STKTransfer=ON \
+   -D Trilinos_ENABLE_STKSearch=ON \
+   -D Trilinos_ENABLE_STKUtil=ON \
    -D Trilinos_ENABLE_STKTopology=OFF \
    -D Trilinos_ENABLE_Pamgen=OFF \
    \

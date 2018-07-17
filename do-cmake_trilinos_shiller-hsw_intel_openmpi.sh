@@ -82,7 +82,7 @@ cmake \
    -D Tpetra_INST_DOUBLE=ON \
    -D Tpetra_INST_COMPLEX_FLOAT=OFF \
    -D Tpetra_INST_COMPLEX_DOUBLE=OFF \
-   -D Tpetra_INST_INT_INT=ON \
+   -D Tpetra_INST_INT_INT=OFF \
    -D Tpetra_INST_INT_LONG=OFF \
    -D Tpetra_INST_INT_UNSIGNED=OFF \
    -D Tpetra_INST_INT_LONG_LONG=ON \
@@ -115,6 +115,7 @@ cmake \
    -D Tpetra_INST_OPENMP=ON \
    -D Trilinos_ENABLE_Belos=ON \
    -D Trilinos_ENABLE_Amesos2=ON \
+   -D Amesos2_ENABLE_Epetra=ON \
    -D Amesos2_ENABLE_KLU2=ON \
    -D Trilinos_ENABLE_Ifpack2=ON \
    -D Trilinos_ENABLE_MueLu=ON \

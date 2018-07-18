@@ -47,7 +47,7 @@
 
 #include "Teuchos_Comm.hpp"
 #include "Teuchos_Time.hpp"
-#include "Teuchos_oblackholestream.hpp"
+#include "ROL_Stream.hpp"
 #include "Teuchos_GlobalMPISession.hpp"
 #include "Teuchos_XMLParameterListHelpers.hpp"
 
@@ -68,13 +68,15 @@
 #include "pde_helmholtz.hpp"
 #include "obj_helmholtz.hpp"
 
+#include "ROL_OptimizationSolver.hpp"
+
 typedef double RealT;
 
 int main(int argc, char *argv[]) {
   // This little trick lets us print to std::cout only if a (dummy) command-line argument is provided.
   int iprint     = argc - 1;
   ROL::Ptr<std::ostream> outStream;
-  Teuchos::oblackholestream bhs; // outputs nothing
+  ROL::nullstream bhs; // outputs nothing
 
   /*** Initialize communicator. ***/
   Teuchos::GlobalMPISession mpiSession (&argc, &argv, &bhs);
@@ -270,9 +272,18 @@ int main(int argc, char *argv[]) {
     con->solve(*rp,*up,*zp,tol);
     pdecon->outputTpetraVector(u_ptr,"state_uncontrolled.txt");
 
-    ROL::Algorithm<RealT> algo("Trust Region",*parlist,false);
+    bool useFullSpace = parlist->sublist("Problem").get("Full space",false);
+    ROL::Ptr<ROL::Algorithm<RealT> > algo;
     Teuchos::Time algoTimer("Algorithm Time", true);
-    algo.run(*zp,*robj,true,*outStream);
+    if ( useFullSpace ) {
+      ROL::OptimizationProblem<RealT> optProb(obj, makePtrFromRef(x), con, rp);
+      ROL::OptimizationSolver<RealT> optSolver(optProb, *parlist);
+      optSolver.solve(*outStream);
+    }
+    else {
+      ROL::Algorithm<RealT> algo("Trust Region",*parlist,false);
+      algo.run(*zp,*robj,true,*outStream);
+    }
     algoTimer.stop();
     *outStream << "Total optimization time = " << algoTimer.totalElapsedTime() << " seconds.\n";
 

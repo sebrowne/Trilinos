@@ -46,12 +46,13 @@
 
 #include "ROL_Types.hpp"
 
-#include "Teuchos_ParameterList.hpp"
+#include "ROL_ParameterList.hpp"
 #include "ROL_Ptr.hpp"
 
 #include "ROL_StatusTest.hpp"
 #include "ROL_BundleStatusTest.hpp"
 #include "ROL_ConstraintStatusTest.hpp"
+#include "ROL_FletcherStatusTest.hpp"
 
 namespace ROL {
   template<class Real>
@@ -60,7 +61,7 @@ namespace ROL {
     ~StatusTestFactory(void){}
 
     ROL::Ptr<StatusTest<Real> > getStatusTest(const std::string step,
-                                                  Teuchos::ParameterList &parlist) {
+                                                  ROL::ParameterList &parlist) {
       EStep els = StringToEStep(step);
       switch(els) {
         case STEP_BUNDLE:              return ROL::makePtr<BundleStatusTest<Real>>(parlist);
@@ -71,6 +72,7 @@ namespace ROL {
         case STEP_LINESEARCH:          return ROL::makePtr<StatusTest<Real>>(parlist);
         case STEP_PRIMALDUALACTIVESET: return ROL::makePtr<StatusTest<Real>>(parlist);
         case STEP_TRUSTREGION:         return ROL::makePtr<StatusTest<Real>>(parlist);
+        case STEP_FLETCHER:            return ROL::makePtr<FletcherStatusTest<Real>>(parlist);
         default:                       return ROL::nullPtr;
       } 
     }

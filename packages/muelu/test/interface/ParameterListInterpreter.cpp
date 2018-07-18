@@ -46,6 +46,7 @@
 
 #include <cstdlib>
 #include <fstream>
+#include <algorithm>
 
 #include <Teuchos_UnitTestHarness.hpp>
 #include <Teuchos_XMLParameterListHelpers.hpp>
@@ -115,10 +116,16 @@ int main_(Teuchos::CommandLineProcessor &clp, Xpetra::UnderlyingLib& lib, int ar
   std::vector<std::string> dirList;
   if (runHeavyTests) {
     dirList.push_back("EasyParameterListInterpreter-heavy/");
+#if !(defined(HAVE_MUELU_KOKKOS_REFACTOR) && defined(HAVE_MUELU_KOKKOS_REFACTOR_USE_BY_DEFAULT))
+    // commented since extended xml interface does not support kokkos factories
     dirList.push_back("FactoryParameterListInterpreter-heavy/");
+#endif
   } else {
     dirList.push_back("EasyParameterListInterpreter/");
+#if !(defined(HAVE_MUELU_KOKKOS_REFACTOR) && defined(HAVE_MUELU_KOKKOS_REFACTOR_USE_BY_DEFAULT))
+    // commented since extended xml interface does not support kokkos factories
     dirList.push_back("FactoryParameterListInterpreter/");
+#endif
   }
 #if defined(HAVE_MPI) && defined(HAVE_MUELU_ISORROPIA) && defined(HAVE_AMESOS2_KLU2)
   // The ML interpreter have internal ifdef, which means that the resulting
@@ -137,6 +144,8 @@ int main_(Teuchos::CommandLineProcessor &clp, Xpetra::UnderlyingLib& lib, int ar
   for (int k = 0; k < numLists; k++) {
     Teuchos::ArrayRCP<std::string> fileList = MueLuTests::TestHelpers::GetFileList(dirList[k],
       (numProc == 1 ? std::string(".xml") : std::string("_np" + Teuchos::toString(numProc) + ".xml")));
+
+    std::sort(fileList.begin(),fileList.end());
 
     for (int i = 0; i < fileList.size(); i++) {
       // Set seed
@@ -379,7 +388,9 @@ void run_sed(const std::string& pattern, const std::string& baseFile) {
 #ifdef __APPLE__
   sed_pref = sed_pref +  "\"\" ";
 #endif
-
-  system((sed_pref + pattern + " " + baseFile + ".gold_filtered").c_str());
-  system((sed_pref + pattern + " " + baseFile + ".out_filtered").c_str());
+  int ret;
+  ret = system((sed_pref + pattern + " " + baseFile + ".gold_filtered").c_str());
+  TEUCHOS_ASSERT_EQUALITY(ret,0);
+  ret = system((sed_pref + pattern + " " + baseFile + ".out_filtered").c_str());
+  TEUCHOS_ASSERT_EQUALITY(ret,0);
 }

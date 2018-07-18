@@ -79,7 +79,6 @@ namespace MueLu {
   GetValidParameterList() const {
     RCP<ParameterList> validParamList = rcp(new ParameterList());
 
-    typedef Teuchos::StringToIntegralParameterEntryValidator<int> validatorType;
 #define SET_VALID_ENTRY(name) validParamList->setEntry(name, MasterList::getEntry(name))
     SET_VALID_ENTRY("aggregation: preserve Dirichlet points");
     SET_VALID_ENTRY("aggregation: allow user-specified singletons");
@@ -121,17 +120,22 @@ namespace MueLu {
   DeclareInput(Level& currentLevel) const {
     Input(currentLevel, "Graph");
 
-    // Request the global number of nodes per dimensions
-    if(currentLevel.GetLevelID() == 0) {
-      if(currentLevel.IsAvailable("gNodesPerDim", NoFactory::get())) {
-        currentLevel.DeclareInput("gNodesPerDim", NoFactory::get(), this);
+    ParameterList pL = GetParameterList();
+    std::string coupling = pL.get<std::string>("aggregation: coupling");
+    const bool coupled = (coupling == "coupled" ? true : false);
+    if(coupled) {
+      // Request the global number of nodes per dimensions
+      if(currentLevel.GetLevelID() == 0) {
+        if(currentLevel.IsAvailable("gNodesPerDim", NoFactory::get())) {
+          currentLevel.DeclareInput("gNodesPerDim", NoFactory::get(), this);
+        } else {
+          TEUCHOS_TEST_FOR_EXCEPTION(currentLevel.IsAvailable("gNodesPerDim", NoFactory::get()),
+                                     Exceptions::RuntimeError,
+                                     "gNodesPerDim was not provided by the user on level0!");
+        }
       } else {
-        TEUCHOS_TEST_FOR_EXCEPTION(currentLevel.IsAvailable("gNodesPerDim", NoFactory::get()),
-                                   Exceptions::RuntimeError,
-                                   "gNodesPerDim was not provided by the user on level0!");
+        Input(currentLevel, "gNodesPerDim");
       }
-    } else {
-      Input(currentLevel, "gNodesPerDim");
     }
 
     // Request the local number of nodes per dimensions
@@ -146,8 +150,6 @@ namespace MueLu {
     } else {
       Input(currentLevel, "lNodesPerDim");
     }
-
-    const ParameterList& pL = GetParameterList();
 
     // request special data necessary for OnePtAggregationAlgorithm
     std::string mapOnePtName = pL.get<std::string>("OnePt aggregate map name");
@@ -167,8 +169,15 @@ namespace MueLu {
   Build(Level &currentLevel) const {
     FactoryMonitor m(*this, "Build", currentLevel);
 
-    // RCP<Teuchos::FancyOStream> out = Teuchos::fancyOStream(Teuchos::rcpFromRef(std::cout));
-    // out->setShowAllFrontMatter(false).setShowProcRank(true);
+    RCP<Teuchos::FancyOStream> out;
+    if(const char* dbg = std::getenv("MUELU_STRUCTUREDAGGREGATION_DEBUG")) {
+      out = Teuchos::fancyOStream(Teuchos::rcpFromRef(std::cout));
+    } else {
+      out = Teuchos::getFancyOStream(rcp(new Teuchos::oblackholestream()));
+    }
+    out->setShowAllFrontMatter(false).setShowProcRank(true);
+
+    *out << "Entering structured aggregation" << std::endl;
 
     ParameterList pL = GetParameterList();
     bDefinitionPhase_ = false;  // definition phase is finished, now all aggregation algorithm information is fixed
@@ -191,11 +200,15 @@ namespace MueLu {
     Array<LO> lFineNodesPerDir(3);
     if(currentLevel.GetLevelID() == 0) {
       // On level 0, data is provided by applications and has no associated factory.
-      gFineNodesPerDir = currentLevel.Get<Array<GO> >("gNodesPerDim", NoFactory::get());
+      if(coupled) {
+        gFineNodesPerDir = currentLevel.Get<Array<GO> >("gNodesPerDim", NoFactory::get());
+      }
       lFineNodesPerDir = currentLevel.Get<Array<LO> >("lNodesPerDim", NoFactory::get());
     } else {
       // On level > 0, data is provided directly by generating factories.
-      gFineNodesPerDir = Get<Array<GO> >(currentLevel, "gNodesPerDim");
+      if(coupled) {
+        gFineNodesPerDir = Get<Array<GO> >(currentLevel, "gNodesPerDim");
+      }
       lFineNodesPerDir = Get<Array<LO> >(currentLevel, "lNodesPerDim");
     }
 
@@ -267,9 +280,8 @@ namespace MueLu {
                                                                          minGlobalIndex));
     }
 
-    // *out << "numLocalFineNodes:  " << geoData->getNumLocalFineNodes() << std::endl;
-    // *out << "numGlobalFineNodes: " << geoData->getNumGlobalFineNodes() << std::endl;
 
+    *out << "The index manager has now been built" << std::endl;
     TEUCHOS_TEST_FOR_EXCEPTION(fineMap->getNodeNumElements()
                                != static_cast<size_t>(geoData->getNumLocalFineNodes()),
                                Exceptions::RuntimeError,
@@ -283,17 +295,16 @@ namespace MueLu {
                                  "the number of nodes given by: gNodesPerDim!");
     }
 
+    *out << "Compute coarse mesh data" << std::endl;
     std::vector<std::vector<GO> > coarseMeshData = geoData->getCoarseMeshData();
 
     RCP<const Map> coarseMap;
     Array<LO>  ghostedCoarseNodeCoarseLIDs;
     Array<int> ghostedCoarseNodeCoarsePIDs;
 
-    // *out << "Extract data for ghosted nodes" << std::endl;
+    *out << "Extract data for ghosted nodes" << std::endl;
     geoData->getGhostedNodesData(fineMap, coarseMap, ghostedCoarseNodeCoarseLIDs,
                                  ghostedCoarseNodeCoarsePIDs);
-    // *out << "ghostedCoarseNodeCoarsePIDs: " << ghostedCoarseNodeCoarsePIDs << std::endl;
-    // *out << "ghostedCoarseNodeCoarseLIDs: " << ghostedCoarseNodeCoarseLIDs << std::endl;
 
     // Create aggregates object and set basic parameters
     RCP<Aggregates> aggregates = rcp(new Aggregates(fineMap));
@@ -302,7 +313,6 @@ namespace MueLu {
     std::vector<unsigned> aggStat(geoData->getNumLocalFineNodes(), READY);
     aggregates->SetNumAggregates(geoData->getNumLocalCoarseNodes());
 
-
     // Now we are ready for the big loop over the fine node that will assign each
     // node on the fine grid to an aggregate and a processor.
     LO numNonAggregatedNodes = geoData->getNumLocalFineNodes();
@@ -310,7 +320,7 @@ namespace MueLu {
     ArrayRCP<LO> procWinner   = aggregates->GetProcWinner()  ->getDataNonConst(0);
     LO iGhosted, jGhosted, kGhosted, iCoarse, jCoarse, kCoarse, iRem, jRem, kRem;
     LO ghostedCoarseNodeCoarseLID, aggId, rate;
-    // *out << "Loop over fine nodes and assign them to an aggregate and a rank" << std::endl;
+    *out << "Loop over fine nodes and assign them to an aggregate and a rank" << std::endl;
     for(LO nodeIdx = 0; nodeIdx < geoData->getNumLocalFineNodes(); ++nodeIdx) {
       // Compute coarse ID associated with fine LID
       geoData->getFineNodeGhostedTuple(nodeIdx, iGhosted, jGhosted, kGhosted);
@@ -356,13 +366,9 @@ namespace MueLu {
       --numNonAggregatedNodes;
     }
 
-    // *out << "procWinner: " << procWinner() << std::endl;
-    // *out << "vertex2AggId: " << vertex2AggId() << std::endl;
-
     TEUCHOS_TEST_FOR_EXCEPTION(numNonAggregatedNodes, Exceptions::RuntimeError,
                                "MueLu::StructuredAggregationFactory::Build: Leftover nodes found! Error!");
 
-    // aggregates->AggregatesCrossProcessors(false);
     aggregates->ComputeAggregateSizes(true/*forceRecompute*/);
 
     Set(currentLevel, "Aggregates",         aggregates);

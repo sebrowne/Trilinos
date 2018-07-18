@@ -219,7 +219,7 @@ cmake \
    -D TPL_ENABLE_SuperLUDist=ON \
    -D SuperLUDist_INCLUDE_DIRS:PATH=${SUPERLUDIST_DIR}/SRC \
    -D SuperLUDist_LIBRARY_DIRS:PATH=${SUPERLUDIST_DIR}/lib \
-   -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist_4.2" \
+   -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist" \
    \
    -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi -ldl -lgomp" \
    \

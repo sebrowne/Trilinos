@@ -115,7 +115,7 @@ cmake \
    -D Tpetra_INST_OPENMP=ON \
    -D Trilinos_ENABLE_Belos=ON \
    -D Trilinos_ENABLE_Amesos2=ON \
-   -D Amesos2_ENABLE_Epetra=ON \
+   -D Amesos2_ENABLE_Epetra=OFF \
    -D Amesos2_ENABLE_KLU2=ON \
    -D Trilinos_ENABLE_Ifpack2=ON \
    -D Trilinos_ENABLE_MueLu=ON \

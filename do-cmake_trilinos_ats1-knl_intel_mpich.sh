@@ -137,7 +137,7 @@ cmake \
    \
    -D Trilinos_ENABLE_Gtest=ON \
    \
-   -D Trilinos_ENABLE_TriKota=ON \
+   -D Trilinos_ENABLE_TriKota=OFF \
    -D DAKOTA_ENABLE_TESTS=OFF \
    -D Trilinos_ENABLE_ROL=ON \
    \

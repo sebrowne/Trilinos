@@ -49,8 +49,7 @@
 #include "Stokhos_Tpetra_UQ_PCE.hpp"
 #include "Stokhos_Tpetra_Utilities.hpp"
 #include "Stokhos_Tpetra_Utilities_UQ_PCE.hpp"
-#include "Tpetra_ConfigDefs.hpp"
-#include "Tpetra_DefaultPlatform.hpp"
+#include "Tpetra_Core.hpp"
 #include "Tpetra_Map.hpp"
 #include "Tpetra_MultiVector.hpp"
 #include "Tpetra_Vector.hpp"
@@ -193,7 +192,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ArrayRCP;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space execution_space;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -211,15 +209,13 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   LocalOrdinal pce_size = cijk.dimension();
 
   // Comm
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
 
   // Map
   GlobalOrdinal nrow = 10;
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   ArrayView<const GlobalOrdinal> myGIDs = map->getNodeElementList();
   const size_t num_my_row = myGIDs.size();
 
@@ -283,7 +279,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ArrayRCP;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -302,15 +297,13 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   LocalOrdinal pce_size = cijk.dimension();
 
   // Comm
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
 
   // Map
   GlobalOrdinal nrow = 10;
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   ArrayView<const GlobalOrdinal> myGIDs = map->getNodeElementList();
   const size_t num_my_row = myGIDs.size();
 
@@ -375,7 +368,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ArrayRCP;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -393,15 +385,13 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   LocalOrdinal pce_size = cijk.dimension();
 
   // Comm
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
 
   // Map
   GlobalOrdinal nrow = 10;
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   ArrayView<const GlobalOrdinal> myGIDs = map->getNodeElementList();
   const size_t num_my_row = myGIDs.size();
 
@@ -474,7 +464,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ArrayRCP;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -493,15 +482,13 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   LocalOrdinal pce_size = cijk.dimension();
 
   // Comm
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
 
   // Map
   GlobalOrdinal nrow = 10;
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   ArrayView<const GlobalOrdinal> myGIDs = map->getNodeElementList();
   const size_t num_my_row = myGIDs.size();
 
@@ -577,7 +564,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ArrayRCP;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -596,15 +582,13 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   LocalOrdinal pce_size = cijk.dimension();
 
   // Comm
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
 
   // Map
   GlobalOrdinal nrow = 10;
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   ArrayView<const GlobalOrdinal> myGIDs = map->getNodeElementList();
   const size_t num_my_row = myGIDs.size();
 
@@ -688,7 +672,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ArrayRCP;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -709,12 +692,10 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
 
   // Build banded matrix
   GlobalOrdinal nrow = 13;
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   RCP<Tpetra_CrsGraph> graph =
     rcp(new Tpetra_CrsGraph(map, size_t(2), Tpetra::StaticProfile));
   Array<GlobalOrdinal> columnIndices(2);
@@ -837,7 +818,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ArrayRCP;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -858,12 +838,10 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
 
   // Build banded matrix
   GlobalOrdinal nrow = 10;
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   RCP<Tpetra_CrsGraph> graph =
     rcp(new Tpetra_CrsGraph(map, size_t(2), Tpetra::StaticProfile));
   Array<GlobalOrdinal> columnIndices(2);
@@ -994,7 +972,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ArrayRCP;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -1018,12 +995,10 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
 
   // Build banded matrix
   GlobalOrdinal nrow = 10;
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   RCP<Tpetra_CrsGraph> graph =
     rcp(new Tpetra_CrsGraph(map, size_t(2), Tpetra::StaticProfile));
   Array<GlobalOrdinal> columnIndices(2);
@@ -1154,7 +1129,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ParameterList;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -1176,12 +1150,10 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   // 1-D Laplacian matrix
   GlobalOrdinal nrow = 10;
   BaseScalar h = 1.0 / static_cast<BaseScalar>(nrow-1);
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   RCP<Tpetra_CrsGraph> graph =
     rcp(new Tpetra_CrsGraph(map, size_t(3), Tpetra::StaticProfile));
   Array<GlobalOrdinal> columnIndices(3);
@@ -1331,7 +1303,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::getParametersFromXmlFile;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -1353,12 +1324,10 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   // 1-D Laplacian matrix
   GlobalOrdinal nrow = 10;
   BaseScalar h = 1.0 / static_cast<BaseScalar>(nrow-1);
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   RCP<Tpetra_CrsGraph> graph =
     rcp(new Tpetra_CrsGraph(map, size_t(3), Tpetra::StaticProfile));
   Array<GlobalOrdinal> columnIndices(3);
@@ -1437,7 +1406,7 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   RCP<OP> M = rcp(new Stokhos::MeanBasedTpetraOperator<Scalar,LocalOrdinal,GlobalOrdinal,Node>(M_s));
 #else
   Cijk mean_cijk =
-    Stokhos::create_mean_based_product_tensor<Device,typename Storage::ordinal_type,BaseScalar>();
+    Stokhos::create_mean_based_product_tensor<typename Storage::execution_space,typename Storage::ordinal_type,BaseScalar>();
   Kokkos::setGlobalCijkTensor(mean_cijk);
   RCP<Tpetra_CrsMatrix> mean_matrix = Stokhos::build_mean_matrix(*matrix);
   RCP<OP> mean_matrix_op = mean_matrix;
@@ -1534,7 +1503,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ParameterList;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -1555,12 +1523,10 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
 
   // Build banded matrix
   GlobalOrdinal nrow = 10;
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   RCP<Tpetra_CrsGraph> graph =
     rcp(new Tpetra_CrsGraph(map, size_t(2), Tpetra::StaticProfile));
   Array<GlobalOrdinal> columnIndices(2);
@@ -1710,7 +1676,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ParameterList;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -1731,12 +1696,10 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
 
   // Build banded matrix
   GlobalOrdinal nrow = 10;
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   RCP<Tpetra_CrsGraph> graph =
     rcp(new Tpetra_CrsGraph(map, size_t(2), Tpetra::StaticProfile));
   Array<GlobalOrdinal> columnIndices(2);
@@ -1896,7 +1859,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::getParametersFromXmlFile;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -1918,12 +1880,10 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   // 1-D Laplacian matrix
   GlobalOrdinal nrow = 10;
   BaseScalar h = 1.0 / static_cast<BaseScalar>(nrow-1);
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   RCP<Tpetra_CrsGraph> graph =
     rcp(new Tpetra_CrsGraph(map, size_t(3), Tpetra::StaticProfile));
   Array<GlobalOrdinal> columnIndices(3);
@@ -2002,7 +1962,7 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   RCP<OP> M = rcp(new Stokhos::MeanBasedTpetraOperator<Scalar,LocalOrdinal,GlobalOrdinal,Node>(M_s));
 #else
   Cijk mean_cijk =
-    Stokhos::create_mean_based_product_tensor<Device,typename Storage::ordinal_type,BaseScalar>();
+    Stokhos::create_mean_based_product_tensor<typename Storage::execution_space,typename Storage::ordinal_type,BaseScalar>();
   Kokkos::setGlobalCijkTensor(mean_cijk);
   RCP<Tpetra_CrsMatrix> mean_matrix = Stokhos::build_mean_matrix(*matrix);
   RCP<OP> mean_matrix_op = mean_matrix;
@@ -2120,7 +2080,6 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   using Teuchos::ParameterList;
 
   typedef typename Storage::value_type BaseScalar;
-  typedef typename Storage::execution_space Device;
   typedef Sacado::UQ::PCE<Storage> Scalar;
   typedef typename Scalar::cijk_type Cijk;
 
@@ -2143,12 +2102,10 @@ TEUCHOS_UNIT_TEST_TEMPLATE_4_DECL(
   // 1-D Laplacian matrix
   GlobalOrdinal nrow = 10;
   BaseScalar h = 1.0 / static_cast<BaseScalar>(nrow-1);
-  RCP<const Tpetra_Comm> comm =
-    Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
-  RCP<Node> node = KokkosClassic::Details::getNode<Node>();
+  RCP<const Tpetra_Comm> comm = Tpetra::getDefaultComm();
   RCP<const Tpetra_Map> map =
-    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal>(
-      nrow, comm, node);
+    Tpetra::createUniformContigMapWithNode<LocalOrdinal,GlobalOrdinal,Node>(
+      nrow, comm);
   RCP<Tpetra_CrsGraph> graph = Tpetra::createCrsGraph(map, size_t(3));
   Array<GlobalOrdinal> columnIndices(3);
   ArrayView<const GlobalOrdinal> myGIDs = map->getNodeElementList();

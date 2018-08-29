@@ -63,7 +63,6 @@
 #include "Teuchos_Array.hpp"
 #include "Teuchos_ArrayView.hpp"
 
-#include "Tpetra_DefaultPlatform.hpp"
 #include "Tpetra_Map.hpp"
 #include "Tpetra_Export.hpp"
 #include "Tpetra_Vector.hpp"
@@ -121,7 +120,7 @@ public:
     return true;
   }
 
-  virtual std::size_t selectedIndex(GlobalOrdinal GID,
+  virtual std::size_t selectedIndex(GlobalOrdinal /* GID */,
                                     const std::vector<std::pair<int,LocalOrdinal> > & pid_and_lid) const
   {
     // always choose index of pair with smallest pid

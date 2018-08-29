@@ -10,7 +10,15 @@ if [ "$ATDM_CONFIG_COMPILER" == "DEFAULT" ] ; then
   export ATDM_CONFIG_COMPILER=GNU
 fi
 
-echo "Using hansen/shiller compiler stack $ATDM_CONFIG_COMPILER to build $ATDM_CONFIG_BUILD_TYPE code with Kokkos node type $ATDM_CONFIG_NODE_TYPE"
+if [[ "$ATDM_CONFIG_KOKKOS_ARCH" == "DEFAULT" ]] ; then
+  if [[ "$ATDM_CONFIG_COMPILER" == "CUDA"* ]]; then
+    export ATDM_CONFIG_KOKKOS_ARCH=Kepler37
+  else
+    export ATDM_CONFIG_KOKKOS_ARCH=HSW
+  fi
+fi
+
+echo "Using hansen/shiller compiler stack $ATDM_CONFIG_COMPILER to build $ATDM_CONFIG_BUILD_TYPE code with Kokkos node type $ATDM_CONFIG_NODE_TYPE and KOKKOS_ARCH=$ATDM_CONFIG_KOKKOS_ARCH"
 
 export ATDM_CONFIG_USE_NINJA=ON
 export ATDM_CONFIG_BUILD_COUNT=32
@@ -30,32 +38,30 @@ else
   # temporarily unavailable".  Therefore, we need to run with -j16, not -j32.
 fi
 
-if [ "$ATDM_CONFIG_COMPILER" == "GNU" ]; then
-  export ATDM_CONFIG_KOKKOS_ARCH=HSW
+if [[ "$ATDM_CONFIG_COMPILER" == "GNU" && "$ATDM_CONFIG_KOKKOS_ARCH" == "HSW" ]] ; then
   module load devpack/openmpi/2.1.1/gcc/4.9.3/cuda/8.0.61
   export OMPI_CXX=`which g++`
   export OMPI_CC=`which gcc`
   export OMPI_FC=`which gfortran`
   export ATDM_CONFIG_LAPACK_LIB="-L${LAPACK_ROOT}/lib;-llapack;-lgfortran"
   export ATDM_CONFIG_BLAS_LIB="-L${BLAS_ROOT}/lib;-lblas;-lgfortran"
-elif [ "$ATDM_CONFIG_COMPILER" == "INTEL" ]; then
+elif [[ "$ATDM_CONFIG_COMPILER" == "INTEL" && "$ATDM_CONFIG_KOKKOS_ARCH" == "HSW" ]] ; then
   module load devpack/openmpi/2.1.1/intel/17.4.196/cuda/none
   export OMPI_CXX=`which icpc`
   export OMPI_CC=`which icc`
   export OMPI_FC=`which ifort`
   export ATDM_CONFIG_LAPACK_LIB="-mkl"
   export ATDM_CONFIG_BLAS_LIB="-mkl"
-elif [[ "$ATDM_CONFIG_COMPILER" == "CUDA"* ]]; then
+elif [[ "$ATDM_CONFIG_COMPILER" == "CUDA"* && "$ATDM_CONFIG_KOKKOS_ARCH" == "Kepler37" ]] ; then
   if [[ "$ATDM_CONFIG_COMPILER" == "CUDA" ]] ; then
     export ATDM_CONFIG_COMPILER=CUDA-8.0  # The default CUDA version currently
   fi
   if [[ "$ATDM_CONFIG_COMPILER" == "CUDA-8.0" ]] ; then
-    export ATDM_CONFIG_KOKKOS_ARCH=Kepler37
     module load devpack/openmpi/2.1.1/gcc/4.9.3/cuda/8.0.61
   elif [[ "$ATDM_CONFIG_COMPILER" == "CUDA-9.0" ]] ; then
-    export ATDM_CONFIG_KOKKOS_ARCH=Kepler37
     module load devpack/openmpi/2.1.1/gcc/4.9.3/cuda/9.0.176
   else
+      echo
       echo "***"
       echo "*** ERROR: COMPILER=$ATDM_CONFIG_COMPILER is not a supported version of CUDA on this system!"
       echo "***"
@@ -76,8 +82,17 @@ elif [[ "$ATDM_CONFIG_COMPILER" == "CUDA"* ]]; then
   export ATDM_CONFIG_CTEST_PARALLEL_LEVEL=8
   # Avoids timeouts due to not running on seprate GPUs (see #2446)
 else
+  echo
   echo "***"
-  echo "*** ERROR: COMPILER=$ATDM_CONFIG_COMPILER is not supported on this system!"
+  echo "*** ERROR: KOKKOS_ARCH=$ATDM_CONFIG_KOKKOS_ARCH with compiler=$ATDM_CONFIG_COMPILER "
+  echo "*** is not a supported combination on this system. Supported compilers are: "
+  echo "*** gnu, intel, cuda-8.0, and cuda-9.0"
+  echo "*** Please be aware that you do not need to specify KOKKOS_ARCH on this system because the "
+  echo "*** the defaults are the only reasonable choices"
+  echo "***"
+  echo "*** FYI:"
+  echo "*** 'HSW' (Haswell) will be used for all non-CUDA compiler builds and "
+  echo "*** 'Kepler37' (Kepler K-80 GPU) will be used for all CUDA builds"
   echo "***"
   return
 fi

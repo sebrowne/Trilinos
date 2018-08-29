@@ -59,6 +59,7 @@
 #include "Kokkos_DualView.hpp"
 #include "Kokkos_StaticCrsGraph.hpp"
 
+#include "Teuchos_CommHelpers.hpp"
 #include "Teuchos_Describable.hpp"
 #include "Teuchos_ParameterListAcceptorDefaultBase.hpp"
 
@@ -561,7 +562,7 @@ namespace Tpetra {
     ///   default values.
     CrsGraph (const local_graph_type& lclGraph,
               const Teuchos::RCP<const map_type>& rowMap,
-              const Teuchos::RCP<const map_type>& colMap = Teuchos::null,
+              const Teuchos::RCP<const map_type>& colMap,
               const Teuchos::RCP<const map_type>& domainMap = Teuchos::null,
               const Teuchos::RCP<const map_type>& rangeMap = Teuchos::null,
               const Teuchos::RCP<Teuchos::ParameterList>& params = Teuchos::null);

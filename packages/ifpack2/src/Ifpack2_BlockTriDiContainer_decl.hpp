@@ -55,8 +55,6 @@
 #include <type_traits>
 #include <string>
 
-#include "Ifpack2_BlockTriDiContainer_impl.hpp"
-
 namespace Ifpack2 {
 
   /// \class BlockTriDiContainer
@@ -88,8 +86,46 @@ namespace Ifpack2 {
   /// user-provided column Map.
   ///
   /// Currently, this class is expected to perform well on conventional CPU and
-  /// Intel Xeon Phi. It does *not* yet perform well on GPU.
+  /// Intel Xeon Phi (reaching the ceiling of the bandwidth utilization) and 
+  /// perform reasonably well on GPU (comparable to Intel Xeon Phi performance).
+  /// The main performance issue on GPU is block sparse matrix vector multiplication
+  /// which does not use a SIMD format.
+  ///
+  /// Implementation specific comments:
+  ///  - When ETI is not enabled, do not use something like "using namepsace KokkosBatched::Experimental".
+  ///    Albany (or any applications) can use the same struct name (in this case Albany uses Side).
+  ///  - Use an impl pointer to hide details. If you use an object inside of an Ifpack container,  
+  ///    it requires a complete definition of the member object, which needs to expose an impl details 
+  ///    header. However, a pointer does not require a complete definition of the member objects.
+  ///  - Always test with complex even if this code is not used with complex. 
+  ///  - Always check a non MPI build to check MPI is guarded by #ifdef HAVE_IFPACK2_MPI
+  ///  - Do not trust CMake variables and macros because you see the variables in the file. If you use
+  ///    CMake varialbes and macro definitions, check Ifpack2_config.h. 
+  ///  - Always better remove warnings (shadows and signed/unsinged comparison). If the code is used by 
+  ///    other customers, they may have a different software quality standard. It is better to follow 
+  ///    a higher quality standard.
 
+  ///
+  /// Impl Tag
+  ///
+  namespace BlockTriDiContainerDetails {
+    ///
+    /// impl tag to distinguish built-in types and sacado types
+    ///
+    struct ImplNotAvailTag {};
+    struct ImplSimdTag {};
+    struct ImplSacadoTag {};
+
+    template<typename T> struct ImplTag                        { typedef ImplNotAvailTag type; };
+    template<>           struct ImplTag<float>                 { typedef ImplSimdTag type;     };
+    template<>           struct ImplTag<double>                { typedef ImplSimdTag type;     };
+    template<>           struct ImplTag<std::complex<float> >  { typedef ImplSimdTag type;     };
+    template<>           struct ImplTag<std::complex<double> > { typedef ImplSimdTag type;     };
+
+    /// forward declaration 
+    template<typename MatrixType> struct ImplObject;
+  }
+  
   ///
   /// Primary declation
   ///
@@ -365,28 +401,8 @@ namespace Ifpack2 {
     //! If \c true, the container has been successfully computed.
     bool IsComputed_;
 
-    using impl_type = BlockTriDiContainerDetails::ImplType<MatrixType>;
-    using part_interface_type = BlockTriDiContainerDetails::PartInterface<MatrixType>;
-    using block_tridiags_type = BlockTriDiContainerDetails::BlockTridiags<MatrixType>;
-    using amd_type = BlockTriDiContainerDetails::AmD<MatrixType>;
-    using norm_manager_type = BlockTriDiContainerDetails::NormManager<MatrixType>;
-    using async_import_type = BlockTriDiContainerDetails::AsyncableImport<MatrixType>;
-
-    // distructed objects
-    Teuchos::RCP<const typename impl_type::tpetra_block_crs_matrix_type> A_;
-    Teuchos::RCP<const typename impl_type::tpetra_import_type> tpetra_importer_;
-    Teuchos::RCP<async_import_type> async_importer_;
-    bool overlap_communication_and_computation_;
-
-    // copy of Y (mutable to penentrate const)
-    mutable typename impl_type::tpetra_multivector_type Z_;
-
-    // local objects
-    part_interface_type part_interface_;
-    block_tridiags_type block_tridiags_; // D
-    amd_type a_minus_d_; // R = A - D
-    mutable typename impl_type::vector_type_1d_view work_; // right hand side workspace
-    mutable norm_manager_type norm_manager_;
+    // hide details of impl using ImplObj; finally I understand why AMB did that way.
+    Teuchos::RCP<BlockTriDiContainerDetails::ImplObject<MatrixType> > impl_;
     
     // initialize distributed and local objects
     void initInternal (const Teuchos::RCP<const row_matrix_type>& matrix,

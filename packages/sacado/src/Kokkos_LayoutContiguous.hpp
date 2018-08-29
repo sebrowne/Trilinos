@@ -30,8 +30,7 @@
 #ifndef KOKKOS_LAYOUT_CONTIGUOUS_HPP
 #define KOKKOS_LAYOUT_CONTIGUOUS_HPP
 
-#include "Kokkos_Core.hpp"
-#include "Kokkos_Macros.hpp"
+#include "Kokkos_Core_fwd.hpp"
 #include "Kokkos_Layout.hpp"
 
 namespace Kokkos {
@@ -85,23 +84,8 @@ struct inner_layout< LayoutContiguous<Layout> > {
   typedef Layout type;
 };
 
-template <class Layout, int32_t N>
-struct inner_layout< LayoutContiguous<Layout, N> > {
-  typedef Layout type;
-};
-
-template <class Layout, int64_t N>
-struct inner_layout< LayoutContiguous<Layout, N> > {
-  typedef Layout type;
-};
-
-template <class Layout, uint32_t N>
-struct inner_layout< LayoutContiguous<Layout, N> > {
-  typedef Layout type;
-};
-
-template <class Layout, uint64_t N>
-struct inner_layout< LayoutContiguous<Layout, N> > {
+template <class Layout, unsigned Stride>
+struct inner_layout< LayoutContiguous<Layout, Stride> > {
   typedef Layout type;
 };
 

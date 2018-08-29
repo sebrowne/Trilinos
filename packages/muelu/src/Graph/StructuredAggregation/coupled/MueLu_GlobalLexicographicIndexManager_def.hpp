@@ -86,23 +86,32 @@ namespace MueLu {
     }
 
     this->computeMeshParameters();
+    computeGlobalCoarseParameters();
 
   }
 
   template <class LocalOrdinal, class GlobalOrdinal, class Node>
   void GlobalLexicographicIndexManager<LocalOrdinal, GlobalOrdinal, Node>::
-  getGhostedNodesData(const RCP<const Map> fineMap, RCP<const Map> coarseMap,
-                     Array<LO>& ghostedNodeCoarseLIDs, Array<int>& ghostedNodeCoarsePIDs) const {
+  computeGlobalCoarseParameters() {
+    this->gNumCoarseNodes10 = this->gCoarseNodesPerDir[0]*this->gCoarseNodesPerDir[1];
+    this->gNumCoarseNodes   = this->gNumCoarseNodes10*this->gCoarseNodesPerDir[2];
+  }
+
+  template <class LocalOrdinal, class GlobalOrdinal, class Node>
+  void GlobalLexicographicIndexManager<LocalOrdinal, GlobalOrdinal, Node>::
+  getGhostedNodesData(const RCP<const Map> fineMap,
+                     Array<LO>& ghostedNodeCoarseLIDs, Array<int>& ghostedNodeCoarsePIDs, Array<GO>&ghostedNodeCoarseGIDs) const {
 
     ghostedNodeCoarseLIDs.resize(this->getNumLocalGhostedNodes());
     ghostedNodeCoarsePIDs.resize(this->getNumLocalGhostedNodes());
+    ghostedNodeCoarseGIDs.resize(this->numGhostedNodes);
 
     // Find the GIDs, LIDs and PIDs of the coarse points on the fine mesh and coarse
     // mesh as this data will be used to fill vertex2AggId and procWinner vectors.
     Array<GO> lCoarseNodeCoarseGIDs(this->lNumCoarseNodes),
       lCoarseNodeFineGIDs(this->lNumCoarseNodes);
-    Array<GO> ghostedNodeCoarseGIDs(this->numGhostedNodes),
-      ghostedCoarseNodeFineGIDs(this->numGhostedNodes);
+    //Array<GO> ghostedNodeCoarseGIDs(this->numGhostedNodes);
+      Array<GO> ghostedCoarseNodeFineGIDs(this->numGhostedNodes);
     Array<LO> ghostedCoarseNodeCoarseIndices(3), ghostedCoarseNodeFineIndices(3), ijk(3);
     LO currentIndex = -1, /*coarseNodeFineLID = -1,*/ currentCoarseIndex = -1;
     for(ijk[2] = 0; ijk[2] < this->ghostedNodesPerDir[2]; ++ijk[2]) {
@@ -173,14 +182,12 @@ namespace MueLu {
       }
     }
 
-    coarseMap = Xpetra::MapFactory<LO,GO,NO>::Build (fineMap->lib(),
-                                                     this->gNumCoarseNodes,
-                                                     lCoarseNodeCoarseGIDs(),
-                                                     fineMap->getIndexBase(),
-                                                     fineMap->getComm());
+    RCP<const Map> coarseMap = Xpetra::MapFactory<LO,GO,NO>::Build (fineMap->lib(),
+                                                                    this->gNumCoarseNodes,
+                                                                    lCoarseNodeCoarseGIDs(),
+                                                                    fineMap->getIndexBase(),
+                                                                    fineMap->getComm());
 
-    // Array<int> ghostedCoarseNodeCoarsePIDs(this->numGhostedNodes);
-    // Array<LO>  ghostedCoarseNodeCoarseLIDs(this->numGhostedNodes);
     coarseMap->getRemoteIndexList(ghostedNodeCoarseGIDs(),
                                   ghostedNodeCoarsePIDs(),
                                   ghostedNodeCoarseLIDs());

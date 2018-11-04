@@ -23,8 +23,6 @@ LINK_FLAGS="-g1 -mkl -xMIC-AVX512"
 TRILINOS_HOME=$(cd ..; pwd)
 
 # Shouldn't need to change anything below this line
-BUILD=${SPARC_ARCH}_${SPARC_COMPILER}_${SPARC_MPI}
-
 if [[ ${1} == 'opt' || ${2} == 'opt' ]]
 then
   BUILD_TYPE=RELEASE
@@ -39,11 +37,17 @@ else
   BUILD_SUFFIX=opt
 fi
 
+TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
+TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_openmp_${SPARC_MPI}_static_${BUILD_SUFFIX}
+
+echo " *** Installing in: ${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR}"
+sleep 5
+
 rm -f CMakeCache.txt; rm -rf CMakeFiles
 
 cmake \
    -D CMAKE_VERBOSE_MAKEFILE=FALSE \
-   -D CMAKE_INSTALL_PREFIX:PATH=${TRILINOS_HOME}/${BUILD}_static_${BUILD_SUFFIX} \
+   -D CMAKE_INSTALL_PREFIX:PATH=${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR} \
    -D CMAKE_BUILD_TYPE:STRING=${BUILD_TYPE} \
    -D BUILD_SHARED_LIBS=OFF \
    \
@@ -188,9 +192,9 @@ cmake \
    -D ParMETIS_LIBRARY_DIRS:PATH=${PARMETIS_DIR}/lib \
    \
    -D TPL_ENABLE_SuperLUDist=ON \
-   -D SuperLUDist_INCLUDE_DIRS:PATH=${SUPERLUDIST_DIR}/SRC \
+   -D SuperLUDist_INCLUDE_DIRS:PATH=${SUPERLUDIST_DIR}/include \
    -D SuperLUDist_LIBRARY_DIRS:PATH=${SUPERLUDIST_DIR}/lib \
-   -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist_4.2" \
+   -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist" \
    \
    -D Trilinos_EXTRA_LINK_FLAGS:STRING="-L${MPI_DIR}/lib -lmpich" \
    \

@@ -19,13 +19,13 @@ CEE_CLANG=cee-cpu_clang-5.0.1_serial_openmpi-1.10.2_static    # sparc developmen
 CEE_GCC=cee-cpu_gcc-7.2.0_serial_openmpi-1.10.2_shared        # sierra development default
 CEE_INTEL=cee-cpu_intel-17.0.1_serial_intelmpi-5.1.2_static   # sierra production default
 CEE_ATS1=cee-cpu_intel-18.0.2_openmp_mpich2-3.2_static        # ats-1 surrogate
-CEE_ATS2=cee-gpu_cuda-9.2.88_gcc-7.2.0_openmpi-1.10.2_static # ats-2 surrogate
+CEE_ATS2=cee-gpu_cuda-9.2.88_gcc-7.2.0_openmpi-1.10.2_static  # ats-2 surrogate
 
 # HPCs
 ATS1_HSW=ats1-hsw_intel-18.0.2_openmp_mpich-7.7.1_static	# ats-1/hsw
 ATS1_KNL=ats1-knl_intel-18.0.2_openmp_mpich-7.7.1_static	# ats-1/knl
 CTS1_BDW=cts1-bdw_intel-17.0.1_openmp_openmpi-1.10.5_static	# cts-1/bdw
-CTS1_P100=cts1-p100_gcc-7.2.0_cuda-9.2.88_openmpi-1.10.5_static # cts-1/p100
+CTS1_P100=cts1-p100_gcc-6.3.1_cuda-9.2.88_openmpi-2.1.1_static  # cts-1/p100
 TLCC2_SNB=tlcc2-snb_intel-17.0.1_openmp_openmpi-1.10.5_static   # tlcc2/snb
 
 # Testbeds
@@ -111,8 +111,8 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'cts1' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-bdw/Trilinos; fi
     module purge && module load sparc-dev/intel
-    cd ${CTS1_HSW}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
-    cd ${CTS1_HSW}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    cd ${CTS1_BDW}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
+    cd ${CTS1_BDW}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-p100/Trilinos; fi
     module purge && module load sparc-dev/cuda-gcc

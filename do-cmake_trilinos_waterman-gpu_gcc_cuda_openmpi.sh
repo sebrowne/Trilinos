@@ -23,8 +23,6 @@ LINK_FLAGS=""
 TRILINOS_HOME=$(cd ..; pwd)
 
 # Shouldn't need to change anything below this line
-BUILD=${SPARC_ARCH}_${SPARC_COMPILER}_${SPARC_MPI}
-
 if [[ ${1} == 'static' || ${2} == 'static' ]]
 then
   LINK_SHARED=OFF
@@ -63,11 +61,17 @@ else
   BUILD_SUFFIX=opt
 fi
 
+TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
+TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_${SPARC_MPI}_${LINK_SUFFIX}_${BUILD_SUFFIX}
+
+echo " *** Installing in: ${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR}"
+sleep 5
+
 rm -f CMakeCache.txt; rm -rf CMakeFiles
 
 cmake \
    -D CMAKE_VERBOSE_MAKEFILE=FALSE \
-   -D CMAKE_INSTALL_PREFIX:PATH=${TRILINOS_HOME}/${BUILD}_${LINK_SUFFIX}_${BUILD_SUFFIX} \
+   -D CMAKE_INSTALL_PREFIX:PATH=${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR} \
    -D CMAKE_BUILD_TYPE:STRING=${BUILD_TYPE} \
    -D BUILD_SHARED_LIBS=${LINK_SHARED} \
    \
@@ -140,7 +144,7 @@ cmake \
    -D Trilinos_ENABLE_STKTopology=OFF \
    -D Trilinos_ENABLE_Pamgen=OFF \
    \
-   -D Ifpack2_ENABLE_TESTS=ON \
+   -D Ifpack2_ENABLE_TESTS=OFF \
    \
    -D Trilinos_ENABLE_Intrepid2=OFF \
    \

@@ -130,18 +130,18 @@ namespace Experimental {
 /// }
 /// \endcode
 ///
-template<class Scalar = ::Tpetra::Details::DefaultTypes::scalar_type,
-         class LO = ::Tpetra::Details::DefaultTypes::local_ordinal_type,
-         class GO = ::Tpetra::Details::DefaultTypes::global_ordinal_type,
-         class Node = ::Tpetra::Details::DefaultTypes::node_type>
+template<class Scalar,
+         class LO,
+         class GO,
+         class Node>
 class BlockCrsMatrix :
-  virtual public Tpetra::RowMatrix<Scalar, LO, GO, Node>,
-  virtual public Tpetra::DistObject<char, LO, GO, Node>
+  virtual public ::Tpetra::RowMatrix<Scalar, LO, GO, Node>,
+  virtual public ::Tpetra::DistObject<char, LO, GO, Node>
 {
 private:
-  typedef Tpetra::DistObject<char, LO, GO, Node> dist_object_type;
-  typedef BlockMultiVector<Scalar, LO, GO, Node> BMV;
-  typedef Teuchos::ScalarTraits<Scalar> STS;
+  using dist_object_type = ::Tpetra::DistObject<char, LO, GO, Node>;
+  using BMV = BlockMultiVector<Scalar, LO, GO, Node>;
+  using STS = Teuchos::ScalarTraits<Scalar>;
 
 protected:
   //! Implementation detail; tells
@@ -152,7 +152,7 @@ public:
   //@{
 
   //! The type of entries in the matrix (that is, of each entry in each block).
-  typedef Scalar scalar_type;
+  using scalar_type = Scalar;
 
   /// \brief The implementation type of entries in the matrix.
   ///
@@ -160,7 +160,7 @@ public:
   /// work correctly for Scalar types like std::complex<T>, which lack
   /// the necessary CUDA device macros and volatile overloads to work
   /// correctly with Kokkos.
-  typedef typename BlockMultiVector<Scalar, LO, GO, Node>::impl_scalar_type impl_scalar_type;
+  using impl_scalar_type = typename BMV::impl_scalar_type;
 
   //! The type of local indices.
   typedef LO local_ordinal_type;
@@ -182,9 +182,9 @@ public:
   //! The implementation of Map that this class uses.
   typedef ::Tpetra::Map<LO, GO, node_type> map_type;
   //! The implementation of MultiVector that this class uses.
-  typedef Tpetra::MultiVector<Scalar, LO, GO, node_type> mv_type;
+  typedef ::Tpetra::MultiVector<Scalar, LO, GO, node_type> mv_type;
   //! The implementation of CrsGraph that this class uses.
-  typedef Tpetra::CrsGraph<LO, GO, node_type> crs_graph_type;
+  typedef ::Tpetra::CrsGraph<LO, GO, node_type> crs_graph_type;
 
   //! The type used to access nonconst matrix blocks.
   typedef Kokkos::View<impl_scalar_type**,
@@ -337,7 +337,7 @@ public:
   LO getBlockSize () const { return blockSize_; }
 
   //! Get the (mesh) graph.
-  virtual Teuchos::RCP<const Tpetra::RowGraph<LO,GO,Node> > getGraph () const;
+  virtual Teuchos::RCP<const ::Tpetra::RowGraph<LO,GO,Node> > getGraph () const;
 
   const crs_graph_type & getCrsGraph () const { return graph_; }
 
@@ -357,8 +357,8 @@ public:
   /// Not Implemented
   void
   gaussSeidelCopy (MultiVector<Scalar,LO,GO,Node> &X,
-                   const MultiVector<Scalar,LO,GO,Node> &B,
-                   const MultiVector<Scalar,LO,GO,Node> &D,
+                   const ::Tpetra::MultiVector<Scalar,LO,GO,Node> &B,
+                   const ::Tpetra::MultiVector<Scalar,LO,GO,Node> &D,
                    const Scalar& dampingFactor,
                    const ESweepDirection direction,
                    const int numSweeps,
@@ -368,9 +368,9 @@ public:
   ///
   /// Not Implemented
   void
-  reorderedGaussSeidelCopy (MultiVector<Scalar,LO,GO,Node>& X,
-                            const MultiVector<Scalar,LO,GO,Node>& B,
-                            const MultiVector<Scalar,LO,GO,Node>& D,
+  reorderedGaussSeidelCopy (::Tpetra::MultiVector<Scalar,LO,GO,Node>& X,
+                            const ::Tpetra::MultiVector<Scalar,LO,GO,Node>& B,
+                            const ::Tpetra::MultiVector<Scalar,LO,GO,Node>& D,
                             const Teuchos::ArrayView<LO>& rowIndices,
                             const Scalar& dampingFactor,
                             const ESweepDirection direction,
@@ -735,29 +735,29 @@ protected:
   /// Users don't have to worry about these methods.
   //@{
 
-  virtual bool checkSizes (const Tpetra::SrcDistObject& source);
+  virtual bool checkSizes (const ::Tpetra::SrcDistObject& source);
 
   virtual void
-  copyAndPermute (const Tpetra::SrcDistObject& source,
+  copyAndPermute (const ::Tpetra::SrcDistObject& source,
                   size_t numSameIDs,
                   const Teuchos::ArrayView<const LO>& permuteToLIDs,
                   const Teuchos::ArrayView<const LO>& permuteFromLIDs);
 
   virtual void
-  packAndPrepare (const Tpetra::SrcDistObject& source,
+  packAndPrepare (const ::Tpetra::SrcDistObject& source,
                   const Teuchos::ArrayView<const LO>& exportLIDs,
                   Teuchos::Array<packet_type>& exports,
                   const Teuchos::ArrayView<size_t>& numPacketsPerLID,
                   size_t& constantNumPackets,
-                  Tpetra::Distributor& distor);
+                  ::Tpetra::Distributor& distor);
 
   virtual void
   unpackAndCombine (const Teuchos::ArrayView<const LO> &importLIDs,
                     const Teuchos::ArrayView<const packet_type> &imports,
                     const Teuchos::ArrayView<size_t> &numPacketsPerLID,
                     size_t constantNumPackets,
-                    Tpetra::Distributor& distor,
-                    Tpetra::CombineMode CM);
+                    ::Tpetra::Distributor& distor,
+                    ::Tpetra::CombineMode CM);
   //@}
 
 private:
@@ -903,6 +903,18 @@ public:
     val_.template modify<typename MemorySpace::memory_space> ();
   }
 
+  //! Mark the matrix's valueas as modified in host space
+  inline void modify_host()
+  {
+    val_.modify_host();
+  }
+
+  //! Mark the matrix's valueas as modified in device space
+  inline void modify_device()
+  {
+    val_.modify_device();
+  }
+
   //! Whether the matrix's values need sync'ing to the given memory space.
   template<class MemorySpace>
   bool need_sync () const
@@ -916,6 +928,18 @@ public:
     return val_.template need_sync<typename MemorySpace::memory_space> ();
   }
 
+  //! Whether the matrix's values need sync'ing to host space
+  inline bool need_sync_host() const
+  {
+    return val_.need_sync_host();
+  }
+
+  //! Whether the matrix's values need sync'ing to device space
+  inline bool need_sync_device() const
+  {
+    return val_.need_sync_device();
+  }
+
   //! Sync the matrix's values <i>to</i> the given memory space.
   template<class MemorySpace>
   void sync ()
@@ -927,6 +951,18 @@ public:
     // However, insisting on a memory space avoids unnecessary
     // instantiations.
     val_.template sync<typename MemorySpace::memory_space> ();
+  }
+
+  //! Sync the matrix's values to host space
+  inline void sync_host()
+  {
+    val_.sync_host();
+  }
+
+  //! Sync the matrix's values to device space
+  inline void sync_device()
+  {
+    val_.sync_device();
   }
 
   /// \brief Get the host or device View of the matrix's values (\c val_).
@@ -943,10 +979,24 @@ public:
   /// allocations generally are not lazy; that way, the host fill
   /// interface always works in a thread-parallel context without
   /// needing to synchronize on the allocation.
+  ///
+  /// CT: While we reserved the "right" we ignored this and explicitly did const cast away
+  /// Hence I made the non-templated functions const. 
+
   template<class MemorySpace>
   auto getValues () -> decltype (val_.template view<typename MemorySpace::memory_space> ())
   {
     return val_.template view<typename MemorySpace::memory_space> ();
+  }
+
+  // \brief Get the host view of the matrix's values
+  inline typename Kokkos::DualView<impl_scalar_type*, device_type>::t_host getValuesHost () const {
+    return val_.view_host();
+  }
+
+  // \brief Get the device view of the matrix's values
+  inline typename Kokkos::DualView<impl_scalar_type*, device_type>::t_dev getValuesDevice () const {
+    return val_.view_device();
   }
 
   //@}
@@ -1239,7 +1289,7 @@ public:
   /// same diagonal element.  You may combine these overlapping
   /// diagonal elements by doing an Export from the row Map Vector
   /// to a range Map Vector.
-  virtual void getLocalDiagCopy (Vector<Scalar,LO,GO,Node>& diag) const;
+  virtual void getLocalDiagCopy (::Tpetra::Vector<Scalar,LO,GO,Node>& diag) const;
 
   //@}
   //! \name Mathematical methods
@@ -1250,14 +1300,14 @@ public:
    *
    * On return, for all entries i,j in the matrix, \f$A(i,j) = x(i)*A(i,j)\f$.
    */
-  virtual void leftScale (const Vector<Scalar, LO, GO, Node>& x);
+  virtual void leftScale (const ::Tpetra::Vector<Scalar, LO, GO, Node>& x);
 
   /**
    * \brief Scale the RowMatrix on the right with the given Vector x.
    *
    * On return, for all entries i,j in the matrix, \f$A(i,j) = x(j)*A(i,j)\f$.
    */
-  virtual void rightScale (const Vector<Scalar, LO, GO, Node>& x);
+  virtual void rightScale (const ::Tpetra::Vector<Scalar, LO, GO, Node>& x);
 
   /// \brief The Frobenius norm of the matrix.
   ///
@@ -1267,7 +1317,7 @@ public:
   /// \f$\|A\|_F = \sqrt{ \sum_{i,j} |A(i,j)|^2 }\f$.
   /// It has the same value as the Euclidean norm of a vector made
   /// by stacking the columns of \f$A\f$.
-  virtual typename Tpetra::RowMatrix<Scalar, LO, GO, Node>::mag_type
+  virtual typename ::Tpetra::RowMatrix<Scalar, LO, GO, Node>::mag_type
   getFrobeniusNorm () const;
   //@}
 };

@@ -950,13 +950,13 @@ public:
       // on host.
 #ifdef HAVE_TPETRA_DEBUG
       TEUCHOS_TEST_FOR_EXCEPTION
-        (this->template need_sync<Kokkos::HostSpace> (), std::runtime_error,
+        (this->need_sync_host (), std::runtime_error,
          prefix << "The matrix's values need sync on both device and host.");
 #endif // HAVE_TPETRA_DEBUG
-      this->template modify<Kokkos::HostSpace> ();
-      Kokkos::deep_copy (this->template getValues<Kokkos::HostSpace> (), alpha);
+      this->modify_host ();
+      Kokkos::deep_copy (getValuesHost (), alpha);
     }
-    else if (this->template need_sync<Kokkos::HostSpace> ()) {
+    else if (this->need_sync_host ()) {
       // If we need to sync to host, then the data were last modified
       // on device.  In that case, we should again modify them on
       // device.
@@ -1005,7 +1005,7 @@ public:
 
 #ifdef HAVE_TPETRA_DEBUG
     TEUCHOS_TEST_FOR_EXCEPTION
-      (this->template need_sync<Kokkos::HostSpace> (), std::runtime_error,
+      (this->need_sync_host (), std::runtime_error,
        prefix << "The matrix's data were last modified on device, but have "
        "not been sync'd to host.  Please sync to host (by calling "
        "sync<Kokkos::HostSpace>() on this matrix) before calling this "
@@ -1017,7 +1017,7 @@ public:
     // data).
     typedef BlockCrsMatrix<Scalar, LO, GO, Node> this_type;
     auto vals_host_out =
-      const_cast<this_type*> (this)->template getValues<Kokkos::HostSpace> ();
+      getValuesHost ();
     impl_scalar_type* vals_host_out_raw = vals_host_out.data ();
 
     for (LO k = 0; k < numColInds; ++k, pointOffset += perBlockSize) {
@@ -1398,7 +1398,7 @@ public:
         const_little_block_type A_new =
           getConstLocalBlockFromInput (vIn, pointOffset);
 
-        Impl::absMax (A_old, A_new);
+        ::Tpetra::Experimental::Impl::absMax (A_old, A_new);
         hint = relBlockOffset + 1;
         ++validCount;
       }
@@ -1439,7 +1439,7 @@ public:
 
 #ifdef HAVE_TPETRA_DEBUG
     TEUCHOS_TEST_FOR_EXCEPTION
-      (this->template need_sync<Kokkos::HostSpace> (), std::runtime_error,
+      (this->need_sync_host (), std::runtime_error,
        prefix << "The matrix's data were last modified on device, but have not "
        "been sync'd to host.  Please sync to host (by calling "
        "sync<Kokkos::HostSpace>() on this matrix) before calling this method.");
@@ -1450,7 +1450,7 @@ public:
     // data).
     typedef BlockCrsMatrix<Scalar, LO, GO, Node> this_type;
     auto vals_host_out =
-      const_cast<this_type*> (this)->template getValues<Kokkos::HostSpace> ();
+      getValuesHost ();
     impl_scalar_type* vals_host_out_raw = vals_host_out.data ();
 
     for (LO k = 0; k < numColInds; ++k, pointOffset += perBlockSize) {
@@ -1509,7 +1509,7 @@ public:
 
 #ifdef HAVE_TPETRA_DEBUG
       TEUCHOS_TEST_FOR_EXCEPTION
-        (this->template need_sync<Kokkos::HostSpace> (), std::runtime_error,
+        (this->need_sync_host (), std::runtime_error,
          prefix << "The matrix's data were last modified on device, but have "
          "not been sync'd to host.  Please sync to host (by calling "
          "sync<Kokkos::HostSpace>() on this matrix) before calling this "
@@ -1521,7 +1521,7 @@ public:
       // data).
       typedef BlockCrsMatrix<Scalar, LO, GO, Node> this_type;
       auto vals_host_out =
-        const_cast<this_type*> (this)->template getValues<Kokkos::HostSpace> ();
+        getValuesHost ();
       impl_scalar_type* vals_host_out_raw = vals_host_out.data ();
       impl_scalar_type* const vOut = vals_host_out_raw +
         absBlockOffsetStart * offsetPerBlock ();
@@ -1661,7 +1661,7 @@ public:
           getNonConstLocalBlockFromAbsOffset (absBlockOffset);
         const_little_block_type A_new =
           getConstLocalBlockFromInput (vIn, pointOffset);
-        Impl::absMax (A_old, A_new);
+        ::Tpetra::Experimental::Impl::absMax (A_old, A_new);
         ++validCount;
       }
     }
@@ -1753,45 +1753,36 @@ public:
   {
     using Teuchos::RCP;
     using Teuchos::rcp;
-    typedef Tpetra::Import<LO, GO, Node> import_type;
-    typedef Tpetra::Export<LO, GO, Node> export_type;
+    typedef ::Tpetra::Import<LO, GO, Node> import_type;
+    typedef ::Tpetra::Export<LO, GO, Node> export_type;
     const Scalar zero = STS::zero ();
     const Scalar one = STS::one ();
     RCP<const import_type> import = graph_.getImporter ();
     // "export" is a reserved C++ keyword, so we can't use it.
     RCP<const export_type> theExport = graph_.getExporter ();
-
-    // FIXME (mfh 20 May 2014) X.mv_ and Y.mv_ requires a friend
-    // declaration, which is useful only for debugging.
-    TEUCHOS_TEST_FOR_EXCEPTION(
-      X.mv_.getCopyOrView () != Teuchos::View, std::invalid_argument,
-      "Tpetra::Experimental::BlockCrsMatrix::applyBlockNoTrans: "
-      "The input BlockMultiVector X has deep copy semantics, "
-      "not view semantics (as it should).");
-    TEUCHOS_TEST_FOR_EXCEPTION(
-      Y.mv_.getCopyOrView () != Teuchos::View, std::invalid_argument,
-      "Tpetra::Experimental::BlockCrsMatrix::applyBlockNoTrans: "
-      "The output BlockMultiVector Y has deep copy semantics, "
-      "not view semantics (as it should).");
+    const char prefix[] = "Tpetra::BlockCrsMatrix::applyBlockNoTrans: ";
 
     if (alpha == zero) {
       if (beta == zero) {
         Y.putScalar (zero); // replace Inf or NaN (BLAS rules)
-      } else if (beta != one) {
+      }
+      else if (beta != one) {
         Y.scale (beta);
       }
-    } else { // alpha != 0
+    }
+    else { // alpha != 0
       const BMV* X_colMap = NULL;
       if (import.is_null ()) {
         try {
           X_colMap = &X;
-        } catch (std::exception& e) {
-          TEUCHOS_TEST_FOR_EXCEPTION(
-            true, std::logic_error, "Tpetra::Experimental::BlockCrsMatrix::"
-            "applyBlockNoTrans:" << std::endl << "Tpetra::MultiVector::"
-            "operator= threw an exception: " << std::endl << e.what ());
         }
-      } else {
+        catch (std::exception& e) {
+          TEUCHOS_TEST_FOR_EXCEPTION
+            (true, std::logic_error, prefix << "Tpetra::MultiVector::"
+             "operator= threw an exception: " << std::endl << e.what ());
+        }
+      }
+      else {
         // X_colMap_ is a pointer to a pointer to BMV.  Ditto for
         // Y_rowMap_ below.  This lets us do lazy initialization
         // correctly with view semantics of BlockCrsMatrix.  All views
@@ -1817,16 +1808,16 @@ public:
         }
         (*X_colMap_)->getMultiVectorView().doImport (X.getMultiVectorView (),
                                                      **pointImporter_,
-                                                     Tpetra::REPLACE);
+                                                     ::Tpetra::REPLACE);
 #else
-        (**X_colMap_).doImport (X, *import, Tpetra::REPLACE);
+        (**X_colMap_).doImport (X, *import, ::Tpetra::REPLACE);
 #endif
         try {
           X_colMap = &(**X_colMap_);
-        } catch (std::exception& e) {
-          TEUCHOS_TEST_FOR_EXCEPTION(
-            true, std::logic_error, "Tpetra::Experimental::BlockCrsMatrix::"
-            "applyBlockNoTrans:" << std::endl << "Tpetra::MultiVector::"
+        }
+        catch (std::exception& e) {
+          TEUCHOS_TEST_FOR_EXCEPTION
+            (true, std::logic_error, prefix << "Tpetra::MultiVector::"
             "operator= threw an exception: " << std::endl << e.what ());
         }
       }
@@ -1834,17 +1825,18 @@ public:
       BMV* Y_rowMap = NULL;
       if (theExport.is_null ()) {
         Y_rowMap = &Y;
-      } else if ((*Y_rowMap_).is_null () ||
+      }
+      else if ((*Y_rowMap_).is_null () ||
                  (**Y_rowMap_).getNumVectors () != Y.getNumVectors () ||
                  (**Y_rowMap_).getBlockSize () != Y.getBlockSize ()) {
         *Y_rowMap_ = rcp (new BMV (* (graph_.getRowMap ()), getBlockSize (),
                                    static_cast<LO> (X.getNumVectors ())));
         try {
           Y_rowMap = &(**Y_rowMap_);
-        } catch (std::exception& e) {
+        }
+        catch (std::exception& e) {
           TEUCHOS_TEST_FOR_EXCEPTION(
-            true, std::logic_error, "Tpetra::Experimental::BlockCrsMatrix::"
-            "applyBlockNoTrans:" << std::endl << "Tpetra::MultiVector::"
+            true, std::logic_error, prefix << "Tpetra::MultiVector::"
             "operator= threw an exception: " << std::endl << e.what ());
         }
       }
@@ -1854,19 +1846,17 @@ public:
       }
       catch (std::exception& e) {
         TEUCHOS_TEST_FOR_EXCEPTION
-          (true, std::runtime_error, "Tpetra::Experimental::BlockCrsMatrix::"
-           "applyBlockNoTrans: localApplyBlockNoTrans threw an exception: "
-           << e.what ());
+          (true, std::runtime_error, prefix << "localApplyBlockNoTrans threw "
+           "an exception: " << e.what ());
       }
       catch (...) {
         TEUCHOS_TEST_FOR_EXCEPTION
-          (true, std::runtime_error, "Tpetra::Experimental::BlockCrsMatrix::"
-           "applyBlockNoTrans: localApplyBlockNoTrans threw some exception "
-           "that is not a subclass of std::exception.");
+          (true, std::runtime_error, prefix << "localApplyBlockNoTrans threw "
+           "an exception not a subclass of std::exception.");
       }
 
       if (! theExport.is_null ()) {
-        Y.doExport (*Y_rowMap, *theExport, Tpetra::REPLACE);
+        Y.doExport (*Y_rowMap, *theExport, ::Tpetra::REPLACE);
       }
     }
   }
@@ -1879,7 +1869,7 @@ public:
                           const Scalar alpha,
                           const Scalar beta)
   {
-    using Tpetra::Experimental::Impl::bcrsLocalApplyNoTrans;
+    using ::Tpetra::Experimental::Impl::bcrsLocalApplyNoTrans;
 
     const impl_scalar_type alpha_impl = alpha;
     const auto graph = this->graph_.getLocalGraph ();
@@ -2000,7 +1990,7 @@ public:
     else {
 #ifdef HAVE_TPETRA_DEBUG
       TEUCHOS_TEST_FOR_EXCEPTION
-        (this->template need_sync<Kokkos::HostSpace> (), std::runtime_error,
+        (this->need_sync_host (), std::runtime_error,
          prefix << "The matrix's data were last modified on device, but have "
          "not been sync'd to host.  Please sync to host (by calling "
          "sync<Kokkos::HostSpace>() on this matrix) before calling this "
@@ -2013,7 +2003,7 @@ public:
       // data).
       typedef BlockCrsMatrix<Scalar, LO, GO, Node> this_type;
       auto vals_host =
-        const_cast<this_type*> (this)->template getValues<Kokkos::HostSpace> ();
+        getValuesHost();
       const impl_scalar_type* vals_host_raw = vals_host.data ();
 
       return getConstLocalBlockFromInput (vals_host_raw, absPointOffset);
@@ -2067,7 +2057,7 @@ public:
       const size_t absPointOffset = absBlockOffset * offsetPerBlock ();
 #ifdef HAVE_TPETRA_DEBUG
       TEUCHOS_TEST_FOR_EXCEPTION
-        (this->template need_sync<Kokkos::HostSpace> (), std::runtime_error,
+        (this->need_sync_host (), std::runtime_error,
          prefix << "The matrix's data were last modified on device, but have "
          "not been sync'd to host.  Please sync to host (by calling "
          "sync<Kokkos::HostSpace>() on this matrix) before calling this "
@@ -2077,8 +2067,7 @@ public:
       // version of the data always exists (no lazy allocation for host
       // data).
       typedef BlockCrsMatrix<Scalar, LO, GO, Node> this_type;
-      auto vals_host =
-        const_cast<this_type*> (this)->template getValues<Kokkos::HostSpace> ();
+      auto vals_host = getValuesHost();
       impl_scalar_type* vals_host_raw = vals_host.data ();
       return getNonConstLocalBlockFromInput (vals_host_raw, absPointOffset);
     }
@@ -2115,7 +2104,7 @@ public:
   template<class Scalar, class LO, class GO, class Node>
   bool
   BlockCrsMatrix<Scalar, LO, GO, Node>::
-  checkSizes (const Tpetra::SrcDistObject& source)
+  checkSizes (const ::Tpetra::SrcDistObject& source)
   {
     using std::endl;
     typedef BlockCrsMatrix<Scalar, LO, GO, Node> this_type;
@@ -2169,7 +2158,7 @@ public:
   template<class Scalar, class LO, class GO, class Node>
   void
   BlockCrsMatrix<Scalar, LO, GO, Node>::
-  copyAndPermute (const Tpetra::SrcDistObject& source,
+  copyAndPermute (const ::Tpetra::SrcDistObject& source,
                   size_t numSameIDs,
                   const Teuchos::ArrayView<const LO>& permuteToLIDs,
                   const Teuchos::ArrayView<const LO>& permuteFromLIDs)
@@ -2586,7 +2575,7 @@ public:
                   const size_t numBytesPerValue,
                   const size_t blkSize)
     {
-      using Tpetra::Details::PackTraits;
+      using ::Tpetra::Details::PackTraits;
 
       if (numEnt == 0) {
         // Empty rows always take zero bytes, to ensure sparsity.
@@ -2615,13 +2604,13 @@ public:
     /// \return Number of (block) entries in the packed row.
     template<class ST, class LO, class GO, class D>
     size_t
-    unpackRowCount (const typename Tpetra::Details::PackTraits<LO, D>::input_buffer_type& imports,
+    unpackRowCount (const typename ::Tpetra::Details::PackTraits<LO, D>::input_buffer_type& imports,
                     const size_t offset,
                     const size_t numBytes,
                     const size_t numBytesPerValue)
     {
       using Kokkos::subview;
-      using Tpetra::Details::PackTraits;
+      using ::Tpetra::Details::PackTraits;
 
       if (numBytes == 0) {
         // Empty rows always take zero bytes, to ensure sparsity.
@@ -2659,16 +2648,16 @@ public:
     /// Tpetra::RowMatrix::packRow.
     template<class ST, class LO, class GO, class D>
     size_t
-    packRowForBlockCrs (const typename Tpetra::Details::PackTraits<LO, D>::output_buffer_type& exports,
+    packRowForBlockCrs (const typename ::Tpetra::Details::PackTraits<LO, D>::output_buffer_type& exports,
                         const size_t offset,
                         const size_t numEnt,
-                        const typename Tpetra::Details::PackTraits<GO, D>::input_array_type& gidsIn,
-                        const typename Tpetra::Details::PackTraits<ST, D>::input_array_type& valsIn,
+                        const typename ::Tpetra::Details::PackTraits<GO, D>::input_array_type& gidsIn,
+                        const typename ::Tpetra::Details::PackTraits<ST, D>::input_array_type& valsIn,
                         const size_t numBytesPerValue,
                         const size_t blockSize)
     {
       using Kokkos::subview;
-      using Tpetra::Details::PackTraits;
+      using ::Tpetra::Details::PackTraits;
 
       if (numEnt == 0) {
         // Empty rows always take zero bytes, to ensure sparsity.
@@ -2721,16 +2710,16 @@ public:
     // Return the number of bytes actually read / used.
     template<class ST, class LO, class GO, class D>
     size_t
-    unpackRowForBlockCrs (const typename Tpetra::Details::PackTraits<GO, D>::output_array_type& gidsOut,
-                          const typename Tpetra::Details::PackTraits<ST, D>::output_array_type& valsOut,
-                          const typename Tpetra::Details::PackTraits<int, D>::input_buffer_type& imports,
+    unpackRowForBlockCrs (const typename ::Tpetra::Details::PackTraits<GO, D>::output_array_type& gidsOut,
+                          const typename ::Tpetra::Details::PackTraits<ST, D>::output_array_type& valsOut,
+                          const typename ::Tpetra::Details::PackTraits<int, D>::input_buffer_type& imports,
                           const size_t offset,
                           const size_t numBytes,
                           const size_t numEnt,
                           const size_t numBytesPerValue,
                           const size_t blockSize)
     {
-      using Tpetra::Details::PackTraits;
+      using ::Tpetra::Details::PackTraits;
 
       if (numBytes == 0) {
         // Rows with zero bytes always have zero entries.
@@ -2802,19 +2791,19 @@ public:
   template<class Scalar, class LO, class GO, class Node>
   void
   BlockCrsMatrix<Scalar, LO, GO, Node>::
-  packAndPrepare (const Tpetra::SrcDistObject& source,
+  packAndPrepare (const ::Tpetra::SrcDistObject& source,
                   const Teuchos::ArrayView<const LO>& exportLIDs,
                   Teuchos::Array<packet_type>& exports,
                   const Teuchos::ArrayView<size_t>& numPacketsPerLID,
                   size_t& constantNumPackets,
-                  Tpetra::Distributor& /* distor */)
+                  ::Tpetra::Distributor& /* distor */)
   {
     using std::endl;
-    using Tpetra::Details::PackTraits;
+    using ::Tpetra::Details::PackTraits;
     using Kokkos::MemoryUnmanaged;
     using Kokkos::subview;
     using Kokkos::View;
-    typedef typename Tpetra::MultiVector<Scalar, LO, GO, Node>::impl_scalar_type ST;
+    typedef typename ::Tpetra::MultiVector<Scalar, LO, GO, Node>::impl_scalar_type ST;
     typedef typename View<int*, device_type>::HostMirror::execution_space HES;
     typedef BlockCrsMatrix<Scalar, LO, GO, Node> this_type;
     typedef typename Teuchos::ArrayView<const LO>::size_type size_type;
@@ -3035,15 +3024,15 @@ public:
                     const Teuchos::ArrayView<const packet_type>& imports,
                     const Teuchos::ArrayView<size_t>& numPacketsPerLID,
                     size_t /* constantNumPackets */, // not worthwhile to use this
-                    Tpetra::Distributor& /* distor */,
-                    Tpetra::CombineMode CM)
+                    ::Tpetra::Distributor& /* distor */,
+                    ::Tpetra::CombineMode CM)
   {
     using std::endl;
-    using Tpetra::Details::PackTraits;
+    using ::Tpetra::Details::PackTraits;
     using Kokkos::MemoryUnmanaged;
     using Kokkos::subview;
     using Kokkos::View;
-    typedef typename Tpetra::MultiVector<Scalar, LO, GO, Node>::impl_scalar_type ST;
+    typedef typename ::Tpetra::MultiVector<Scalar, LO, GO, Node>::impl_scalar_type ST;
     typedef typename Teuchos::ArrayView<const LO>::size_type size_type;
     typedef typename View<int*, device_type>::HostMirror::execution_space HES;
     typedef std::pair<typename View<int*, HES>::size_type,
@@ -3411,11 +3400,11 @@ public:
       // the easiest and least memory-intensive way to implement this
       // method.
       typedef BlockCrsMatrix<Scalar, LO, GO, Node> this_type;
-      const_cast<this_type*> (this)->template sync<Kokkos::HostSpace> ();
+      const_cast<this_type*> (this)->sync_host ();
 
 #ifdef HAVE_TPETRA_DEBUG
       TEUCHOS_TEST_FOR_EXCEPTION
-        (this->template need_sync<Kokkos::HostSpace> (), std::logic_error,
+        (this->need_sync_host (), std::logic_error,
          prefix << "Right after sync to host, the matrix claims that it needs "
          "sync to host.  Please report this bug to the Tpetra developers.");
 #endif // HAVE_TPETRA_DEBUG
@@ -3722,20 +3711,18 @@ public:
   void
   BlockCrsMatrix<Scalar, LO, GO, Node>::
   getLocalRowView (LO LocalRow,
-                   Teuchos::ArrayView<const LO> &indices,
-                   Teuchos::ArrayView<const Scalar> &values) const
+                   Teuchos::ArrayView<const LO>& indices,
+                   Teuchos::ArrayView<const Scalar>& values) const
   {
     TEUCHOS_TEST_FOR_EXCEPTION(
       true, std::logic_error, "Tpetra::Experimental::BlockCrsMatrix::getLocalRowView: "
       "This class doesn't support local matrix indexing.");
-
   }
-
 
   template<class Scalar, class LO, class GO, class Node>
   void
   BlockCrsMatrix<Scalar, LO, GO, Node>::
-  getLocalDiagCopy (Tpetra::Vector<Scalar,LO,GO,Node> &diag) const
+  getLocalDiagCopy (::Tpetra::Vector<Scalar,LO,GO,Node>& diag) const
   {
 #ifdef HAVE_TPETRA_DEBUG
     const char prefix[] =
@@ -3755,7 +3742,7 @@ public:
 
 #ifdef HAVE_TPETRA_DEBUG
     TEUCHOS_TEST_FOR_EXCEPTION
-      (this->template need_sync<Kokkos::HostSpace> (), std::runtime_error,
+      (this->need_sync_host (), std::runtime_error,
        prefix << "The matrix's data were last modified on device, but have "
        "not been sync'd to host.  Please sync to host (by calling "
        "sync<Kokkos::HostSpace>() on this matrix) before calling this "
@@ -3766,8 +3753,7 @@ public:
     // version of the data always exists (no lazy allocation for host
     // data).
     typedef BlockCrsMatrix<Scalar, LO, GO, Node> this_type;
-    auto vals_host_out =
-      const_cast<this_type*> (this)->template getValues<Kokkos::HostSpace> ();
+    auto vals_host_out = getValuesHost ();
     Scalar* vals_host_out_raw =
       reinterpret_cast<Scalar*> (vals_host_out.data ());
 
@@ -3793,7 +3779,7 @@ public:
   template<class Scalar, class LO, class GO, class Node>
   void
   BlockCrsMatrix<Scalar, LO, GO, Node>::
-  leftScale (const Tpetra::Vector<Scalar, LO, GO, Node>& x)
+  leftScale (const ::Tpetra::Vector<Scalar, LO, GO, Node>& x)
   {
     TEUCHOS_TEST_FOR_EXCEPTION(
       true, std::logic_error, "Tpetra::Experimental::BlockCrsMatrix::leftScale: "
@@ -3804,7 +3790,7 @@ public:
   template<class Scalar, class LO, class GO, class Node>
   void
   BlockCrsMatrix<Scalar, LO, GO, Node>::
-  rightScale (const Tpetra::Vector<Scalar, LO, GO, Node>& x)
+  rightScale (const ::Tpetra::Vector<Scalar, LO, GO, Node>& x)
   {
     TEUCHOS_TEST_FOR_EXCEPTION(
       true, std::logic_error, "Tpetra::Experimental::BlockCrsMatrix::rightScale: "
@@ -3813,7 +3799,7 @@ public:
   }
 
   template<class Scalar, class LO, class GO, class Node>
-  Teuchos::RCP<const Tpetra::RowGraph<LO, GO, Node> >
+  Teuchos::RCP<const ::Tpetra::RowGraph<LO, GO, Node> >
   BlockCrsMatrix<Scalar, LO, GO, Node>::
   getGraph() const
   {
@@ -3821,7 +3807,7 @@ public:
   }
 
   template<class Scalar, class LO, class GO, class Node>
-  typename Tpetra::RowMatrix<Scalar, LO, GO, Node>::mag_type
+  typename ::Tpetra::RowMatrix<Scalar, LO, GO, Node>::mag_type
   BlockCrsMatrix<Scalar, LO, GO, Node>::
   getFrobeniusNorm () const
   {
@@ -3836,9 +3822,11 @@ public:
 //
 // Explicit instantiation macro
 //
-// Must be expanded from within the Tpetra::Experimental namespace!
+// Must be expanded from within the Tpetra namespace!
 //
 #define TPETRA_EXPERIMENTAL_BLOCKCRSMATRIX_INSTANT(S,LO,GO,NODE) \
-  template class Experimental::BlockCrsMatrix< S, LO, GO, NODE >;
+  namespace Experimental { \
+    template class BlockCrsMatrix< S, LO, GO, NODE >; \
+  }
 
 #endif // TPETRA_EXPERIMENTAL_BLOCKCRSMATRIX_DEF_HPP

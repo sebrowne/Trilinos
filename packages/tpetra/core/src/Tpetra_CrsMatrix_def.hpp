@@ -139,8 +139,8 @@ namespace Tpetra {
              const Teuchos::RCP<Teuchos::ParameterList>& params) :
     dist_object_type (rowMap),
     storageStatus_ (pftype == StaticProfile ?
-                    Details::STORAGE_1D_UNPACKED :
-                    Details::STORAGE_2D),
+                    ::Tpetra::Details::STORAGE_1D_UNPACKED :
+                    ::Tpetra::Details::STORAGE_2D),
     fillComplete_ (false),
     frobNorm_ (-STM::one ())
   {
@@ -174,8 +174,8 @@ namespace Tpetra {
              const Teuchos::RCP<Teuchos::ParameterList>& params) :
     dist_object_type (rowMap),
     storageStatus_ (pftype == StaticProfile ?
-                    Details::STORAGE_1D_UNPACKED :
-                    Details::STORAGE_2D),
+                    ::Tpetra::Details::STORAGE_1D_UNPACKED :
+                    ::Tpetra::Details::STORAGE_2D),
     fillComplete_ (false),
     frobNorm_ (-STM::one ())
   {
@@ -210,8 +210,8 @@ namespace Tpetra {
              const Teuchos::RCP<Teuchos::ParameterList>& params) :
     dist_object_type (rowMap),
     storageStatus_ (pftype == StaticProfile ?
-                    Details::STORAGE_1D_UNPACKED :
-                    Details::STORAGE_2D),
+                    ::Tpetra::Details::STORAGE_1D_UNPACKED :
+                    ::Tpetra::Details::STORAGE_2D),
     fillComplete_ (false),
     frobNorm_ (-STM::one ())
   {
@@ -260,8 +260,8 @@ namespace Tpetra {
              const Teuchos::RCP<Teuchos::ParameterList>& params) :
     dist_object_type (rowMap),
     storageStatus_ (pftype == StaticProfile ?
-                    Details::STORAGE_1D_UNPACKED :
-                    Details::STORAGE_2D),
+                    ::Tpetra::Details::STORAGE_1D_UNPACKED :
+                    ::Tpetra::Details::STORAGE_2D),
     fillComplete_ (false),
     frobNorm_ (-STM::one ())
   {
@@ -293,7 +293,7 @@ namespace Tpetra {
              const Teuchos::RCP<Teuchos::ParameterList>& /* params */) :
     dist_object_type (graph->getRowMap ()),
     staticGraph_ (graph),
-    storageStatus_ (Details::STORAGE_1D_PACKED),
+    storageStatus_ (::Tpetra::Details::STORAGE_1D_PACKED),
     fillComplete_ (false),
     frobNorm_ (-STM::one ())
   {
@@ -340,7 +340,7 @@ namespace Tpetra {
              const typename local_matrix_type::values_type& values,
              const Teuchos::RCP<Teuchos::ParameterList>& params) :
     dist_object_type (rowMap),
-    storageStatus_ (Details::STORAGE_1D_PACKED),
+    storageStatus_ (::Tpetra::Details::STORAGE_1D_PACKED),
     fillComplete_ (false),
     frobNorm_ (-STM::one ())
   {
@@ -361,7 +361,7 @@ namespace Tpetra {
 #ifdef HAVE_TPETRA_DEBUG
     if (rowPointers.extent (0) != 0) {
       const size_t numEnt =
-        Details::getEntryOnHost (rowPointers, rowPointers.extent (0) - 1);
+        ::Tpetra::Details::getEntryOnHost (rowPointers, rowPointers.extent (0) - 1);
       TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
         (numEnt != static_cast<size_t> (columnIndices.extent (0)) ||
          numEnt != static_cast<size_t> (values.extent (0)),
@@ -442,7 +442,7 @@ namespace Tpetra {
              const Teuchos::ArrayRCP<Scalar>& val,
              const Teuchos::RCP<Teuchos::ParameterList>& params) :
     dist_object_type (rowMap),
-    storageStatus_ (Details::STORAGE_1D_PACKED),
+    storageStatus_ (::Tpetra::Details::STORAGE_1D_PACKED),
     fillComplete_ (false),
     frobNorm_ (-STM::one ())
   {
@@ -511,7 +511,7 @@ namespace Tpetra {
     dist_object_type (rowMap),
     lclMatrix_ (lclMatrix),
     k_values1D_ (lclMatrix.values),
-    storageStatus_ (Details::STORAGE_1D_PACKED),
+    storageStatus_ (::Tpetra::Details::STORAGE_1D_PACKED),
     fillComplete_ (true),
     frobNorm_ (-STM::one ())
   {
@@ -568,7 +568,7 @@ namespace Tpetra {
     dist_object_type (rowMap),
     lclMatrix_ (lclMatrix),
     k_values1D_ (lclMatrix.values),
-    storageStatus_ (Details::STORAGE_1D_PACKED),
+    storageStatus_ (::Tpetra::Details::STORAGE_1D_PACKED),
     fillComplete_ (true),
     frobNorm_ (-STM::one ())
   {
@@ -730,7 +730,7 @@ namespace Tpetra {
   CrsMatrix<Scalar, LocalOrdinal, GlobalOrdinal, Node>::
   getGlobalNumDiagsImpl () const {
     const crs_graph_type& G = this->getCrsGraphRef ();
-    using HDM = Details::HasDeprecatedMethods2630_WarningThisClassIsNotForUsers;
+    using HDM = ::Tpetra::Details::HasDeprecatedMethods2630_WarningThisClassIsNotForUsers;
     return dynamic_cast<const HDM&> (G).getGlobalNumDiagsImpl ();
   }
 
@@ -746,7 +746,7 @@ namespace Tpetra {
   CrsMatrix<Scalar, LocalOrdinal, GlobalOrdinal, Node>::
   getNodeNumDiagsImpl () const {
     const crs_graph_type& G = this->getCrsGraphRef ();
-    using HDM = Details::HasDeprecatedMethods2630_WarningThisClassIsNotForUsers;
+    using HDM = ::Tpetra::Details::HasDeprecatedMethods2630_WarningThisClassIsNotForUsers;
     return dynamic_cast<const HDM&> (G).getNodeNumDiagsImpl ();
   }
 
@@ -864,7 +864,7 @@ namespace Tpetra {
   CrsMatrix<Scalar, LocalOrdinal, GlobalOrdinal, Node>::
   isLowerTriangularImpl () const {
     const crs_graph_type& G = this->getCrsGraphRef ();
-    using HDM = Details::HasDeprecatedMethods2630_WarningThisClassIsNotForUsers;
+    using HDM = ::Tpetra::Details::HasDeprecatedMethods2630_WarningThisClassIsNotForUsers;
     return dynamic_cast<const HDM&> (G).isLowerTriangularImpl ();
   }
 
@@ -880,7 +880,7 @@ namespace Tpetra {
   CrsMatrix<Scalar, LocalOrdinal, GlobalOrdinal, Node>::
   isUpperTriangularImpl () const {
     const crs_graph_type& G = this->getCrsGraphRef ();
-    using HDM = Details::HasDeprecatedMethods2630_WarningThisClassIsNotForUsers;
+    using HDM = ::Tpetra::Details::HasDeprecatedMethods2630_WarningThisClassIsNotForUsers;
     return dynamic_cast<const HDM&> (G).isUpperTriangularImpl ();
   }
 
@@ -1038,7 +1038,7 @@ namespace Tpetra {
         << (lclNumRows+1) << ".");
 
       const size_t lclTotalNumEntries =
-        Details::getEntryOnHost (k_ptrs, lclNumRows);
+        ::Tpetra::Details::getEntryOnHost (k_ptrs, lclNumRows);
 
       // Allocate array of (packed???) matrix values.
       typedef typename local_matrix_type::values_type values_type;
@@ -1249,7 +1249,7 @@ namespace Tpetra {
            "branch) After copying into k_ptrs, k_ptrs.extent(0) = " <<
            numOffsets << " != (lclNumRows+1) = " << (lclNumRows+1) << ".");
 
-        const auto valToCheck = Details::getEntryOnHost (k_ptrs, numOffsets-1);
+        const auto valToCheck = ::Tpetra::Details::getEntryOnHost (k_ptrs, numOffsets-1);
         TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
           (static_cast<size_t> (valToCheck) != k_vals.extent (0),
           std::logic_error, "(DynamicProfile branch) After packing, k_ptrs("
@@ -1285,7 +1285,7 @@ namespace Tpetra {
       {
         const size_t numOffsets = curRowOffsets.extent (0);
         const auto valToCheck =
-          Details::getEntryOnHost (curRowOffsets, numOffsets - 1);
+          ::Tpetra::Details::getEntryOnHost (curRowOffsets, numOffsets - 1);
         TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
           (numOffsets != 0 &&
            myGraph_->k_lclInds1D_.extent (0) != valToCheck,
@@ -1308,7 +1308,7 @@ namespace Tpetra {
           const size_t numOffsets =
             static_cast<size_t> (curRowOffsets.extent (0));
           const auto valToCheck =
-            Details::getEntryOnHost (curRowOffsets, numOffsets-1);
+            ::Tpetra::Details::getEntryOnHost (curRowOffsets, numOffsets-1);
           TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
             (static_cast<size_t> (valToCheck) !=
              static_cast<size_t> (k_values1D_.extent (0)),
@@ -1362,7 +1362,7 @@ namespace Tpetra {
            "k_ptrs.extent(0) = " << k_ptrs.extent (0) << " != "
            "lclNumRows+1 = " << (lclNumRows+1) << ".");
         {
-          const auto valToCheck = Details::getEntryOnHost (k_ptrs, lclNumRows);
+          const auto valToCheck = ::Tpetra::Details::getEntryOnHost (k_ptrs, lclNumRows);
           TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
             (valToCheck != lclTotalNumEntries, std::logic_error,
              "(StaticProfile unpacked branch) After filling k_ptrs, "
@@ -1410,7 +1410,7 @@ namespace Tpetra {
            "probably means that k_rowPtrs_ was never allocated.");
         if (k_ptrs.extent (0) != 0) {
           const size_t numOffsets = static_cast<size_t> (k_ptrs.extent (0));
-          const auto valToCheck = Details::getEntryOnHost (k_ptrs, numOffsets - 1);
+          const auto valToCheck = ::Tpetra::Details::getEntryOnHost (k_ptrs, numOffsets - 1);
           TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
             (static_cast<size_t> (valToCheck) != k_vals.extent (0),
              std::logic_error,
@@ -1439,7 +1439,7 @@ namespace Tpetra {
           "k_rowPtrs_ was never allocated.");
         if (k_ptrs_const.extent (0) != 0) {
           const size_t numOffsets = static_cast<size_t> (k_ptrs_const.extent (0));
-          const auto valToCheck = Details::getEntryOnHost (k_ptrs_const, numOffsets - 1);
+          const auto valToCheck = ::Tpetra::Details::getEntryOnHost (k_ptrs_const, numOffsets - 1);
           TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
             (static_cast<size_t> (valToCheck) != k_vals.extent (0),
              std::logic_error,
@@ -1467,7 +1467,7 @@ namespace Tpetra {
     if (k_ptrs_const.extent (0) != 0) {
       const size_t numOffsets = static_cast<size_t> (k_ptrs_const.extent (0));
       const size_t k_ptrs_const_numOffsetsMinus1 =
-        Details::getEntryOnHost (k_ptrs_const, numOffsets - 1);
+        ::Tpetra::Details::getEntryOnHost (k_ptrs_const, numOffsets - 1);
       TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
         (k_ptrs_const_numOffsetsMinus1 != k_vals.extent (0),
          std::logic_error, "After packing, k_ptrs_const(" << (numOffsets-1) <<
@@ -1515,8 +1515,8 @@ namespace Tpetra {
 
       // Whatever graph was before, it's StaticProfile now.
       myGraph_->pftype_ = StaticProfile;
-      myGraph_->storageStatus_ = Details::STORAGE_1D_PACKED;
-      this->storageStatus_ = Details::STORAGE_1D_PACKED;
+      myGraph_->storageStatus_ = ::Tpetra::Details::STORAGE_1D_PACKED;
+      this->storageStatus_ = ::Tpetra::Details::STORAGE_1D_PACKED;
     }
 
     // Make the local graph, using the arrays of row offsets and
@@ -1657,7 +1657,7 @@ namespace Tpetra {
          "h_ptrs.extent(0) = " << h_ptrs.extent (0) << " != "
          "(lclNumRows+1) = " << (lclNumRows+1) << ".");
       {
-        const auto valToCheck = Details::getEntryOnHost (k_ptrs, lclNumRows);
+        const auto valToCheck = ::Tpetra::Details::getEntryOnHost (k_ptrs, lclNumRows);
         TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
           (static_cast<size_t> (valToCheck) != lclTotalNumEntries,
            std::logic_error, "(DynamicProfile branch) After packing k_ptrs, "
@@ -1686,7 +1686,7 @@ namespace Tpetra {
       if (k_ptrs.extent (0) != 0) {
         const size_t numOffsets = static_cast<size_t> (k_ptrs.extent (0));
         const auto valToCheck =
-          Details::getEntryOnHost (k_ptrs, numOffsets - 1);
+          ::Tpetra::Details::getEntryOnHost (k_ptrs, numOffsets - 1);
         TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
           (static_cast<size_t> (valToCheck) != k_vals.extent (0),
            std::logic_error, "(DynamicProfile branch) After packing, k_ptrs("
@@ -1754,7 +1754,7 @@ namespace Tpetra {
       // unpacked 2-D and 1-D storage, and keep the packed storage.
       values2D_ = null;
       k_values1D_ = k_vals;
-      this->storageStatus_ = Details::STORAGE_1D_PACKED;
+      this->storageStatus_ = ::Tpetra::Details::STORAGE_1D_PACKED;
     }
 
     // Build the local sparse matrix object.  At this point, the local
@@ -3786,7 +3786,7 @@ namespace Tpetra {
 
     // Storage MUST be packed, since the interface doesn't give any
     // way to indicate any extra space at the end of each row.
-    this->storageStatus_ = Details::STORAGE_1D_PACKED;
+    this->storageStatus_ = ::Tpetra::Details::STORAGE_1D_PACKED;
 
     checkInternalState ();
   }
@@ -3996,12 +3996,12 @@ namespace Tpetra {
     // device, we need to clear that flag, since the code below works
     // on host.
     auto diag_dv = diag.getDualView ();
-    diag_dv.modified_device () = 0;
+    diag_dv.clear_sync_state();
 
     // For now, we fill the Vector on the host and sync to device.
     // Later, we may write a parallel kernel that works entirely on
     // device.
-    diag.template modify<host_execution_space> ();
+    diag.modify_host();
     auto lclVecHost = diag.template getLocalView<host_execution_space> ();
     // 1-D subview of the first (and only) column of lclVecHost.
     auto lclVecHost1d = Kokkos::subview (lclVecHost, Kokkos::ALL (), 0);
@@ -4083,7 +4083,7 @@ namespace Tpetra {
       }
       auto x_lcl = xp->template getLocalView<dev_memory_space> ();
       auto x_lcl_1d = Kokkos::subview (x_lcl, Kokkos::ALL (), 0);
-      Details::leftScaleLocalCrsMatrix (this->lclMatrix_, x_lcl_1d, false, false);
+      ::Tpetra::Details::leftScaleLocalCrsMatrix (this->lclMatrix_, x_lcl_1d, false, false);
     }
     else {
       execution_space::fence (); // for UVM's sake
@@ -4159,7 +4159,7 @@ namespace Tpetra {
       }
       auto x_lcl = xp->template getLocalView<dev_memory_space> ();
       auto x_lcl_1d = Kokkos::subview (x_lcl, Kokkos::ALL (), 0);
-      Details::rightScaleLocalCrsMatrix (this->lclMatrix_, x_lcl_1d, false, false);
+      ::Tpetra::Details::rightScaleLocalCrsMatrix (this->lclMatrix_, x_lcl_1d, false, false);
     }
     else {
       execution_space::fence (); // for UVM's sake
@@ -5787,10 +5787,17 @@ namespace Tpetra {
       X_domainMap = X_colMap->offsetViewNonConst (domainMap, 0);
 
 #ifdef HAVE_TPETRA_DEBUG
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE
       auto X_colMap_host_view =
         X_colMap->template getLocalView<Kokkos::HostSpace> ();
       auto X_domainMap_host_view =
         X_domainMap->template getLocalView<Kokkos::HostSpace> ();
+#else
+      auto X_colMap_host_view =
+        X_colMap->getLocalViewHost ();
+      auto X_domainMap_host_view =
+        X_domainMap->getLocalViewHost ();
+#endif
 
       if (X_colMap->getLocalLength () != 0 && X_domainMap->getLocalLength ()) {
         TEUCHOS_TEST_FOR_EXCEPTION
@@ -6522,16 +6529,16 @@ namespace Tpetra {
     // DistObject might use their placement to decide where to pack
     // and/or unpack.
     const bool permuteToLIDs_sync_back =
-      permuteToLIDs.modified_device () >= permuteToLIDs.modified_host ();
+      !permuteToLIDs.need_sync_host ();
     auto permuteToLIDs_nc = castAwayConstDualView (permuteToLIDs);
-    permuteToLIDs_nc.template sync<host_mem_space> ();
-    auto permuteToLIDs_h = permuteToLIDs.template view<host_mem_space> ();
+    permuteToLIDs_nc.sync_host ();
+    auto permuteToLIDs_h = permuteToLIDs.view_host();
 
     const bool permuteFromLIDs_sync_back =
-      permuteFromLIDs.modified_device () >= permuteFromLIDs.modified_host ();
+      !permuteFromLIDs.need_sync_host ();
     auto permuteFromLIDs_nc = castAwayConstDualView (permuteFromLIDs);
-    permuteFromLIDs_nc.template sync<host_mem_space> ();
-    auto permuteFromLIDs_h = permuteFromLIDs.template view<host_mem_space> ();
+    permuteFromLIDs_nc.sync_host ();
+    auto permuteFromLIDs_h = permuteFromLIDs.view_host ();
 
     if (verbose) {
       std::ostringstream os;
@@ -6699,9 +6706,9 @@ namespace Tpetra {
       // Sync exportLIDs to host, and view its host data as a Teuchos::ArrayView.
       {
         auto exportLIDs_nc = castAwayConstDualView (exportLIDs);
-        exportLIDs_nc.template sync<HostSpace> ();
+        exportLIDs_nc.sync_host ();
       }
-      auto exportLIDs_h = exportLIDs.template view<HostSpace> ();
+      auto exportLIDs_h = exportLIDs.view_host ();
       Teuchos::ArrayView<const LO> exportLIDs_av (exportLIDs_h.data (),
                                                   exportLIDs_h.size ());
 
@@ -6714,10 +6721,10 @@ namespace Tpetra {
       // need to mark the DualView as modified on host.
       {
         auto numPacketsPerLID_nc = numPacketsPerLID; // const DV& -> DV
-        numPacketsPerLID_nc.modified_device() = 0; // write-only host access
-        numPacketsPerLID_nc.modified_host() = 1;
+        numPacketsPerLID_nc.clear_sync_state(); // write only access
+        numPacketsPerLID_nc.modify_host();
       }
-      auto numPacketsPerLID_h = numPacketsPerLID.template view<HostSpace> ();
+      auto numPacketsPerLID_h = numPacketsPerLID.view_host ();
       Teuchos::ArrayView<size_t> numPacketsPerLID_av (numPacketsPerLID_h.data (),
                                                       numPacketsPerLID_h.size ());
 
@@ -6741,10 +6748,10 @@ namespace Tpetra {
       }
       // It's safe to assume that we're working on host anyway, so
       // just keep exports sync'd to host.
-      exports.modified_device() = 0; // ignore current device contents
-      exports.modified_host() = 1;
+      // ignore current device contents
+      exports.modify_host();
 
-      auto exports_h = exports.template view<HostSpace> ();
+      auto exports_h = exports.view_host ();
       auto exports_h_sub = subview (exports_h, range_type (0, newAllocSize));
 
       // Kokkos::deep_copy needs a Kokkos::View input, so turn
@@ -7023,9 +7030,9 @@ namespace Tpetra {
     {
       Kokkos::DualView<local_ordinal_type*, device_type> exportLIDs_nc =
         Tpetra::Details::castAwayConstDualView (exportLIDs);
-      exportLIDs_nc.template sync<Kokkos::HostSpace> ();
+      exportLIDs_nc.sync_host ();
     }
-    auto exportLIDs_h = exportLIDs.template view<Kokkos::HostSpace> ();
+    auto exportLIDs_h = exportLIDs.view_host ();
 
     // Count the total number of matrix entries to send.
     totalNumEntries = 0;
@@ -7084,7 +7091,7 @@ namespace Tpetra {
   {
     // The call to packNew in packAndPrepareNew catches and handles any exceptions.
     if (this->isStaticGraph ()) {
-      using Details::packCrsMatrixNew;
+      using ::Tpetra::Details::packCrsMatrixNew;
       packCrsMatrixNew (*this, exports, numPacketsPerLID, exportLIDs,
                         constantNumPackets, dist);
     }
@@ -7160,9 +7167,9 @@ namespace Tpetra {
     const size_t bufSize = static_cast<size_t> (exports.extent (0));
 
     // Write-only host access
-    exports.modified_device() = 0;
-    exports.modified_host() = 1;
-    auto exports_h = exports.template view<Kokkos::HostSpace> ();
+    exports.clear_sync_state();
+    exports.modify_host();
+    auto exports_h = exports.view_host ();
     if (verbose) {
       std::ostringstream os;
       os << *prefix << "After marking exports as modified on host, "
@@ -7171,12 +7178,12 @@ namespace Tpetra {
     }
 
     // Read-only host access
-    auto exportLIDs_h = exportLIDs.template view<Kokkos::HostSpace> ();
+    auto exportLIDs_h = exportLIDs.view_host ();
 
     // Write-only host access
-    numPacketsPerLID.modified_device() = 0;
-    numPacketsPerLID.modified_host() = 1;
-    auto numPacketsPerLID_h = numPacketsPerLID.template view<Kokkos::HostSpace> ();
+    const_cast<Kokkos::DualView<size_t*, buffer_device_type>*>(&numPacketsPerLID)->clear_sync_state();
+    const_cast<Kokkos::DualView<size_t*, buffer_device_type>*>(&numPacketsPerLID)->modify_host();
+    auto numPacketsPerLID_h = numPacketsPerLID.view_host ();
 
     // Compute the number of "packets" (in this case, bytes) per
     // export LID (in this case, local index of the row to send), and
@@ -7317,7 +7324,7 @@ namespace Tpetra {
         replaceGlobalValues (globalRowIndex, columnIndices, values);
       }
       else if (combineMode == ABSMAX) {
-        using Details::AbsMax;
+        using ::Tpetra::Details::AbsMax;
         AbsMax<Scalar> f;
         this->template transformGlobalValues<AbsMax<Scalar> > (globalRowIndex,
                                                                columnIndices,
@@ -7530,7 +7537,7 @@ namespace Tpetra {
     // Exception are caught and handled upstream, so we just call the
     // implementations directly.
     if (this->isStaticGraph ()) {
-      using Details::unpackCrsMatrixAndCombineNew;
+      using ::Tpetra::Details::unpackCrsMatrixAndCombineNew;
       unpackCrsMatrixAndCombineNew (*this, imports, numPacketsPerLID,
                                     importLIDs, constantNumPackets,
                                     distor, combineMode, atomic);
@@ -7616,23 +7623,23 @@ namespace Tpetra {
     // We're unpacking on host.  This is read-only host access of imports.
     {
       auto imports_nc = castAwayConstDualView (imports);
-      imports_nc.template sync<Kokkos::HostSpace> ();
+      imports_nc.sync_host ();
     }
-    auto imports_h = imports.template view<Kokkos::HostSpace> ();
+    auto imports_h = imports.view_host ();
 
     // Read-only host access.
     {
       auto numPacketsPerLID_nc = castAwayConstDualView (numPacketsPerLID);
-      numPacketsPerLID_nc.template sync<Kokkos::HostSpace> ();
+      numPacketsPerLID_nc.sync_host ();
     }
-    auto numPacketsPerLID_h = numPacketsPerLID.template view<Kokkos::HostSpace> ();
+    auto numPacketsPerLID_h = numPacketsPerLID.view_host ();
 
     // Read-only host access.
     {
       auto importLIDs_nc = castAwayConstDualView (importLIDs);
-      importLIDs_nc.template sync<Kokkos::HostSpace> ();
+      importLIDs_nc.sync_host ();
     }
-    auto importLIDs_h = importLIDs.template view<Kokkos::HostSpace> ();
+    auto importLIDs_h = importLIDs.view_host ();
 
     size_t numBytesPerValue;
     {
@@ -8454,7 +8461,8 @@ namespace Tpetra {
       SourcePids.resize (getColMap ()->getNodeNumElements ());
       SourceCol_pids.get1dCopy (SourcePids ());
     }
-    else if (BaseDomainMap->isSameAs (*BaseRowMap) &&
+    else if ( ! MyImporter.is_null () &&
+             BaseDomainMap->isSameAs (*BaseRowMap) &&
              getDomainMap ()->isSameAs (*getRowMap ())) {
       // We can use the rowTransfer + SourceMatrix's Import to find out who owns what.
       IntVectorType TargetRow_pids (domainMap);
@@ -8526,7 +8534,7 @@ namespace Tpetra {
       int lclErr = 0;
       try {
         // packAndPrepare* methods modify numExportPacketsPerLID_.
-        destMat->numExportPacketsPerLID_.template modify<Kokkos::HostSpace> ();
+        destMat->numExportPacketsPerLID_.modify_host ();
         Teuchos::ArrayView<size_t> numExportPacketsPerLID =
           getArrayViewFromDualView (destMat->numExportPacketsPerLID_);
         packCrsMatrixWithOwningPIDs (*this, destMat->exports_,
@@ -8564,7 +8572,7 @@ namespace Tpetra {
 #else
     {
       // packAndPrepare* methods modify numExportPacketsPerLID_.
-      destMat->numExportPacketsPerLID_.template modify<Kokkos::HostSpace> ();
+      destMat->numExportPacketsPerLID_.modify_host ();
       Teuchos::ArrayView<size_t> numExportPacketsPerLID =
         getArrayViewFromDualView (destMat->numExportPacketsPerLID_);
       packCrsMatrixWithOwningPIDs (*this, destMat->exports_,
@@ -8584,10 +8592,10 @@ namespace Tpetra {
           // Make sure that host has the latest version, since we're
           // using the version on host.  If host has the latest
           // version, syncing to host does nothing.
-          destMat->numExportPacketsPerLID_.template sync<Kokkos::HostSpace> ();
+          destMat->numExportPacketsPerLID_.sync_host ();
           Teuchos::ArrayView<const size_t> numExportPacketsPerLID =
             getArrayViewFromDualView (destMat->numExportPacketsPerLID_);
-          destMat->numImportPacketsPerLID_.template sync<Kokkos::HostSpace> ();
+          destMat->numImportPacketsPerLID_.sync_host ();
           Teuchos::ArrayView<size_t> numImportPacketsPerLID =
             getArrayViewFromDualView (destMat->numImportPacketsPerLID_);
           Distor.doReversePostsAndWaits (numExportPacketsPerLID, 1,
@@ -8600,12 +8608,12 @@ namespace Tpetra {
           // Reallocation MUST go before setting the modified flag,
           // because it may clear out the flags.
           destMat->reallocImportsIfNeeded (totalImportPackets);
-          destMat->imports_.template modify<Kokkos::HostSpace> ();
+          destMat->imports_.modify_host ();
           Teuchos::ArrayView<char> hostImports =
             getArrayViewFromDualView (destMat->imports_);
           // This is a legacy host pack/unpack path, so use the host
           // version of exports_.
-          destMat->exports_.template sync<Kokkos::HostSpace> ();
+          destMat->exports_.sync_host ();
           Teuchos::ArrayView<const char> hostExports =
             getArrayViewFromDualView (destMat->exports_);
           Distor.doReversePostsAndWaits (hostExports,
@@ -8614,12 +8622,12 @@ namespace Tpetra {
                                          numImportPacketsPerLID);
         }
         else { // constant number of packets per LI
-          destMat->imports_.template modify<Kokkos::HostSpace> ();
+          destMat->imports_.modify_host ();
           Teuchos::ArrayView<char> hostImports =
             getArrayViewFromDualView (destMat->imports_);
           // This is a legacy host pack/unpack path, so use the host
           // version of exports_.
-          destMat->exports_.template sync<Kokkos::HostSpace> ();
+          destMat->exports_.sync_host ();
           Teuchos::ArrayView<const char> hostExports =
             getArrayViewFromDualView (destMat->exports_);
           Distor.doReversePostsAndWaits (hostExports,
@@ -8632,10 +8640,10 @@ namespace Tpetra {
           // Make sure that host has the latest version, since we're
           // using the version on host.  If host has the latest
           // version, syncing to host does nothing.
-          destMat->numExportPacketsPerLID_.template sync<Kokkos::HostSpace> ();
+          destMat->numExportPacketsPerLID_.sync_host ();
           Teuchos::ArrayView<const size_t> numExportPacketsPerLID =
             getArrayViewFromDualView (destMat->numExportPacketsPerLID_);
-          destMat->numImportPacketsPerLID_.template sync<Kokkos::HostSpace> ();
+          destMat->numImportPacketsPerLID_.sync_host ();
           Teuchos::ArrayView<size_t> numImportPacketsPerLID =
             getArrayViewFromDualView (destMat->numImportPacketsPerLID_);
           Distor.doPostsAndWaits (numExportPacketsPerLID, 1,
@@ -8648,12 +8656,12 @@ namespace Tpetra {
           // Reallocation MUST go before setting the modified flag,
           // because it may clear out the flags.
           destMat->reallocImportsIfNeeded (totalImportPackets);
-          destMat->imports_.template modify<Kokkos::HostSpace> ();
+          destMat->imports_.modify_host ();
           Teuchos::ArrayView<char> hostImports =
             getArrayViewFromDualView (destMat->imports_);
           // This is a legacy host pack/unpack path, so use the host
           // version of exports_.
-          destMat->exports_.template sync<Kokkos::HostSpace> ();
+          destMat->exports_.sync_host ();
           Teuchos::ArrayView<const char> hostExports =
             getArrayViewFromDualView (destMat->exports_);
           Distor.doPostsAndWaits (hostExports,
@@ -8662,12 +8670,12 @@ namespace Tpetra {
                                   numImportPacketsPerLID);
         }
         else { // constant number of packets per LID
-          destMat->imports_.template modify<Kokkos::HostSpace> ();
+          destMat->imports_.modify_host ();
           Teuchos::ArrayView<char> hostImports =
             getArrayViewFromDualView (destMat->imports_);
           // This is a legacy host pack/unpack path, so use the host
           // version of exports_.
-          destMat->exports_.template sync<Kokkos::HostSpace> ();
+          destMat->exports_.sync_host ();
           Teuchos::ArrayView<const char> hostExports =
             getArrayViewFromDualView (destMat->exports_);
           Distor.doPostsAndWaits (hostExports,
@@ -8686,10 +8694,10 @@ namespace Tpetra {
 #endif
 
     // Backwards compatibility measure.  We'll use this again below.
-    destMat->numImportPacketsPerLID_.template sync<Kokkos::HostSpace> ();
+    destMat->numImportPacketsPerLID_.sync_host ();
     Teuchos::ArrayView<const size_t> numImportPacketsPerLID =
       getArrayViewFromDualView (destMat->numImportPacketsPerLID_);
-    destMat->imports_.template sync<Kokkos::HostSpace> ();
+    destMat->imports_.sync_host ();
     Teuchos::ArrayView<const char> hostImports =
       getArrayViewFromDualView (destMat->imports_);
     size_t mynnz =

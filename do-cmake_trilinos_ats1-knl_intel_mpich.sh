@@ -133,6 +133,7 @@ cmake \
    -D Kokkos_ENABLE_Pthread=OFF \
    -D Kokkos_ENABLE_Cuda=OFF \
    -D Kokkos_ENABLE_Cuda_UVM=OFF \
+   -D KOKKOS_ARCH="KNL" \
    \
    -D Trilinos_ENABLE_SEACAS=ON \
    -D SEACAS_SOURCE_DIR_OVERRIDE:STRING=seacas/packages/seacas \

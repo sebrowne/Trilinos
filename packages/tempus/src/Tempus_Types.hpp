@@ -28,9 +28,9 @@ const char* toString(const Status status)
     case PASSED:  return "PASSED";
     case FAILED:  return "FAILED";
     case WORKING: return "WORKING";
-    default:      TEUCHOS_TEST_FOR_EXCEPT("Invalid Status!");
+    default:      break;
   }
-  return "";  // Should not get here.
+  return "Invalid Status!";
 }
 
 

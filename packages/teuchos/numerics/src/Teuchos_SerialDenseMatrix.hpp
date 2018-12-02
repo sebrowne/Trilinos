@@ -452,7 +452,7 @@ SerialDenseMatrix<OrdinalType, ScalarType>::SerialDenseMatrix(const SerialDenseM
       stride_ = numRows_;
       const OrdinalType newsize = stride_ * numCols_;
       if(newsize > 0) {
-        values_ = new ScalarType[newsize];
+        values_ = new ScalarType[stride_ * numCols_]; // eliminate a pervasive warning (-Wvla) by not using 'newsize' here
         copyMat(Source.values_, Source.stride_, numRows_, numCols_, values_, stride_, 0, 0);
       }
       else {
@@ -656,7 +656,7 @@ SerialDenseMatrix<OrdinalType, ScalarType>::operator=(
       stride_ = Source.numRows_;
       const OrdinalType newsize = stride_ * numCols_;
       if(newsize > 0) {
-        values_ = new ScalarType[newsize];
+        values_ = new ScalarType[stride_ * numCols_]; // eliminate a pervasive warning (-Wvla) by not using 'newsize' here
         valuesCopied_ = true;
       }
       else {
@@ -676,7 +676,7 @@ SerialDenseMatrix<OrdinalType, ScalarType>::operator=(
         stride_ = Source.numRows_;
         const OrdinalType newsize = stride_ * numCols_;
         if(newsize > 0) {
-          values_ = new ScalarType[newsize];
+          values_ = new ScalarType[stride_ * numCols_]; // eliminate a pervasive warning (-Wvla) by not using 'newsize' here
           valuesCopied_ = true;
         }
       }

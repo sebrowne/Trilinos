@@ -141,7 +141,6 @@ cmake \
    -D Kokkos_ENABLE_Cuda_UVM=OFF \
    \
    -D Trilinos_ENABLE_SEACAS=ON \
-   -D SEACAS_SOURCE_DIR_OVERRIDE:STRING=seacas/packages/seacas \
    -D TPL_ENABLE_X11=OFF \
    -D TPL_ENABLE_Matio=OFF \
    \

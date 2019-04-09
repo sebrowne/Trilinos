@@ -23,8 +23,8 @@ CEE_ATS1=cee-cpu_intel-18.0.2_openmp_mpich2-3.2_static        # ats-1 surrogate
 CEE_ATS2=cee-gpu_cuda-9.2.88_gcc-7.2.0_openmpi-1.10.2_static  # ats-2 surrogate
 
 # HPCs
-ATS1_HSW=ats1-hsw_intel-18.0.2_openmp_mpich-7.7.1_static	# ats-1/hsw
-ATS1_KNL=ats1-knl_intel-18.0.2_openmp_mpich-7.7.1_static	# ats-1/knl
+ATS1_HSW=ats1-hsw_intel-18.0.2_openmp_mpich-7.7.4_static	# ats-1/hsw
+ATS1_KNL=ats1-knl_intel-18.0.2_openmp_mpich-7.7.4_static	# ats-1/knl
 CTS1_BDW=cts1-bdw_intel-17.0.1_openmp_openmpi-1.10.5_static	# cts-1/bdw
 CTS1_BDW_LLNL=cts1-bdw_intel-18.0.2_openmp_openmpi-2.0.3_static	# cts-1/bdw
 CTS1_P100=cts1-p100_gcc-6.3.1_cuda-9.2.88_openmpi-2.1.1_static  # cts-1/p100

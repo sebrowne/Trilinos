@@ -37,6 +37,7 @@ MORG_TX2=morgan-tx2_gcc-7.2.0_openmp_openmpi-2.1.2_static           # astra surr
 # Build stuff
 MAKE_CMD='make -j16 install'
 DATE_STR=`date +%Y-%m-%d`
+DATE_STR=2019-04-08
 echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 if     [[ ${1} == 'setup' ]]; then
@@ -106,7 +107,7 @@ elif   [[ ${1} == 'build' ]]; then
     cd ${CEE_GCC}_shared_opt_build; ./do-cmake.sh shared opt; ${MAKE_CMD}; cd ..
     cd ${CEE_GCC}_shared_dbg_build; ./do-cmake.sh shared dbg; ${MAKE_CMD}; cd ..
     
-    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 
   elif [[ ${2} == 'cee-advanced' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6-new/Trilinos/$DATE_STR; fi
@@ -127,7 +128,7 @@ elif   [[ ${1} == 'build' ]]; then
     cd ${CEE_ATS2}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${CEE_ATS2}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
-    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
     
   elif [[ ${2} == 'ats1' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-hsw/Trilinos/$DATE_STR; fi
@@ -140,7 +141,7 @@ elif   [[ ${1} == 'build' ]]; then
     cd ${ATS1_KNL}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${ATS1_KNL}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
-    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 
   elif [[ ${2} == 'cts1' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-bdw/Trilinos/$DATE_STR; fi
@@ -157,7 +158,7 @@ elif   [[ ${1} == 'build' ]]; then
     cd ${CTS1_P100}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${CTS1_P100}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
-    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 
   elif [[ ${2} == 'tlcc2' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/tlcc2-snb/Trilinos/$DATE_STR; fi
@@ -165,7 +166,7 @@ elif   [[ ${1} == 'build' ]]; then
     cd ${TLCC2_SNB}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${TLCC2_SNB}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
-    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 
   elif [[ ${2} == 'waterman' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/waterman/Trilinos/$DATE_STR; fi
@@ -173,7 +174,7 @@ elif   [[ ${1} == 'build' ]]; then
     cd ${WTRM_V100}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${WTRM_V100}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
-    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 
   elif [[ ${2} == 'morgan' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/morgan/Trilinos/$DATE_STR; fi
@@ -181,6 +182,6 @@ elif   [[ ${1} == 'build' ]]; then
     cd ${MORG_TX2}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${MORG_TX2}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
-    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
   fi
 fi

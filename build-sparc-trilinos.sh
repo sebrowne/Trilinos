@@ -15,9 +15,10 @@ if [[ ${3} != 'deploy' && ${3} != '' ]]; then
 fi
 
 # CEE
-CEE_CLANG=cee-cpu_clang-5.0.1_serial_openmpi-1.10.2_static    # sparc development default
-CEE_GCC=cee-cpu_gcc-7.2.0_serial_openmpi-1.10.2_shared        # sierra development default
-CEE_INTEL=cee-cpu_intel-17.0.1_serial_intelmpi-5.1.2_static   # sierra production default
+CEE_CLANG=cee-cpu_clang-5.0.1_serial_openmpi-1.10.2    # sparc development default
+CEE_GCC=cee-cpu_gcc-7.2.0_serial_openmpi-1.10.2        # sierra development default
+CEE_INTEL=cee-cpu_intel-17.0.1_serial_intelmpi-2018.4_static   # sierra production default
+CEE_INTEL_OLD=cee-cpu_intel-17.0.1_serial_intelmpi-5.1.2_static   # sierra old production default
 CEE_ATS1=cee-cpu_intel-18.0.2_openmp_mpich2-3.2_static        # ats-1 surrogate
 CEE_ATS2=cee-gpu_cuda-9.2.88_gcc-7.2.0_openmpi-1.10.2_static  # ats-2 surrogate
 
@@ -34,18 +35,30 @@ MORG_TX2=morgan-tx2_gcc-7.2.0_openmp_openmpi-2.1.2_static           # astra surr
 
 # Build stuff
 MAKE_CMD='make -j16 install'
+DATE_STR=`date +%Y-%m-%d`
+echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 if     [[ ${1} == 'setup' ]]; then
   if   [[ ${2} == 'cee-default' ]]; then
-    mkdir ${CEE_CLANG}_dbg_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_clang_openmpi.sh  do-cmake.sh; cd .. 
-    mkdir ${CEE_CLANG}_opt_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_clang_openmpi.sh  do-cmake.sh; cd ..
+    mkdir ${CEE_CLANG}_static_dbg_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_clang_openmpi.sh  do-cmake.sh; cd .. 
+    mkdir ${CEE_CLANG}_static_opt_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_clang_openmpi.sh  do-cmake.sh; cd ..
+
+    mkdir ${CEE_CLANG}_shared_dbg_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_clang_openmpi.sh  do-cmake.sh; cd .. 
+    mkdir ${CEE_CLANG}_shared_opt_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_clang_openmpi.sh  do-cmake.sh; cd ..
     
-    mkdir ${CEE_GCC}_dbg_build   && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_gcc_openmpi.sh    do-cmake.sh; cd ..
-    mkdir ${CEE_GCC}_opt_build   && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_gcc_openmpi.sh    do-cmake.sh; cd ..
+    mkdir ${CEE_GCC}_static_dbg_build   && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_gcc_openmpi.sh    do-cmake.sh; cd ..
+    mkdir ${CEE_GCC}_static_opt_build   && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_gcc_openmpi.sh    do-cmake.sh; cd ..
+
+    mkdir ${CEE_GCC}_shared_dbg_build   && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_gcc_openmpi.sh    do-cmake.sh; cd ..
+    mkdir ${CEE_GCC}_shared_opt_build   && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_gcc_openmpi.sh    do-cmake.sh; cd ..
+  elif [[ ${2} == 'cee-advanced' ]]; then
     
     mkdir ${CEE_INTEL}_dbg_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_intelmpi.sh do-cmake.sh; cd ..
     mkdir ${CEE_INTEL}_opt_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_intelmpi.sh do-cmake.sh; cd ..
-  elif [[ ${2} == 'cee-advanced' ]]; then
+
+    mkdir ${CEE_INTEL_OLD}_dbg_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_intelmpi.sh do-cmake.sh; cd ..
+    mkdir ${CEE_INTEL_OLD}_opt_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_intelmpi.sh do-cmake.sh; cd ..
+    
     mkdir ${CEE_ATS1}_dbg_build  && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_openmp_mpich.sh do-cmake.sh; cd ..
     mkdir ${CEE_ATS1}_opt_build  && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_openmp_mpich.sh do-cmake.sh; cd ..
     
@@ -75,21 +88,32 @@ if     [[ ${1} == 'setup' ]]; then
   fi
 elif   [[ ${1} == 'build' ]]; then
   if   [[ ${2} == 'cee-default' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6-new/Trilinos; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6-new/Trilinos/$DATE_STR; fi
     
     module purge && module load sparc-dev/clang
-    cd ${CEE_CLANG}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
-    cd ${CEE_CLANG}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    cd ${CEE_CLANG}_static_opt_build; ./do-cmake.sh static opt; ${MAKE_CMD}; cd ..
+    cd ${CEE_CLANG}_static_dbg_build; ./do-cmake.sh static dbg; ${MAKE_CMD}; cd ..
+    cd ${CEE_CLANG}_shared_opt_build; ./do-cmake.sh shared opt; ${MAKE_CMD}; cd ..
+    cd ${CEE_CLANG}_shared_dbg_build; ./do-cmake.sh shared dbg; ${MAKE_CMD}; cd ..
   
     module purge && module load sparc-dev/gcc
-    cd ${CEE_GCC}_opt_build; ./do-cmake.sh shared opt; ${MAKE_CMD}; cd ..
-    cd ${CEE_GCC}_dbg_build; ./do-cmake.sh shared dbg; ${MAKE_CMD}; cd ..
+    cd ${CEE_GCC}_static_opt_build; ./do-cmake.sh static opt; ${MAKE_CMD}; cd ..
+    cd ${CEE_GCC}_static_dbg_build; ./do-cmake.sh static dbg; ${MAKE_CMD}; cd ..
+    cd ${CEE_GCC}_shared_opt_build; ./do-cmake.sh shared opt; ${MAKE_CMD}; cd ..
+    cd ${CEE_GCC}_shared_dbg_build; ./do-cmake.sh shared dbg; ${MAKE_CMD}; cd ..
+    
+    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+
+  elif [[ ${2} == 'cee-advanced' ]]; then
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6-new/Trilinos/$DATE_STR; fi
   
-    module purge && module load sparc-dev/intel
+    module purge && module load sparc-dev/intel-17.0.1_intelmpi-2018.4
     cd ${CEE_INTEL}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${CEE_INTEL}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
-  elif [[ ${2} == 'cee-advanced' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6-new/Trilinos; fi
+  
+    module purge && module load sparc-dev/intel
+    cd ${CEE_INTEL_OLD}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
+    cd ${CEE_INTEL_OLD}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
     module purge && module load sparc-dev/intel-18.0.2_mpich2-3.2
     cd ${CEE_ATS1}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
@@ -98,40 +122,57 @@ elif   [[ ${1} == 'build' ]]; then
     module purge && module load sparc-dev/cuda-9.2.88_gcc-7.2.0_openmpi-1.10.2
     cd ${CEE_ATS2}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${CEE_ATS2}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    
+    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    
   elif [[ ${2} == 'ats1' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-hsw/Trilinos; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-hsw/Trilinos/$DATE_STR; fi
     module unload sparc-dev/intel-knl && module load sparc-dev/intel-hsw
     cd ${ATS1_HSW}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${ATS1_HSW}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-knl/Trilinos; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-knl/Trilinos/$DATE_STR; fi
     module unload sparc-dev/intel-hsw && module load sparc-dev/intel-knl
     cd ${ATS1_KNL}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${ATS1_KNL}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    
+    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+
   elif [[ ${2} == 'cts1' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-bdw/Trilinos; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-bdw/Trilinos/$DATE_STR; fi
     module purge && module load sparc-dev/intel
     cd ${CTS1_BDW}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${CTS1_BDW}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-p100/Trilinos; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-p100/Trilinos/$DATE_STR; fi
     module purge && module load sparc-dev/cuda-gcc
     cd ${CTS1_P100}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${CTS1_P100}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    
+    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+
   elif [[ ${2} == 'tlcc2' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/tlcc2-snb/Trilinos; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/tlcc2-snb/Trilinos/$DATE_STR; fi
     module purge && module load sparc-dev/intel
     cd ${TLCC2_SNB}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${TLCC2_SNB}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    
+    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+
   elif [[ ${2} == 'waterman' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/waterman/Trilinos; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/waterman/Trilinos/$DATE_STR; fi
     module purge && module load sparc-dev/cuda-gcc
     cd ${WTRM_V100}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${WTRM_V100}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    
+    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
+
   elif [[ ${2} == 'morgan' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/morgan/Trilinos; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/morgan/Trilinos/$DATE_STR; fi
     module purge && module load sparc-dev/gcc-7.2.0_openmpi-2.1.2
     cd ${MORG_TX2}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${MORG_TX2}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    
+    if [[ ${3} == 'deploy' ]]; then chmod -R g+rX $TRIL_INSTALL_PATH; fi
   fi
 fi

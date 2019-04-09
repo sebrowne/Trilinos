@@ -27,6 +27,9 @@ if [[ ${1} == 'static' || ${2} == 'static' ]]
 then
   LINK_SHARED=OFF
   LINK_SUFFIX=static
+  EXTRA_C_FLAGS="-fPIC ${EXTRA_C_FLAGS}"
+  EXTRA_CXX_FLAGS="-fPIC ${EXTRA_CXX_FLAGS}"
+  EXTRA_F_FLAGS="-fPIC ${EXTRA_F_FLAGS}"
 elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
 then
   LINK_SHARED=ON

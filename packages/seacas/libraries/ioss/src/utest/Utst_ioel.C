@@ -34,6 +34,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -41,6 +42,7 @@
 
 #include <Ioss_ConcreteVariableType.h>
 #include <Ioss_Initializer.h>
+#include <Ioss_NullEntity.h>
 #include <Ioss_Utils.h>
 #include <Ioss_VariableType.h>
 
@@ -58,8 +60,15 @@ int main(int argc, char *argv[])
   Ioss::Initializer        initialize_topologies;
 
   int err_count = test_all_elements();
+
+  // Make sure Ioss::NullEntity works.  Not used in IOSS iteself,
+  // but some clients use it, so need to make sure it compiles
+  // correctly.
+  std::unique_ptr<Ioss::NullEntity> entity{new Ioss::NullEntity()};
+  std::cout << "\nThe null entity type is " << entity->type_string() << " and it contains "
+            << entity->contains_string() << "\n";
+
   OUTPUT << "\n" << argv[0];
-  ;
   if (err_count == 0) {
     OUTPUT << "\nSIERRA execution successful." << '\n';
     return EXIT_SUCCESS;
@@ -307,10 +316,6 @@ bool test_element(const std::string &type)
   //
   if (element->parametric_dimension() == 3) {
     for (int i = 1; i <= nf; i++) {
-
-      // Nodes defining face...
-      std::vector<int> face_con = element->face_connectivity(i);
-
       unsigned int fncn           = element->face_type(i)->number_corner_nodes();
       unsigned int num_edges_face = element->number_edges_face(i);
       if (fncn != num_edges_face) {

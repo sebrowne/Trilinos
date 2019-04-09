@@ -486,7 +486,7 @@ checkSizes (const Tpetra::SrcDistObject& src)
 template<class Scalar, class LO, class GO, class Node>
 void BlockMultiVector<Scalar, LO, GO, Node>::
 copyAndPermute (const Tpetra::SrcDistObject& src,
-                size_t numSameIDs,
+                const size_t numSameIDs,
                 const Teuchos::ArrayView<const LO>& permuteToLIDs,
                 const Teuchos::ArrayView<const LO>& permuteFromLIDs)
 {
@@ -585,9 +585,9 @@ template<class Scalar, class LO, class GO, class Node>
 void BlockMultiVector<Scalar, LO, GO, Node>::
 unpackAndCombine (const Teuchos::ArrayView<const LO>& importLIDs,
                   const Teuchos::ArrayView<const impl_scalar_type>& imports,
-                  const Teuchos::ArrayView<size_t>& numPacketsPerLID,
-                  size_t constantNumPackets,
-                  Tpetra::Distributor& distor,
+                  const Teuchos::ArrayView<size_t>& /* numPacketsPerLID */,
+                  const size_t /* constantNumPackets */,
+                  Tpetra::Distributor& /* distor */,
                   Tpetra::CombineMode CM)
 {
   typedef typename Teuchos::ArrayView<const LO>::size_type size_type;

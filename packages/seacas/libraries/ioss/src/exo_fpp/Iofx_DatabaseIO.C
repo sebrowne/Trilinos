@@ -742,6 +742,9 @@ namespace Iofx {
 
     bool nemesis_file = true;
     int  error = ex_get_init_info(get_file_pointer(), &num_proc, &num_proc_in_file, &file_type[0]);
+    if (error < 0) {
+      Ioex::exodus_error(get_file_pointer(), __LINE__, __func__, __FILE__);
+    }
 
     if (num_proc == 1 && num_proc_in_file == 1) {
       // Not a nemesis file
@@ -1832,7 +1835,7 @@ void DatabaseIO::get_sets(ex_entity_type type, int64_t count, const std::string 
         }
         if (filtered && type == EX_NODE_SET) {
           Xset->property_add(Ioss::Property("filtered_db_set_size", original_set_size));
-          activeNodesetNodesIndex[Xset_name].swap(active_node_index);
+          activeNodeSetNodesIndex[Xset_name].swap(active_node_index);
         }
         get_region()->add(Xset);
         get_region()->add_alias(Xset_name, alias);
@@ -2578,7 +2581,7 @@ int64_t DatabaseIO::get_field_internal(const Ioss::NodeSet *ns, const Ioss::Fiel
           ierr = ex_get_set(get_file_pointer(), EX_NODE_SET, id, TOPTR(dbvals), nullptr);
           if (ierr >= 0) {
             Ioex::filter_node_list(static_cast<int *>(data), dbvals,
-                                   activeNodesetNodesIndex[ns->name()]);
+                                   activeNodeSetNodesIndex[ns->name()]);
           }
         }
         else {
@@ -2586,7 +2589,7 @@ int64_t DatabaseIO::get_field_internal(const Ioss::NodeSet *ns, const Ioss::Fiel
           ierr = ex_get_set(get_file_pointer(), EX_NODE_SET, id, TOPTR(dbvals), nullptr);
           if (ierr >= 0) {
             Ioex::filter_node_list(static_cast<int64_t *>(data), dbvals,
-                                   activeNodesetNodesIndex[ns->name()]);
+                                   activeNodeSetNodesIndex[ns->name()]);
           }
         }
         if (ierr < 0) {
@@ -2624,7 +2627,8 @@ int64_t DatabaseIO::get_field_internal(const Ioss::NodeSet *ns, const Ioss::Fiel
             Ioex::exodus_error(get_file_pointer(), __LINE__, __func__, __FILE__);
           }
           Ioex::filter_node_list(static_cast<double *>(data), dbvals,
-                                 activeNodesetNodesIndex[ns->name()]);
+                                 activeNodeSetNodesIndex[ns->name()]);
+          set_param[0].distribution_factor_list = nullptr;
         }
       }
       else {
@@ -2887,6 +2891,7 @@ int64_t DatabaseIO::get_field_internal(const Ioss::SideBlock *fb, const Ioss::Fi
           if (ierr < 0) {
             Ioex::exodus_error(get_file_pointer(), __LINE__, __func__, __FILE__);
           }
+          set_param[0].distribution_factor_list = nullptr;
 
           if (field.get_type() == Ioss::Field::INTEGER) {
             // Need to convert 'double' to 'int' for Sierra use...
@@ -4999,7 +5004,7 @@ void DatabaseIO::write_meta_data()
     m_groupCount[EX_ELEM_BLOCK] = element_blocks.size();
   }
 
-  // Nodesets ...
+  // NodeSets ...
   {
     const Ioss::NodeSetContainer &nodesets = region->get_nodesets();
     for (auto &nodeset : nodesets) {
@@ -5012,7 +5017,7 @@ void DatabaseIO::write_meta_data()
     m_groupCount[EX_NODE_SET] = nodesets.size();
   }
 
-  // Edgesets ...
+  // EdgeSets ...
   {
     const Ioss::EdgeSetContainer &edgesets = region->get_edgesets();
     for (auto &edgeset : edgesets) {
@@ -5025,7 +5030,7 @@ void DatabaseIO::write_meta_data()
     m_groupCount[EX_EDGE_SET] = edgesets.size();
   }
 
-  // Facesets ...
+  // FaceSets ...
   {
     const Ioss::FaceSetContainer &facesets = region->get_facesets();
     for (auto &faceset : facesets) {
@@ -5038,7 +5043,7 @@ void DatabaseIO::write_meta_data()
     m_groupCount[EX_FACE_SET] = facesets.size();
   }
 
-  // Elementsets ...
+  // ElementSets ...
   {
     const Ioss::ElementSetContainer &elementsets = region->get_elementsets();
     for (auto &elementset : elementsets) {

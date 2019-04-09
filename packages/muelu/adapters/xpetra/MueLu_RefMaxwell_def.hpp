@@ -82,6 +82,7 @@
 #include <KokkosSparse_CrsMatrix.hpp>
 #endif
 
+#include "MueLu_ZoltanInterface.hpp"
 #include "MueLu_Zoltan2Interface.hpp"
 #include "MueLu_RepartitionHeuristicFactory.hpp"
 #include "MueLu_RepartitionFactory.hpp"
@@ -144,6 +145,8 @@ namespace MueLu {
   template<class Scalar, class LocalOrdinal, class GlobalOrdinal, class Node>
   void RefMaxwell<Scalar,LocalOrdinal,GlobalOrdinal,Node>::compute() {
 
+
+    typedef typename Teuchos::ScalarTraits<Scalar>::magnitudeType realType;
 
 #ifdef HAVE_MUELU_CUDA
     if (parameterList_.get<bool>("refmaxwell: cuda profile setup", false)) cudaProfilerStart();
@@ -330,8 +333,10 @@ namespace MueLu {
 #endif
     }
 
+#ifdef HAVE_MPI
     bool doRebalancing = parameterList_.get<bool>("refmaxwell: subsolves on subcommunicators", false);
     int numProcsAH, numProcsA22;
+#endif
     {
       // build coarse grid operator for (1,1)-block
       formCoarseMatrix();
@@ -367,6 +372,7 @@ namespace MueLu {
         coarseLevel.Set("R",R11_);
         coarseLevel.Set("Coordinates",CoordsH_);
         coarseLevel.Set("number of partitions", numProcsAH);
+        coarseLevel.Set("repartition: heuristic target rows per process", 1000);
 
         coarseLevel.setlib(AH_->getDomainMap()->lib());
         fineLevel.setlib(AH_->getDomainMap()->lib());
@@ -510,7 +516,6 @@ namespace MueLu {
         fineLevel.Set("A",SM_Matrix_);
         coarseLevel.Set("P",D0_Matrix_);
         coarseLevel.Set("Coordinates",Coords_);
-        coarseLevel.Set("number of partitions", numProcsA22);
 
         coarseLevel.setlib(SM_Matrix_->getDomainMap()->lib());
         fineLevel.setlib(SM_Matrix_->getDomainMap()->lib());
@@ -530,6 +535,9 @@ namespace MueLu {
 
 #ifdef HAVE_MPI
         if (doRebalancing) {
+
+          coarseLevel.Set("number of partitions", numProcsA22);
+          coarseLevel.Set("repartition: heuristic target rows per process", 1000);
 
           // auto repartheurFactory = rcp(new RepartitionHeuristicFactory());
           // ParameterList repartheurParams;
@@ -806,7 +814,7 @@ namespace MueLu {
 #endif
       Xpetra::IO<SC, LO, GlobalOrdinal, Node>::Write(std::string("nullspace.mat"), *Nullspace_);
       if (Coords_ != null)
-        Xpetra::IO<double, LO, GlobalOrdinal, Node>::Write(std::string("coords.mat"), *Coords_);
+        Xpetra::IO<realType, LO, GlobalOrdinal, Node>::Write(std::string("coords.mat"), *Coords_);
       Xpetra::IO<SC, LO, GlobalOrdinal, Node>::Write(std::string("D0_nuked.mat"), *D0_Matrix_);
       Xpetra::IO<SC, LO, GlobalOrdinal, Node>::Write(std::string("A_nodal.mat"), *A_nodal_Matrix_);
       Xpetra::IO<SC, LO, GO, NO>::Write(std::string("P11.mat"), *P11_);
@@ -835,6 +843,7 @@ namespace MueLu {
 
     const SC SC_ZERO = Teuchos::ScalarTraits<SC>::zero();
     const SC SC_ONE = Teuchos::ScalarTraits<SC>::one();
+    const Scalar half = SC_ONE / (SC_ONE + SC_ONE);
     size_t dim = Nullspace_->getNumVectors();
     size_t numLocalRows = SM_Matrix_->getNodeNumRows();
 
@@ -1017,7 +1026,7 @@ namespace MueLu {
 #if defined(HAVE_MUELU_DEBUG) && !defined(HAVE_MUELU_CUDA)
                                        TEUCHOS_ASSERT_EQUALITY(P11colind(m),jNew);
 #endif
-                                       P11vals(m) += 0.5 * v * n;
+                                       P11vals(m) += half * v * n;
                                      }
                                    }
                                  }
@@ -1041,7 +1050,7 @@ namespace MueLu {
 #if defined(HAVE_MUELU_DEBUG) && !defined(HAVE_MUELU_CUDA)
                                        TEUCHOS_ASSERT_EQUALITY(P11colind(m),jNew);
 #endif
-                                       P11vals(m) += 0.5 * v * n;
+                                       P11vals(m) += half * v * n;
                                      }
                                    }
                                  }
@@ -1164,7 +1173,7 @@ namespace MueLu {
 #ifdef HAVE_MUELU_DEBUG
                 TEUCHOS_ASSERT_EQUALITY(P11colind[m],jNew);
 #endif
-                  P11vals[m] += 0.5 * v * n;
+                  P11vals[m] += half * v * n;
               }
             }
           }
@@ -1187,7 +1196,7 @@ namespace MueLu {
 #ifdef HAVE_MUELU_DEBUG
                 TEUCHOS_ASSERT_EQUALITY(P11colind[m],jNew);
 #endif
-                  P11vals[m] += 0.5 * v * n;
+                  P11vals[m] += half * v * n;
               }
             }
           }
@@ -1243,14 +1252,14 @@ namespace MueLu {
                 if (P11_status[jNew] == ST_INVALID || P11_status[jNew] < nnz_old) {
                   P11_status[jNew] = nnz;
                   P11colind[nnz] = jNew;
-                  P11vals[nnz] = 0.5 * v * n;
+                  P11vals[nnz] = half * v * n;
                   // or should it be
-                  // P11vals[nnz] = 0.5 * n;
+                  // P11vals[nnz] = half * n;
                   nnz++;
                 } else {
-                  P11vals[P11_status[jNew]] += 0.5 * v * n;
+                  P11vals[P11_status[jNew]] += half * v * n;
                   // or should it be
-                  // P11vals[P11_status[jNew]] += 0.5 * n;
+                  // P11vals[P11_status[jNew]] += half * n;
                 }
               }
             }
@@ -1275,14 +1284,14 @@ namespace MueLu {
                 if (P11_status[jNew] == ST_INVALID || P11_status[jNew] < nnz_old) {
                   P11_status[jNew] = nnz;
                   P11colind[nnz] = jNew;
-                  P11vals[nnz] = 0.5 * v * n;
+                  P11vals[nnz] = half * v * n;
                   // or should it be
-                  // P11vals[nnz] = 0.5 * n;
+                  // P11vals[nnz] = half * n;
                   nnz++;
                 } else {
-                  P11vals[P11_status[jNew]] += 0.5 * v * n;
+                  P11vals[P11_status[jNew]] += half * v * n;
                   // or should it be
-                  // P11vals[P11_status[jNew]] += 0.5 * n;
+                  // P11vals[P11_status[jNew]] += half * n;
                 }
               }
             }
@@ -1467,13 +1476,12 @@ namespace MueLu {
   template<class Scalar, class LocalOrdinal, class GlobalOrdinal, class Node>
   void RefMaxwell<Scalar,LocalOrdinal,GlobalOrdinal,Node>::applyInverseAdditive(const MultiVector& RHS, MultiVector& X) const {
 
-    Scalar one = Teuchos::ScalarTraits<Scalar>::one(), negone = -one, zero = Teuchos::ScalarTraits<Scalar>::zero();
+    Scalar one = Teuchos::ScalarTraits<Scalar>::one();
 
     { // compute residuals
 
       Teuchos::TimeMonitor tmRes(*Teuchos::TimeMonitor::getNewTimer("MueLu RefMaxwell: residual calculation"));
-      SM_Matrix_->apply(X, *residual_, Teuchos::NO_TRANS, one, zero);
-      residual_->update(one, RHS, negone);
+      Utilities::Residual(*SM_Matrix_, X, RHS, *residual_);
       R11_->apply(*residual_,*P11res_,Teuchos::NO_TRANS);
       D0_T_Matrix_->apply(*residual_,*D0res_,Teuchos::NO_TRANS);
     }
@@ -1556,9 +1564,8 @@ namespace MueLu {
   void RefMaxwell<Scalar,LocalOrdinal,GlobalOrdinal,Node>::applyInverse121(const MultiVector& RHS, MultiVector& X) const {
 
     // precondition (1,1)-block
-    Scalar one = Teuchos::ScalarTraits<Scalar>::one(), negone = -one, zero = Teuchos::ScalarTraits<Scalar>::zero();
-    SM_Matrix_->apply(X, *residual_, Teuchos::NO_TRANS, one, zero);
-    residual_->update(one, RHS, negone);
+    Scalar one = Teuchos::ScalarTraits<Scalar>::one();
+    Utilities::Residual(*SM_Matrix_, X, RHS, *residual_);
     R11_->apply(*residual_,*P11res_,Teuchos::NO_TRANS);
     solveH();
     P11_->apply(*P11x_,*residual_,Teuchos::NO_TRANS);
@@ -1569,8 +1576,7 @@ namespace MueLu {
     }
 
     // precondition (2,2)-block
-    SM_Matrix_->apply(X, *residual_, Teuchos::NO_TRANS, one, zero);
-    residual_->update(one, RHS, negone);
+    Utilities::Residual(*SM_Matrix_, X, RHS, *residual_);
     D0_T_Matrix_->apply(*residual_,*D0res_,Teuchos::NO_TRANS);
     solve22();
     D0_Matrix_->apply(*D0x_,*residual_,Teuchos::NO_TRANS);
@@ -1581,8 +1587,7 @@ namespace MueLu {
     }
 
     // precondition (1,1)-block
-    SM_Matrix_->apply(X, *residual_, Teuchos::NO_TRANS, one, zero);
-    residual_->update(one, RHS, negone);
+    Utilities::Residual(*SM_Matrix_, X, RHS, *residual_);
     R11_->apply(*residual_,*P11res_,Teuchos::NO_TRANS);
     solveH();
     P11_->apply(*P11x_,*residual_,Teuchos::NO_TRANS);
@@ -1599,9 +1604,8 @@ namespace MueLu {
   void RefMaxwell<Scalar,LocalOrdinal,GlobalOrdinal,Node>::applyInverse212(const MultiVector& RHS, MultiVector& X) const {
 
     // precondition (2,2)-block
-    Scalar one = Teuchos::ScalarTraits<Scalar>::one(), negone = -one, zero = Teuchos::ScalarTraits<Scalar>::zero();
-    SM_Matrix_->apply(X, *residual_, Teuchos::NO_TRANS, one, zero);
-    residual_->update(one, RHS, negone);
+    Scalar one = Teuchos::ScalarTraits<Scalar>::one();
+    Utilities::Residual(*SM_Matrix_, X, RHS, *residual_);
     D0_T_Matrix_->apply(*residual_,*D0res_,Teuchos::NO_TRANS);
     solve22();
     D0_Matrix_->apply(*D0x_,*residual_,Teuchos::NO_TRANS);
@@ -1612,8 +1616,7 @@ namespace MueLu {
     }
 
     // precondition (1,1)-block
-    SM_Matrix_->apply(X, *residual_, Teuchos::NO_TRANS, one, zero);
-    residual_->update(one, RHS, negone);
+    Utilities::Residual(*SM_Matrix_, X, RHS, *residual_);
     R11_->apply(*residual_,*P11res_,Teuchos::NO_TRANS);
     solveH();
     P11_->apply(*P11x_,*residual_,Teuchos::NO_TRANS);
@@ -1624,8 +1627,7 @@ namespace MueLu {
     }
 
     // precondition (2,2)-block
-    SM_Matrix_->apply(X, *residual_, Teuchos::NO_TRANS, one, zero);
-    residual_->update(one, RHS, negone);
+    Utilities::Residual(*SM_Matrix_, X, RHS, *residual_);
     D0_T_Matrix_->apply(*residual_,*D0res_,Teuchos::NO_TRANS);
     solve22();
     D0_Matrix_->apply(*D0x_,*residual_,Teuchos::NO_TRANS);
@@ -1641,9 +1643,8 @@ namespace MueLu {
   void RefMaxwell<Scalar,LocalOrdinal,GlobalOrdinal,Node>::applyInverse11only(const MultiVector& RHS, MultiVector& X) const {
 
     // compute residuals
-    Scalar one = Teuchos::ScalarTraits<Scalar>::one(), negone = -one, zero = Teuchos::ScalarTraits<Scalar>::zero();
-    SM_Matrix_->apply(X, *residual_, Teuchos::NO_TRANS, one, zero);
-    residual_->update(one, RHS, negone);
+    Scalar one = Teuchos::ScalarTraits<Scalar>::one();
+    Utilities::Residual(*SM_Matrix_, X, RHS,*residual_);
     R11_->apply(*residual_,*P11res_,Teuchos::NO_TRANS);
 
     solveH();
@@ -1780,13 +1781,13 @@ namespace MueLu {
 
     RCP<const Teuchos::Comm<int> > comm = SM_Matrix_->getDomainMap()->getComm();
 
+#ifdef HAVE_MPI
     int root;
     if (!A22_.is_null())
       root = comm->getRank();
     else
       root = -1;
 
-#ifdef HAVE_MPI
     int actualRoot;
     reduceAll(*comm, Teuchos::REDUCE_MAX, root, Teuchos::ptr(&actualRoot));
     root = actualRoot;

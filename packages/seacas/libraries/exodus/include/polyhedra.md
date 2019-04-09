@@ -7,14 +7,14 @@ regular faces such as quadrilateral or triangles; or they can be
 topologically two-dimensional arbitrary polyhedra themselves.
 
 An arbitrary polyhedra 3D element block will have an element type of
-"nfaced" or "NFACED".  
+"nfaced" or "NFACED".
 
 The faces that are used in the connectivity of this block should be
 defined in one or more face blocks.  If the faces are arbitrary
 polyhedra, then they will have a face type of "nsided" or "NSIDED".
 
 An annotated example of defining an arbitrary polyhedral element block
-consisting of 3 elements is shown below.  
+consisting of 3 elements is shown below.
 
 The three elements have the following geometry:
 
@@ -45,8 +45,7 @@ The Exodus model is created via the following calls:
 
 * Output the initial information.  Since the model contains faces and
   a face block, the "extended" version of the `ex_put_init_ext()` call must be used:
-
-  ~~~~{.c}
+  ~~~~C
   ex_init_params par;
   strcpy( par.title, "This is the title" );
   par.num_dim = 3;
@@ -68,13 +67,12 @@ The Exodus model is created via the following calls:
   par.num_elem_maps = 0;
 
   ex_put_init_ext (exoid, &par);
-~~~~
+  ~~~~
 
 * Coordinate output is normal...
 
 * Define the face block.
-
-~~~~{.c}
+  ~~~~C
    block_name = "face_block_1";
    num_face_in_block[0] = 15;
    num_total_nodes_per_blk[0] = 58;
@@ -85,12 +83,11 @@ The Exodus model is created via the following calls:
 		 num_total_nodes_per_blk[0],
 		 0, 0, 0);
    ex_put_name(exoid, EX_FACE_BLOCK, block_id, block_name);
-~~~~
+  ~~~~
 
 * Output the face connectivity for "face_block_1".
   The data for the face connectivity is listed above; a portion is shown below...
-
-~~~~{.c}
+  ~~~~C
    connect = (int *) calloc(num_total_nodes_per_blk[0], sizeof(int));
    i = 0
    connect[i++] = 5;
@@ -124,35 +121,33 @@ The Exodus model is created via the following calls:
    assert(i == num_total_nodes_per_blk[0]);
 
    ex_put_conn (exoid, EX_FACE_BLOCK, block_id, connect, NULL, NULL);
-~~~~
+  ~~~~
 
 * Output the number of nodes per face count for "face_block_1":
-
-~~~~{.c}
+  ~~~~C
    j = 0;
    nnpe[ 1] = 3;   /* Face 1 */
    nnpe[ 2] = 3;
-   nnpe[ 3] = 4;  
+   nnpe[ 3] = 4;
    nnpe[ 4] = 4;
    nnpe[ 5] = 4;
    nnpe[ 6] = 3;
    nnpe[ 7] = 3;
    nnpe[ 8] = 4;
    nnpe[ 9] = 4;
-   nnpe[10] = 5;  
+   nnpe[10] = 5;
    nnpe[11] = 5;
    nnpe[12] = 4;
    nnpe[13] = 4;
    nnpe[14] = 4;
-   nnpe[15] = 4;  
-   
+   nnpe[15] = 4;
+
    ex_put_entity_count_per_polyhedra(exoid, EX_FACE_BLOCK, block_id, nnpe);
-~~~~
+  ~~~~
 
 * The face block is now fully defined; now define the nfaced element
-  block which uses these faces.  
-
-~~~~{.c}
+  block which uses these faces.
+  ~~~~C
    block_name = "nfaced_1";
 
    num_elem_in_block = 3;
@@ -166,18 +161,17 @@ The Exodus model is created via the following calls:
 		 num_total_faces_per_blk,
 		 0); /* attribute count */
    ex_put_name(exoid, EX_ELEM_BLOCK, block_id, block_name);
-~~~~
+  ~~~~
 
    In the `ex_put_block()` function, the element type is "nfaced".  The
    connectivity is defined in terms of the faces, so the node and edge
    arguments are passed zeros.  The nodal connectivity can be defined,
    but it isn't required.  The face connectivity argument for an
    nfaced block is the total number of faces in the connectivity for all
-   elements in the nfaced block. 
+   elements in the nfaced block.
 
 * Write the face connectivity:
-
-~~~~{.c}
+  ~~~~C
    /* write element-face connectivity */
    connect = (int *) calloc(num_total_faces_per_blk, sizeof(int));
 
@@ -187,7 +181,7 @@ The Exodus model is created via the following calls:
    connect[i++] = 3;
    connect[i++] = 4;
    connect[i++] = 5;
-   
+
    connect[i++] = 4;
    connect[i++] = 6;
    connect[i++] = 7;
@@ -204,29 +198,26 @@ The Exodus model is created via the following calls:
 
    assert(i == num_total_faces_per_blk);
    ex_put_conn (exoid, EX_ELEM_BLOCK, block_id, NULL, NULL, connect);
-~~~~
+  ~~~~
 
 * Output the number of faces per element count for "nfaced_1":
-
-~~~~{.c}
+  ~~~~C
    nnpe[1] = 5;  /* Number of faces per element 1 */
    nnpe[2] = 5;  /* Number of faces per element 2 */
    nnpe[3] = 7;  /* Number of faces per element 3 */
 
    ex_put_entity_count_per_polyhedra(exoid, EX_ELEM_BLOCK, block_id, nnpe);
-~~~~
+  ~~~~
 
 * That's all; the rest of the calls are the same as normal Exodus except:
 
   * There is a similar `ex_get_entity_count_per_polyhedra()` function for read.
+
   * The `ex_get_block()` functions return the total number of nodes or
     faces for all faces or element for "nfaced" and "nsided" blocks
-    and not the number per element 
+    and not the number per element
 
 * An example read/write usage is shown in the
   [testwt-nfaced.c](../test/testwt-nfaced.c) and [testrd-nfaced](../test/testrd-nfaced.c) files.
 
 * These changes are in Exodus version v4.93 and later.
-
-
-

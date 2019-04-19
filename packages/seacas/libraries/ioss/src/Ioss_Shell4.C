@@ -84,6 +84,7 @@ namespace {
   //        returns -1 if faces have differing topology
   int Constants::edges_per_face[nface + 1] = {4, 4, 4};
 } // namespace
+const char* Ioss::Shell4::name = "shell4";
 
 void Ioss::Shell4::factory()
 {

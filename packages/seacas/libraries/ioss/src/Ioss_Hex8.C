@@ -86,6 +86,7 @@ namespace {
   //        returns -1 if faces have differing topology
   int Constants::edges_per_face[nface + 1] = {4, 4, 4, 4, 4, 4, 4};
 } // namespace
+const char* Ioss::Hex8::name = "hex8";
 
 void Ioss::Hex8::factory()
 {

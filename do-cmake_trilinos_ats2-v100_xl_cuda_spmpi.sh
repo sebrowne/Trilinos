@@ -80,7 +80,7 @@ cmake \
    -D CMAKE_Fortran_COMPILER=${FC} \
    \
    -D CMAKE_C_FLAGS="$EXTRA_C_FLAGS" \
-   -D CMAKE_CXX_FLAGS="$EXTRA_CXX_FLAGS" \
+   -D CMAKE_CXX_FLAGS="$EXTRA_CXX_FLAGS -ccbin xlC" \
    -D CMAKE_Fortran_FLAGS="$EXTRA_F_FLAGS" \
    -D CMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
    -D Trilinos_CXX11_FLAGS="-std=c++11 --expt-extended-lambda" \

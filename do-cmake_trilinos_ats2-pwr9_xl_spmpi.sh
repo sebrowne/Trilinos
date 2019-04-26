@@ -80,7 +80,7 @@ cmake \
    -D CMAKE_Fortran_COMPILER=${FC} \
    \
    -D CMAKE_C_FLAGS="$EXTRA_C_FLAGS -O3" \
-   -D CMAKE_CXX_FLAGS="$EXTRA_CXX_FLAGS -ccbin xlC -O3" \
+   -D CMAKE_CXX_FLAGS="$EXTRA_CXX_FLAGS -O3" \
    -D CMAKE_Fortran_FLAGS="$EXTRA_F_FLAGS -O3" \
    -D CMAKE_C_FLAGS_RELEASE_OVERRIDE="-DNDEBUG" \
    -D CMAKE_CXX_FLAGS_RELEASE_OVERRIDE="-DNDEBUG" \
@@ -160,13 +160,13 @@ cmake \
    -D Kokkos_ENABLE_Serial=ON \
    -D Kokkos_ENABLE_OpenMP=OFF \
    -D Kokkos_ENABLE_Pthread=OFF \
-   -D Kokkos_ENABLE_Cuda=ON \
-   -D Kokkos_ENABLE_Cuda_UVM=ON \
-   -D Kokkos_ENABLE_Cuda_Lambda=ON \
+   -D Kokkos_ENABLE_Cuda=OFF \
+   -D Kokkos_ENABLE_Cuda_UVM=OFF \
+   -D Kokkos_ENABLE_Cuda_Lambda=OFF \
    -D Kokkos_ENABLE_Cuda_Relocatable_Device_Code=OFF \
    -D Kokkos_ENABLE_Deprecated_Code=OFF \
-   -D TPL_ENABLE_CUDA=ON \
-   -D KOKKOS_ARCH="Volta70" \
+   -D TPL_ENABLE_CUDA=OFF \
+   -D KOKKOS_ARCH="Power9" \
    \
    -D Trilinos_ENABLE_SEACAS=ON \
    -D TPL_ENABLE_X11=OFF \

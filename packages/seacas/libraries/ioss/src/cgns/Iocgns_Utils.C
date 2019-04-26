@@ -317,9 +317,9 @@ namespace {
         for (const auto &field_name : fields) {
           const Ioss::Field &field = block->get_fieldref(field_name);
           std::string        type  = field.raw_storage()->name();
-          strncpy(&fld_names[offset], field_name.c_str(), CGNS_MAX_NAME_LENGTH);
+          Ioss::Utils::copy_string(&fld_names[offset], field_name, CGNS_MAX_NAME_LENGTH + 1);
           offset += CGNS_MAX_NAME_LENGTH + 1;
-          strncpy(&fld_names[offset], type.c_str(), CGNS_MAX_NAME_LENGTH);
+          Ioss::Utils::copy_string(&fld_names[offset], type, CGNS_MAX_NAME_LENGTH + 1);
           offset += CGNS_MAX_NAME_LENGTH + 1;
         }
       }
@@ -506,7 +506,7 @@ namespace {
     for (const auto &sb : structured_blocks) {
       my_count += std::count_if(
           sb->m_zoneConnectivity.begin(), sb->m_zoneConnectivity.end(),
-          [](const Ioss::ZoneConnectivity &z) { return !z.is_intra_block() && z.is_active(); });
+          [](const Ioss::ZoneConnectivity &z) { return !z.is_from_decomp() && z.is_active(); });
     }
 
     std::vector<int> rcv_data_cnt;
@@ -532,8 +532,8 @@ namespace {
     auto pack_lambda = [&off_data, &off_name, &off_cnt, &snd_zgc_data,
                         &snd_zgc_name](const std::vector<Ioss::ZoneConnectivity> &zgc) {
       for (const auto &z : zgc) {
-        if (!z.is_intra_block() && z.is_active()) {
-          strncpy(&snd_zgc_name[off_name], z.m_connectionName.c_str(), BYTE_PER_NAME);
+        if (!z.is_from_decomp() && z.is_active()) {
+          Ioss::Utils::copy_string(&snd_zgc_name[off_name], z.m_connectionName, BYTE_PER_NAME);
           off_cnt++;
           off_name += BYTE_PER_NAME;
 
@@ -606,6 +606,13 @@ namespace {
       assert(off_data / count == INT_PER_ZGC);
       assert(off_name % count == 0 && off_name / count == BYTE_PER_NAME);
 
+#if IOSS_DEBUG_OUTPUT
+      std::cerr << "ZGC_CONSOLIDATE: Before consolidation: (" << zgc.size() << ")\n";
+      for (const auto &z : zgc) {
+        std::cerr << "\tOZ " << z.m_ownerZone << z << "\n";
+      }
+#endif
+
       // Consolidate down to the minimum set that has the union of all ranges.
       for (size_t i = 0; i < zgc.size(); i++) {
         if (zgc[i].m_ownerZone > 0 && zgc[i].m_donorZone > 0) {
@@ -614,14 +621,24 @@ namespace {
 
           for (size_t j = i + 1; j < zgc.size(); j++) {
             if (zgc[j].m_connectionName == zgc[i].m_connectionName &&
-                zgc[j].m_ownerZone == owner_zone && zgc[j].m_donorZone == donor_zone) {
-              // Found another instance of the "same" zgc...  Union the ranges
-              union_zgc_range(zgc[i], zgc[j]);
-              assert(zgc[i].is_valid());
+                zgc[j].m_ownerZone == owner_zone) {
+              if (zgc[j].m_donorZone == donor_zone) {
+                // Found another instance of the "same" zgc...  Union the ranges
+                union_zgc_range(zgc[i], zgc[j]);
+                assert(zgc[i].is_valid());
 
-              // Flag the 'j' instance so it is processed only this time.
-              zgc[j].m_ownerZone = -1;
-              zgc[j].m_donorZone = -1;
+                // Flag the 'j' instance so it is processed only this time.
+                zgc[j].m_ownerZone = -1;
+                zgc[j].m_donorZone = -1;
+              }
+              else {
+                // We have a bad zgc -- name and owner_zone match, but not donor_zone.
+                std::ostringstream errmsg;
+                errmsg << "ERROR: CGNS: Found zgc named " << zgc[i].m_connectionName << " on zone "
+                       << owner_zone << " which has two different donor zones: " << donor_zone
+                       << " and " << zgc[j].m_donorZone << "\n";
+                IOSS_ERROR(errmsg);
+              }
             }
           }
         }
@@ -631,7 +648,7 @@ namespace {
       zgc.erase(std::remove_if(zgc.begin(), zgc.end(),
                                [](Ioss::ZoneConnectivity &z) {
                                  return (z.m_ownerZone == -1 && z.m_donorZone == -1) ||
-                                        z.is_intra_block() || !z.is_active();
+                                        z.is_from_decomp() || !z.is_active();
                                }),
                 zgc.end());
 
@@ -649,6 +666,13 @@ namespace {
       assert(off_data % count == 0);
       assert(off_data / count == INT_PER_ZGC);
       assert(off_name % count == 0 && off_name / count == BYTE_PER_NAME);
+
+#if IOSS_DEBUG_OUTPUT
+      std::cerr << "ZGC_CONSOLIDATE: After consolidation: (" << zgc.size() << ")\n";
+      for (const auto &z : zgc) {
+        std::cerr << "\tOZ " << z.m_ownerZone << z << "\n";
+      }
+#endif
     } // End of processor 0 only processing...
 
     // Send the list of unique zgc instances to all processors so they can all output.
@@ -932,8 +956,10 @@ size_t Iocgns::Utils::common_write_meta_data(int file_ptr, const Ioss::Region &r
     if (is_parallel_io) {
       region.get_database()->progress("\t\tZone Grid Connectivity");
     }
-    std::set<std::string>
-        zgc_names; // Used to detect duplicate zgc names in parallel but non-parallel-io case
+
+    // Used to detect duplicate zgc names in parallel but non-parallel-io case
+    std::set<std::string> zgc_names;
+
     for (const auto &zgc : sb->m_zoneConnectivity) {
       if (zgc.is_valid() && zgc.is_active()) {
         int                     zgc_idx = 0;
@@ -947,7 +973,7 @@ size_t Iocgns::Utils::common_write_meta_data(int file_ptr, const Ioss::Region &r
         std::string donor_name   = zgc.m_donorName;
         std::string connect_name = zgc.m_connectionName;
         if (is_parallel && !is_parallel_io) {
-          if (zgc.is_intra_block()) {
+          if (zgc.is_from_decomp()) {
             connect_name = std::to_string(zgc.m_ownerGUID) + "--" + std::to_string(zgc.m_donorGUID);
           }
           else {
@@ -962,6 +988,26 @@ size_t Iocgns::Utils::common_write_meta_data(int file_ptr, const Ioss::Region &r
                   break;
                 }
               }
+	      if (connect_name == zgc.m_connectionName) {
+		bool done = false;
+		for (char c1 = 'A'; c1 <= 'Z' && !done; c1++) {
+		  for (char c2 = 'A'; c2 <= 'Z' && !done; c2++) {
+		    std::string potential = connect_name + c1 + c2;
+		    iter                  = zgc_names.insert(potential);
+		    if (iter.second) {
+		      connect_name = potential;
+		      done = true;
+		    }
+		  }
+		}
+		if (connect_name == zgc.m_connectionName) {
+		  std::ostringstream errmsg;
+		  errmsg << "ERROR: CGNS: Duplicate ZGC Name '" << zgc.m_connectionName
+			 << "' on zone '" << sb->name() << "', processor "
+			 << zgc.m_ownerProcessor << "\n";
+		  IOSS_ERROR(errmsg);
+		}
+	      }
             }
           }
           donor_name += "_proc-";
@@ -1301,7 +1347,7 @@ size_t Iocgns::Utils::resolve_nodes(Ioss::Region &region, int my_processor, bool
   // location.
   for (auto &owner_block : blocks) {
     for (const auto &zgc : owner_block->m_zoneConnectivity) {
-      if (!zgc.is_intra_block() &&
+      if (!zgc.is_from_decomp() &&
           zgc.is_active()) { // Not due to processor decomposition and has faces.
         // NOTE: In parallel, the owner block should exist, but may not have
         // any cells on this processor.  We can access its global i,j,k, but
@@ -1440,7 +1486,7 @@ Iocgns::Utils::resolve_processor_shared_nodes(Ioss::Region &region, int my_proce
         }
       }
     }
-#if 1 && IOSS_DEBUG_OUTPUT
+#if IOSS_DEBUG_OUTPUT
     std::cerr << "P" << my_processor << ", Block " << owner_block->name()
               << " Shared Nodes: " << shared_nodes[owner_zone].size() << "\n";
 #endif
@@ -1518,14 +1564,14 @@ void Iocgns::Utils::add_structured_boundary_conditions_pio(int                  
         CGCHECKNP(cg_famname_read(fam_name));
       }
       else {
-        strncpy(fam_name, boco_name, CGNS_MAX_NAME_LENGTH);
+        Ioss::Utils::copy_string(fam_name, boco_name);
       }
 
       CGCHECKNP(cg_boco_read(cgns_file_ptr, base, zone, ibc + 1, range, nullptr));
 
-      strncpy(&bc_names[off_name], boco_name, CGNS_MAX_NAME_LENGTH + 1);
+      Ioss::Utils::copy_string(&bc_names[off_name], boco_name, CGNS_MAX_NAME_LENGTH + 1);
       off_name += (CGNS_MAX_NAME_LENGTH + 1);
-      strncpy(&bc_names[off_name], fam_name, CGNS_MAX_NAME_LENGTH + 1);
+      Ioss::Utils::copy_string(&bc_names[off_name], fam_name, CGNS_MAX_NAME_LENGTH + 1);
       off_name += (CGNS_MAX_NAME_LENGTH + 1);
 
       bc_data[off_data++] = bocotype;
@@ -1620,7 +1666,7 @@ void Iocgns::Utils::add_structured_boundary_conditions_fpp(int                  
       CGCHECKNP(cg_famname_read(fam_name));
     }
     else {
-      strncpy(fam_name, boco_name, CGNS_MAX_NAME_LENGTH);
+      Ioss::Utils::copy_string(fam_name, boco_name);
     }
 
     CGCHECKNP(cg_boco_read(cgns_file_ptr, base, zone, ibc + 1, range, nullptr));
@@ -1696,7 +1742,7 @@ void Iocgns::Utils::finalize_database(int cgns_file_ptr, const std::vector<doubl
     for (size_t state = 0; state < timesteps.size(); state++) {
       // This name is the "postfix" or common portion of all FlowSolution names...
       std::string name = base_type + std::to_string(state + 1);
-      std::strncpy(&names[state * 32], name.c_str(), 32);
+      Ioss::Utils::copy_string(&names[state * 32], name, 32);
       for (size_t i = name.size(); i < 32; i++) {
         names[state * 32 + i] = ' ';
       }
@@ -1777,12 +1823,12 @@ void Iocgns::Utils::add_transient_variables(int cgns_file_ptr, const std::vector
       int field_count = 0;
       CGCHECK(cg_nfields(cgns_file_ptr, b, z, sol, &field_count));
 
-      char **field_names = Ioss::Utils::get_name_array(field_count, CGNS_MAX_NAME_LENGTH + 1);
+      char **field_names = Ioss::Utils::get_name_array(field_count, CGNS_MAX_NAME_LENGTH);
       for (int field = 1; field <= field_count; field++) {
         CG_DataType_t data_type;
         char          field_name[CGNS_MAX_NAME_LENGTH + 1];
         CGCHECK(cg_field_info(cgns_file_ptr, b, z, sol, field, &data_type, field_name));
-        std::strncpy(field_names[field - 1], field_name, CGNS_MAX_NAME_LENGTH);
+        Ioss::Utils::copy_string(field_names[field - 1], field_name, CGNS_MAX_NAME_LENGTH + 1);
       }
 
       // Convert raw field names into composite fields (a_x, a_y, a_z ==> 3D vector 'a')

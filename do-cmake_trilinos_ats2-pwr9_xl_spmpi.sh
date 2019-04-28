@@ -54,7 +54,7 @@ elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
-  EXTRA_CXX_FLAGS="$EXTRA_CXX_FLAGS -lineinfo"
+  EXTRA_CXX_FLAGS="$EXTRA_CXX_FLAGS"
 else
   echo " *** Warning: 'opt' or 'dbg' BUILD_TYPE is an optional argument to this script.  Defaulting to 'opt'."
   BUILD_TYPE=RELEASE

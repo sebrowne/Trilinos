@@ -5,8 +5,8 @@ if [[ ${1} != 'setup' && ${1} != 'build' ]]; then
   echo " *** Error: Argument #1 to this script must be either 'setup' or 'build'! ***"
   exit
 fi
-if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' && ${2} != 'morgan' ]]; then
-  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'cts1', 'tlcc2', 'waterman', 'morgan'! ***"
+if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' && ${2} != 'morgan' ]]; then
+  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'cts1', 'tlcc2', 'waterman', 'morgan'! ***"
   exit
 fi
 if [[ ${3} != 'deploy' && ${3} != '' ]]; then
@@ -25,6 +25,8 @@ CEE_ATS2=cee-gpu_cuda-9.2.88_gcc-7.2.0_openmpi-1.10.2_static  # ats-2 surrogate
 # HPCs
 ATS1_HSW=ats1-hsw_intel-18.0.2_openmp_mpich-7.7.4_static	# ats-1/hsw
 ATS1_KNL=ats1-knl_intel-18.0.2_openmp_mpich-7.7.4_static	# ats-1/knl
+ATS2_PWR9=ats2-pwr9_xl-2019.02.07_spmpi-2019.01.30_static               # ats-2/pwr9
+ATS2_V100=ats2-v100_xl-2019.02.07_cuda-9.2.148_spmpi-2019.01.30_static	# ats-2/v100
 CTS1_BDW=cts1-bdw_intel-17.0.1_openmp_openmpi-1.10.5_static	# cts-1/bdw
 CTS1_BDW_LLNL=cts1-bdw_intel-18.0.2_openmp_openmpi-2.0.3_static	# cts-1/bdw
 CTS1_P100=cts1-p100_gcc-6.3.1_cuda-9.2.88_openmpi-2.1.1_static  # cts-1/p100
@@ -37,7 +39,7 @@ MORG_TX2=morgan-tx2_gcc-7.2.0_openmp_openmpi-2.1.2_static           # astra surr
 # Build stuff
 MAKE_CMD='make -j16 install'
 DATE_STR=`date +%Y-%m-%d`
-DATE_STR=2019-04-08
+DATE_STR=2019-04-26
 echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 if     [[ ${1} == 'setup' ]]; then
@@ -72,6 +74,12 @@ if     [[ ${1} == 'setup' ]]; then
     
     mkdir ${ATS1_KNL}_dbg_build  && cd $_; ln -s ../do-cmake_trilinos_ats1-knl_intel_mpich.sh do-cmake.sh; cd ..
     mkdir ${ATS1_KNL}_opt_build  && cd $_; ln -s ../do-cmake_trilinos_ats1-knl_intel_mpich.sh do-cmake.sh; cd ..
+  elif [[ ${2} == 'ats2' ]]; then
+    mkdir ${ATS2_PWR9}_dbg_build  && cd $_; ln -s ../do-cmake_trilinos_ats2-pwr9_xl_spmpi.sh do-cmake.sh; cd ..
+    mkdir ${ATS2_PWR9}_opt_build  && cd $_; ln -s ../do-cmake_trilinos_ats2-pwr9_xl_spmpi.sh do-cmake.sh; cd ..
+    
+    mkdir ${ATS2_V100}_dbg_build  && cd $_; ln -s ../do-cmake_trilinos_ats2-v100_xl_cuda_spmpi.sh do-cmake.sh; cd ..
+    mkdir ${ATS2_V100}_opt_build  && cd $_; ln -s ../do-cmake_trilinos_ats2-v100_xl_cuda_spmpi.sh do-cmake.sh; cd ..
   elif [[ ${2} == 'cts1' ]]; then
     mkdir ${CTS1_BDW}_dbg_build  && cd $_; ln -s ../do-cmake_trilinos_cts1-bdw_intel_openmpi.sh do-cmake.sh; cd ..
     mkdir ${CTS1_BDW}_opt_build  && cd $_; ln -s ../do-cmake_trilinos_cts1-bdw_intel_openmpi.sh do-cmake.sh; cd ..
@@ -135,12 +143,25 @@ elif   [[ ${1} == 'build' ]]; then
     module unload sparc-dev/intel-knl && module load sparc-dev/intel-hsw
     cd ${ATS1_HSW}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${ATS1_HSW}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
     
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-knl/Trilinos/$DATE_STR; fi
     module unload sparc-dev/intel-hsw && module load sparc-dev/intel-knl
     cd ${ATS1_KNL}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${ATS1_KNL}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+
+  elif [[ ${2} == 'ats2' ]]; then
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-pwr9/Trilinos/$DATE_STR; fi
+    module unload sparc-dev/cuda-xl && module load sparc-dev/xl
+    cd ${ATS2_PWR9}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
+    cd ${ATS2_PWR9}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
     
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-v100/Trilinos/$DATE_STR; fi
+    module unload sparc-dev/xl && module load sparc-dev/cuda-xl
+    cd ${ATS2_V100}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
+    cd ${ATS2_V100}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 
   elif [[ ${2} == 'cts1' ]]; then
@@ -152,12 +173,12 @@ elif   [[ ${1} == 'build' ]]; then
     module purge && module load sparc-dev/intel-18.0.2_openmpi-2.0.3
     cd ${CTS1_BDW_LLNL}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${CTS1_BDW_LLNL}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
   
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-p100/Trilinos/$DATE_STR; fi
     module purge && module load sparc-dev/cuda-gcc
     cd ${CTS1_P100}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${CTS1_P100}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
-    
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 
   elif [[ ${2} == 'tlcc2' ]]; then

@@ -20,7 +20,7 @@ EXTRA_CXX_FLAGS=""
 EXTRA_F_FLAGS=""
 LINK_FLAGS="-ldl"
 
-TRILINOS_HOME=$(cd ..; pwd)
+TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 
 # Shouldn't need to change anything below this line
 if [[ ${1} == 'static' || ${2} == 'static' ]]

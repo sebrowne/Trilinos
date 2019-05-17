@@ -20,7 +20,7 @@ EXTRA_CXX_FLAGS="-g1 -mkl -xMIC-AVX512 -qoverride-limits"
 EXTRA_F_FLAGS="-g1 -mkl -xMIC-AVX512 -qoverride-limits"
 LINK_FLAGS="-g1 -mkl -xMIC-AVX512"
 
-TRILINOS_HOME=$(cd ..; pwd)
+TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 
 # Shouldn't need to change anything below this line
 if [[ ${1} == 'opt' || ${2} == 'opt' ]]

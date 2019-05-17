@@ -20,7 +20,7 @@ EXTRA_CXX_FLAGS="-g1 -mkl -qoverride-limits"
 EXTRA_F_FLAGS="-g1 -mkl -qoverride-limits"
 LINK_FLAGS="-g1 -mkl"
 
-TRILINOS_HOME=$(cd ..; pwd)
+TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 
 # Shouldn't need to change anything below this line
 BUILD=${SPARC_ARCH}_${SPARC_COMPILER}_${SPARC_MPI}

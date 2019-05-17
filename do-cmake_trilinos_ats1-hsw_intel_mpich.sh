@@ -20,7 +20,7 @@ EXTRA_CXX_FLAGS="-mkl -xCORE-AVX2"
 EXTRA_F_FLAGS="-mkl -xCORE-AVX2"
 LINK_FLAGS="-mkl -xCORE-AVX2"
 
-TRILINOS_HOME=$(cd ..; pwd)
+TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 
 # Shouldn't need to change anything below this line
 if [[ ${1} == 'opt' || ${2} == 'opt' ]]

@@ -20,7 +20,7 @@ EXTRA_CXX_FLAGS=""
 EXTRA_F_FLAGS=""
 LINK_FLAGS=""
 
-TRILINOS_HOME=/home/sdhammo/trilinos/sparc
+TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 
 # Shouldn't need to change anything below this line
 BUILD=${SPARC_ARCH}_${SPARC_COMPILER}_${SPARC_MPI}

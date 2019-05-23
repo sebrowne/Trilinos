@@ -15,10 +15,10 @@ METIS_DIR=${METIS_ROOT}
 PARMETIS_DIR=${PARMETIS_ROOT}
 SUPERLUDIST_DIR=${SUPERLUDIST_ROOT}
 
-EXTRA_C_FLAGS="-g1 -mkl -xMIC-AVX512 -qoverride-limits"
-EXTRA_CXX_FLAGS="-g1 -mkl -xMIC-AVX512 -qoverride-limits"
-EXTRA_F_FLAGS="-g1 -mkl -xMIC-AVX512 -qoverride-limits"
-LINK_FLAGS="-g1 -mkl -xMIC-AVX512"
+EXTRA_C_FLAGS="-mkl -xMIC-AVX512 -qoverride-limits"
+EXTRA_CXX_FLAGS="-mkl -xMIC-AVX512 -qoverride-limits"
+EXTRA_F_FLAGS="-mkl -xMIC-AVX512 -qoverride-limits"
+LINK_FLAGS="-mkl -xMIC-AVX512"
 
 TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 

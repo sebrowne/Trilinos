@@ -165,6 +165,7 @@ cmake \
    -D Kokkos_ENABLE_Cuda_UVM=ON \
    -D Kokkos_ENABLE_Cuda_Lambda=ON \
    -D Kokkos_ENABLE_Cuda_Relocatable_Device_Code=OFF \
+   -D Kokkos_ENABLE_Deprecated_Code=OFF \
    -D TPL_ENABLE_CUDA=ON \
    -D KOKKOS_ARCH="Volta70" \
    \

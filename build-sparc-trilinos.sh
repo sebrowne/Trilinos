@@ -39,7 +39,7 @@ MORG_TX2=morgan-tx2_gcc-7.2.0_openmp_openmpi-2.1.2_static           # astra surr
 # Build stuff
 MAKE_CMD='make -j16 install'
 DATE_STR=`date +%Y-%m-%d`
-DATE_STR=2019-05-21
+DATE_STR=2019-05-28
 echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 if     [[ ${1} == 'setup' ]]; then

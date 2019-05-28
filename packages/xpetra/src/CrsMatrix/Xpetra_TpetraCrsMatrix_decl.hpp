@@ -834,7 +834,6 @@ namespace Xpetra {
     /// \brief Access the local Kokkos::CrsMatrix data
     local_matrix_type getLocalMatrix () const {
       TEUCHOS_UNREACHABLE_RETURN(local_matrix_type());
-      return local_matrix_type(); // make compiler happy
     }
 
     void setAllValues (const typename local_matrix_type::row_map_type& ptr,

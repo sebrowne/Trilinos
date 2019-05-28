@@ -816,7 +816,7 @@ namespace Xpetra {
     local_matrix_type getLocalMatrix () const {
       throw std::runtime_error("Xpetra::TpetraBlockCrsMatrix does not support getLocalMatrix due to missing Kokkos::CrsMatrix in Tpetra's experimental implementation");
       local_matrix_type ret;
-      //return ret; // make compiler happy (only when the 'throw std::runtime_error' above is gone)
+      return ret; // make compiler happy
     }
 
     void setAllValues (const typename local_matrix_type::row_map_type& ptr,

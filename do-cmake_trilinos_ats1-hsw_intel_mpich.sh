@@ -115,6 +115,7 @@ cmake \
    -D Trilinos_ENABLE_MueLu=ON \
    -D MueLu_ENABLE_Epetra=OFF \
    -D Xpetra_ENABLE_Epetra=OFF \
+   -D Xpetra_ENABLE_EpetraExt=OFF \
    -D Trilinos_ENABLE_Zoltan2=ON \
    -D Trilinos_ENABLE_STKMesh=OFF \
    -D Trilinos_ENABLE_STKIO=OFF \
@@ -124,7 +125,7 @@ cmake \
    -D Trilinos_ENABLE_STKTopology=OFF \
    \
    -D Trilinos_ENABLE_ShyLU=ON \
-   -D Trilinos_ENABLE_ShyLU_DDCore=ON \
+   -D Trilinos_ENABLE_ShyLU_DDCore=OFF \
    -D Trilinos_ENABLE_ShyLU_NodeHTS=ON \
    -D ShyLU_NodeHTS_ENABLE_TESTS=OFF \
    \

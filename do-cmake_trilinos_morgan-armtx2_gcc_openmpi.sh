@@ -130,7 +130,7 @@ cmake \
    -D Trilinos_ENABLE_STKTopology=OFF \
    \
    -D Trilinos_ENABLE_ShyLU=ON \
-   -D Trilinos_ENABLE_ShyLU_DDCore=ON \
+   -D Trilinos_ENABLE_ShyLU_DDCore=OFF \
    -D Trilinos_ENABLE_ShyLU_NodeHTS=ON \
    -D ShyLU_NodeHTS_ENABLE_TESTS=OFF \
    \

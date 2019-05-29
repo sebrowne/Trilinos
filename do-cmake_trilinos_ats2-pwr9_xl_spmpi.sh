@@ -140,6 +140,7 @@ cmake \
    -D Trilinos_ENABLE_MueLu=ON \
    -D MueLu_ENABLE_Epetra=OFF \
    -D Xpetra_ENABLE_Epetra=OFF \
+   -D Xpetra_ENABLE_EpetraExt=OFF \
    -D Trilinos_ENABLE_Zoltan2=ON \
    -D Trilinos_ENABLE_STKMesh=OFF \
    -D Trilinos_ENABLE_STKIO=OFF \

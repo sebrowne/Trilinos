@@ -15,9 +15,9 @@ METIS_DIR=${METIS_ROOT}
 PARMETIS_DIR=${PARMETIS_ROOT}
 SUPERLUDIST_DIR=${SUPERLUDIST_ROOT}
 
-EXTRA_C_FLAGS="-mkl -xMIC-AVX512 -qoverride-limits"
-EXTRA_CXX_FLAGS="-mkl -xMIC-AVX512 -qoverride-limits"
-EXTRA_F_FLAGS="-mkl -xMIC-AVX512 -qoverride-limits"
+EXTRA_C_FLAGS="-mkl -xMIC-AVX512"
+EXTRA_CXX_FLAGS="-mkl -xMIC-AVX512"
+EXTRA_F_FLAGS="-mkl -xMIC-AVX512"
 LINK_FLAGS="-mkl -xMIC-AVX512"
 
 TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
@@ -27,6 +27,9 @@ if [[ ${1} == 'opt' || ${2} == 'opt' ]]
 then
   BUILD_TYPE=RELEASE
   BUILD_SUFFIX=opt
+  EXTRA_C_FLAGS="${EXTRA_C_FLAGS} -qoverride-limits"
+  EXTRA_CXX_FLAGS="${EXTRA_CXX_FLAGS} -qoverride-limits"
+  EXTRA_F_FLAGS="${EXTRA_F_FLAGS} -qoverride-limits"
 elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
@@ -35,6 +38,9 @@ else
   echo " *** Warning: 'opt' or 'dbg' BUILD_TYPE is an optional argument to this script.  Defaulting to 'opt'."
   BUILD_TYPE=RELEASE
   BUILD_SUFFIX=opt
+  EXTRA_C_FLAGS="${EXTRA_C_FLAGS} -qoverride-limits"
+  EXTRA_CXX_FLAGS="${EXTRA_CXX_FLAGS} -qoverride-limits"
+  EXTRA_F_FLAGS="${EXTRA_F_FLAGS} -qoverride-limits"
 fi
 
 TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}

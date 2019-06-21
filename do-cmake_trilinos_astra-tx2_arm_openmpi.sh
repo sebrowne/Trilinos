@@ -8,16 +8,16 @@ HDF5_DIR=${HDF5_DIR}
 NETCDF_DIR=${NETCDF_DIR}
 PNETCDF_DIR=${PNETCDF_DIR}
 ZLIB_DIR=${ZLIB_DIR}
-CGNS_DIR=/ascldap/users/sdhammo/cgns/astra/20190218/atse/arm/19.1.0
+CGNS_DIR=/ascldap/users/sdhammo/cgns/astra/3.4.0/atse/arm/19.1.0
 BOOST_DIR=${BOOST_DIR}
 METIS_DIR=${METIS_DIR}
 PARMETIS_DIR=/ascldap/users/sdhammo/parmetis/4.0.3/openmpi/3.1.3/arm/19.1.0
 SUPERLUDIST_DIR=${SUPERLU_DIST_DIR}
 
-EXTRA_C_FLAGS="-fsimdmath -mcpu=thunderx2t99 -mtune=thunderx2t99 -armpl"
-EXTRA_CXX_FLAGS="-fsimdmath -mcpu=thunderx2t99 -mtune=thunderx2t99 -armpl"
-EXTRA_F_FLAGS="-fsimdmath -mcpu=thunderx2t99 -mtune=thunderx2t99 -armpl"
-LINK_FLAGS="-fsimdmath -mcpu=thunderx2t99 -mtune=thunderx2t99 -armpl"
+EXTRA_C_FLAGS=""
+EXTRA_CXX_FLAGS=""
+EXTRA_F_FLAGS=""
+LINK_FLAGS=""
 
 TRILINOS_HOME=$(cd ..; pwd)
 
@@ -88,7 +88,7 @@ cmake \
    -D Tpetra_INST_DOUBLE=ON \
    -D Tpetra_INST_COMPLEX_FLOAT=OFF \
    -D Tpetra_INST_COMPLEX_DOUBLE=OFF \
-   -D Tpetra_INST_INT_INT=OFF \
+   -D Tpetra_INST_INT_INT=ON \
    -D Tpetra_INST_INT_LONG=OFF \
    -D Tpetra_INST_INT_UNSIGNED=OFF \
    -D Tpetra_INST_INT_LONG_LONG=ON \
@@ -117,6 +117,7 @@ cmake \
    -D Trilinos_ENABLE_Stokhos=OFF \
    -D Trilinos_ENABLE_Panzer=OFF \
    -D Trilinos_ENABLE_Tpetra=ON \
+   -D Tpetra_INST_SERIAL=OFF \
    -D Tpetra_INST_OPENMP=ON \
    -D Trilinos_ENABLE_Belos=ON \
    -D Trilinos_ENABLE_Amesos2=ON \
@@ -134,8 +135,8 @@ cmake \
    \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
-   -D Kokkos_ENABLE_OpenMP=ON \
    -D Kokkos_ENABLE_Serial=OFF \
+   -D Kokkos_ENABLE_OpenMP=ON \
    -D Kokkos_ENABLE_Pthread=OFF \
    -D Kokkos_ENABLE_Cuda=OFF \
    -D Kokkos_ENABLE_Cuda_UVM=OFF \
@@ -161,11 +162,16 @@ cmake \
    -D TPL_ENABLE_BinUtils=ON \
    \
    -D TPL_ENABLE_BLAS=ON \
+   -D BLAS_LIBRARY_DIRS:PATH="${BLAS_DIR}/lib" \
+   -D BLAS_LIBRARY_NAMES:STRING="armpl_lp64_mp;armflang;omp" \
    \
    -D TPL_ENABLE_LAPACK=ON \
+   -D LAPACK_LIBRARY_DIRS:PATH="${LAPACK_DIR}/lib" \
+   -D LAPACK_LIBRARY_NAMES:STRING="armpl_lp64_mp;armflang;omp" \
    \
    -D TPL_ENABLE_Boost=ON \
    -D Boost_INCLUDE_DIRS:PATH=${BOOST_DIR}/include \
+   -D TPL_Boost_LIBRARY_DIRS:PATH=${BOOST_DIR}/lib \
    \
    -D TPL_ENABLE_BoostLib=ON \
    -D BoostLib_INCLUDE_DIRS:PATH=${BOOST_DIR}/include \
@@ -201,3 +207,6 @@ cmake \
    ${TRILINOS_HOME}
 
 #   -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi" \
+#   -D Xpetra_ENABLE_Epetra=OFF \
+#   -D Xpetra_Epetra_NO_32BIT_GLOBAL_INDICES=ON \
+

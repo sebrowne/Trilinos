@@ -8,7 +8,7 @@ HDF5_DIR=${HDF5_DIR}
 NETCDF_DIR=${NETCDF_DIR}
 PNETCDF_DIR=${PNETCDF_DIR}
 ZLIB_DIR=${ZLIB_DIR}
-CGNS_DIR=/ascldap/users/sdhammo/cgns/astra/20190218/atse/gcc/7.2.0
+CGNS_DIR=/ascldap/users/sdhammo/cgns/astra/3.4.0/atse/gcc/7.2.0
 BOOST_DIR=${BOOST_DIR}
 METIS_DIR=${METIS_DIR}
 PARMETIS_DIR=/ascldap/users/sdhammo/parmetis/4.0.3/openmpi/3.1.3/gcc/7.2.0
@@ -88,7 +88,7 @@ cmake \
    -D Tpetra_INST_DOUBLE=ON \
    -D Tpetra_INST_COMPLEX_FLOAT=OFF \
    -D Tpetra_INST_COMPLEX_DOUBLE=OFF \
-   -D Tpetra_INST_INT_INT=OFF \
+   -D Tpetra_INST_INT_INT=ON \
    -D Tpetra_INST_INT_LONG=OFF \
    -D Tpetra_INST_INT_UNSIGNED=OFF \
    -D Tpetra_INST_INT_LONG_LONG=ON \
@@ -96,7 +96,7 @@ cmake \
    -D Teuchos_ENABLE_COMPLEX=OFF \
    -D Zoltan_ENABLE_ULLONG_IDS=ON \
    \
-   -D Trilinos_ENABLE_OpenMP=OFF \
+   -D Trilinos_ENABLE_OpenMP=ON \
    -D TPL_ENABLE_Pthread=OFF \
    \
    -D Trilinos_ENABLE_Teuchos=ON \
@@ -117,8 +117,8 @@ cmake \
    -D Trilinos_ENABLE_Stokhos=OFF \
    -D Trilinos_ENABLE_Panzer=OFF \
    -D Trilinos_ENABLE_Tpetra=ON \
-   -D Tpetra_INST_SERIAL=ON \
-   -D Tpetra_INST_OPENMP=OFF \
+   -D Tpetra_INST_SERIAL=OFF \
+   -D Tpetra_INST_OPENMP=ON \
    -D Trilinos_ENABLE_Belos=ON \
    -D Trilinos_ENABLE_Amesos2=ON \
    -D Amesos2_ENABLE_Epetra=OFF \
@@ -135,8 +135,8 @@ cmake \
    \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
-   -D Kokkos_ENABLE_Serial=ON \
-   -D Kokkos_ENABLE_OpenMP=OFF \
+   -D Kokkos_ENABLE_Serial=OFF \
+   -D Kokkos_ENABLE_OpenMP=ON \
    -D Kokkos_ENABLE_Pthread=OFF \
    -D Kokkos_ENABLE_Cuda=OFF \
    -D Kokkos_ENABLE_Cuda_UVM=OFF \
@@ -207,3 +207,6 @@ cmake \
    ${TRILINOS_HOME}
 
 #   -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi" \
+#   -D Xpetra_ENABLE_Epetra=OFF \
+#   -D Xpetra_Epetra_NO_32BIT_GLOBAL_INDICES=ON \
+

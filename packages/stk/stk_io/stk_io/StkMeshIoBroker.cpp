@@ -1,6 +1,7 @@
-// Copyright (c) 2013, Sandia Corporation.
-// Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-// the U.S. Government retains certain rights in this software.
+// Copyright 2002 - 2008, 2010, 2011 National Technology Engineering
+// Solutions of Sandia, LLC (NTESS). Under the terms of Contract
+// DE-NA0003525 with NTESS, the U.S. Government retains certain rights
+// in this software.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -14,9 +15,9 @@
 //       disclaimer in the documentation and/or other materials provided
 //       with the distribution.
 //
-//     * Neither the name of Sandia Corporation nor the names of its
-//       contributors may be used to endorse or promote products derived
-//       from this software without specific prior written permission.
+//     * Neither the name of NTESS nor the names of its contributors
+//       may be used to endorse or promote products derived from this
+//       software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -33,6 +34,7 @@
 
 // #######################  Start Clang Header Tool Managed Headers ########################
 // clang-format off
+#include <stk_util/stk_config.h>
 #include <stk_io/StkMeshIoBroker.hpp>
 #include <stk_util/environment/Env.hpp>
 #include <Ionit_Initializer.h>                       // for Initializer
@@ -55,7 +57,9 @@
 #include <stk_mesh/base/Field.hpp>                   // for Field
 #include <stk_mesh/base/GetEntities.hpp>
 #include <stk_mesh/base/MetaData.hpp>                // for MetaData, etc
+#if defined(STK_HAVE_BOOSTLIB)
 #include <stk_util/environment/FileUtils.hpp>
+#endif
 #include <stk_util/util/ReportHandler.hpp>    // for ThrowErrorMsgIf, etc
 #include <utility>                                   // for pair, make_pair
 #include "Ioss_CodeTypes.h"                          // for NameList
@@ -159,17 +163,6 @@ StkMeshIoBroker::StkMeshIoBroker()
 {
     Ioss::Init::Initializer::initialize_ioss();
 }
-
-#ifndef STK_HIDE_DEPRECATED_CODE
-STK_DEPRECATED StkMeshIoBroker::StkMeshIoBroker(stk::ParallelMachine comm, const stk::mesh::ConnectivityMap * /*connectivity_map*/)
-: m_communicator(comm),
-  m_activeMeshIndex(0),
-  m_sidesetFaceCreationBehavior(STK_IO_SIDE_CREATION_USING_GRAPH_TEST),
-  m_autoLoadAttributes(true)
-{
-    Ioss::Init::Initializer::initialize_ioss();
-}
-#endif
 
 StkMeshIoBroker::StkMeshIoBroker(stk::ParallelMachine comm)
 : m_communicator(comm),
@@ -505,7 +498,9 @@ size_t StkMeshIoBroker::create_output_mesh(const std::string &filename, Database
     }
 
     std::string out_filename = filename;
+#if defined(STK_HAVE_BOOSTLIB)
     stk::util::filename_substitution(out_filename);
+#endif
     Ioss::Region *input_region = nullptr;
     if (is_index_valid(m_inputFiles, m_activeMeshIndex)) {
         input_region = get_input_io_region().get();
@@ -1157,7 +1152,9 @@ size_t StkMeshIoBroker::add_heartbeat_output(const std::string &filename, Heartb
                                              const Ioss::PropertyManager &properties, bool openFileImmediately)
 {
     std::string out_filename = filename;
+#if defined(STK_HAVE_BOOSTLIB)
     stk::util::filename_substitution(out_filename);
+#endif
     auto heartbeat = Teuchos::rcp(new impl::Heartbeat(out_filename, hb_type,
                                                       properties, m_communicator, openFileImmediately));
     m_heartbeat.push_back(heartbeat);

@@ -17,6 +17,7 @@ fi
 # CEE
 CEE_CLANG=cee-cpu_clang-5.0.1_serial_openmpi-1.10.2    # sparc development default
 CEE_GCC=cee-cpu_gcc-7.2.0_serial_openmpi-1.10.2        # sierra development default
+CEE_INTEL_NEW=cee-cpu_intel-19.0.3_serial_intelmpi-2018.4_static # sierra production default
 CEE_INTEL=cee-cpu_intel-17.0.1_serial_intelmpi-2018.4_static   # sierra production default
 CEE_INTEL_OLD=cee-cpu_intel-17.0.1_serial_intelmpi-5.1.2_static   # sierra old production default
 CEE_ATS1=cee-cpu_intel-18.0.2_openmp_mpich2-3.2_static        # ats-1 surrogate
@@ -64,6 +65,9 @@ if     [[ ${1} == 'setup' ]]; then
 
     mkdir ${CEE_INTEL_OLD}_dbg_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_intelmpi.sh do-cmake.sh; cd ..
     mkdir ${CEE_INTEL_OLD}_opt_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_intelmpi.sh do-cmake.sh; cd ..
+
+    mkdir ${CEE_INTEL_NEW}_dbg_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_intelmpi.sh do-cmake.sh; cd ..
+    mkdir ${CEE_INTEL_NEW}_opt_build && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_intelmpi.sh do-cmake.sh; cd ..
     
     mkdir ${CEE_ATS1}_dbg_build  && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_openmp_mpich.sh do-cmake.sh; cd ..
     mkdir ${CEE_ATS1}_opt_build  && cd $_; ln -s ../do-cmake_trilinos_cee-cpu_intel_openmp_mpich.sh do-cmake.sh; cd ..
@@ -136,7 +140,11 @@ elif   [[ ${1} == 'build' ]]; then
     module purge && module load sparc-dev/intel
     cd ${CEE_INTEL_OLD}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${CEE_INTEL_OLD}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
-    
+ 
+    module purge && module load sparc-dev/intel-19.0.3_intelmpi-2018.4
+    cd ${CEE_INTEL_NEW}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
+    cd ${CEE_INTEL_NEW}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+  
     module purge && module load sparc-dev/intel-18.0.2_mpich2-3.2
     cd ${CEE_ATS1}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${CEE_ATS1}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..

@@ -26,6 +26,7 @@ CEE_ATS2=cee-gpu_cuda-9.2.88_gcc-7.2.0_openmpi-1.10.2_static  # ats-2 surrogate
 ATS1_HSW=ats1-hsw_intel-18.0.2_openmp_mpich-7.7.4_static	# ats-1/hsw
 ATS1_KNL=ats1-knl_intel-18.0.2_openmp_mpich-7.7.4_static	# ats-1/knl
 ATS2_PWR9=ats2-pwr9_xl-2019.02.07_spmpi-2019.01.30_static               # ats-2/pwr9
+ATS2_PWR9_GCC=ats2-pwr9_gcc-7.3.1_spmpi-2019.01.30_static
 ATS2_V100=ats2-v100_xl-2019.02.07_cuda-9.2.148_spmpi-2019.01.30_static	# ats-2/v100
 CTS1_BDW=cts1-bdw_intel-17.0.1_openmp_openmpi-1.10.5_static	# cts-1/bdw
 CTS1_BDW_LLNL=cts1-bdw_intel-18.0.2_openmp_openmpi-2.0.3_static	# cts-1/bdw
@@ -39,7 +40,7 @@ MORG_TX2=morgan-tx2_gcc-7.2.0_openmp_openmpi-2.1.2_static           # astra surr
 # Build stuff
 MAKE_CMD='make -j16 install'
 DATE_STR=`date +%Y-%m-%d`
-DATE_STR=2019-08-12
+DATE_STR=2019-08-12/00000001
 echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 if     [[ ${1} == 'setup' ]]; then
@@ -77,7 +78,10 @@ if     [[ ${1} == 'setup' ]]; then
   elif [[ ${2} == 'ats2' ]]; then
     mkdir ${ATS2_PWR9}_dbg_build  && cd $_; ln -s ../do-cmake_trilinos_ats2-pwr9_xl_spmpi.sh do-cmake.sh; cd ..
     mkdir ${ATS2_PWR9}_opt_build  && cd $_; ln -s ../do-cmake_trilinos_ats2-pwr9_xl_spmpi.sh do-cmake.sh; cd ..
-    
+
+    mkdir ${ATS2_PWR9_GCC}_dbg_build  && cd $_; ln -s ../do-cmake_trilinos_ats2-pwr9_gcc_spmpi.sh do-cmake.sh; cd ..
+    mkdir ${ATS2_PWR9_GCC}_opt_build  && cd $_; ln -s ../do-cmake_trilinos_ats2-pwr9_gcc_spmpi.sh do-cmake.sh; cd ..
+ 
     mkdir ${ATS2_V100}_dbg_build  && cd $_; ln -s ../do-cmake_trilinos_ats2-v100_xl_cuda_spmpi.sh do-cmake.sh; cd ..
     mkdir ${ATS2_V100}_opt_build  && cd $_; ln -s ../do-cmake_trilinos_ats2-v100_xl_cuda_spmpi.sh do-cmake.sh; cd ..
   elif [[ ${2} == 'cts1' ]]; then
@@ -157,7 +161,13 @@ elif   [[ ${1} == 'build' ]]; then
     cd ${ATS2_PWR9}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${ATS2_PWR9}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
-    
+
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-pwr9/Trilinos/$DATE_STR; fi
+    module unload sparc-dev/cuda-xl && module load sparc-dev/gcc-7.3.1_spmpi-2019.01.30
+    cd ${ATS2_PWR9_GCC}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
+    cd ${ATS2_PWR9_GCC}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+ 
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-v100/Trilinos/$DATE_STR; fi
     module unload sparc-dev/xl && module load sparc-dev/cuda-xl
     cd ${ATS2_V100}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..

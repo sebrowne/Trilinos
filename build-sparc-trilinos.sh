@@ -106,7 +106,7 @@ if     [[ ${1} == 'setup' ]]; then
   fi
 elif   [[ ${1} == 'build' ]]; then
   if   [[ ${2} == 'cee-default' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6-new/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6/Trilinos/$DATE_STR; fi
     
     module purge && module load sparc-dev/clang
     cd ${CEE_CLANG}_static_opt_build; ./do-cmake.sh static opt; ${MAKE_CMD}; cd ..
@@ -123,7 +123,7 @@ elif   [[ ${1} == 'build' ]]; then
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 
   elif [[ ${2} == 'cee-advanced' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6-new/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6/Trilinos/$DATE_STR; fi
   
     module purge && module load sparc-dev/intel
     cd ${CEE_INTEL}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..

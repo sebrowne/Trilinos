@@ -135,6 +135,7 @@ cmake \
    -D Trilinos_ENABLE_STKSearch=ON \
    -D Trilinos_ENABLE_STKUtil=ON \
    -D Trilinos_ENABLE_STKTopology=OFF \
+   -D Trilinos_ENABLE_STKSimd=ON\
    \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \

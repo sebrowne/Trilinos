@@ -177,7 +177,6 @@ lib stk_balance_lib
     search_tolerance_algs
     /sierra/stk_io//stk_io
     /sierra/stk_mesh//stk_mesh_base
-    /tpl/trilinos//teuchos
     /tpl/trilinos//zoltan2
     /sierra/stk_tools//stk_transfer_utils_lib
     /sierra/stk_search//stk_search
@@ -217,7 +216,7 @@ exe stk_balance_unit_tester
     [ glob $(stk_balance-root)/../stk_unit_tests/stk_balance/*.cpp 
     ]
     /sierra/stk_unit_test_utils//stk_unit_main
-    /sierra/stk_mesh//stk_mesh_fixtures
+    /sierra/stk_unit_test_utils//stk_mesh_fixtures
     stk_balance_test_utils
   :
     <tag>@sierra-exec-tag
@@ -238,6 +237,7 @@ exe stk_balance_integration_tester
     [ glob $(stk_balance-root)/../stk_integration_tests/stk_balance/*.cpp 
     ]
     /sierra/stk_unit_test_utils//stk_unit_main
+    /sierra/stk_search//stk_search
     stk_balance_test_utils
   :
     <tag>@sierra-exec-tag

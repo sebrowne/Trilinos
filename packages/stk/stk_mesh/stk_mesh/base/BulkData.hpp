@@ -160,6 +160,7 @@ public:
   enum GhostingId { SHARED = 0, AURA = 1 };
   enum EntitySharing : char { NOT_MARKED=0, POSSIBLY_SHARED=1, IS_SHARED=2, NOT_SHARED };
   enum AutomaticAuraOption { NO_AUTO_AURA, AUTO_AURA };
+  using ModEndOptimization = impl::MeshModification::modification_optimization;
 
   /** \brief  Construct mesh bulk data manager conformal to the given
    *          \ref stk::mesh::MetaData "meta data manager" and will
@@ -250,10 +251,10 @@ public:
    *              a parallel-consistent exception will be thrown.
    */
 
-  bool modification_end()
+  bool modification_end(ModEndOptimization modEndOpt = ModEndOptimization::MOD_END_SORT)
   {
       notifier.notify_started_modification_end();
-      return m_meshModification.modification_end();
+      return m_meshModification.modification_end(modEndOpt);
   }
 
   void sort_entities(const stk::mesh::EntitySorterBase& sorter);
@@ -397,6 +398,11 @@ public:
       const PARTVECTOR & add_parts ,
       const PARTVECTOR & remove_parts = PARTVECTOR());
 
+  template<typename PARTVECTOR>
+  void change_entity_parts( const EntityVector& entities,
+      const PARTVECTOR & add_parts ,
+      const PARTVECTOR & remove_parts = PARTVECTOR());
+
   /** \brief Change part-membership of the specified entities by adding
    * and/or removing parts for each entity.
    *
@@ -504,6 +510,9 @@ public:
       const RelationIdentifier local_id,
       Permutation permutation = stk::mesh::Permutation::INVALID_PERMUTATION);
 
+  void declare_relation( Entity e_from ,
+                         const EntityVector& to_entities);
+ 
   //it's ugly to have 3 scratch-space vectors in the API, but for now
   //it is a big performance improvement. TODO: improve the internals to remove
   //the need for these vectors.
@@ -604,6 +613,7 @@ public:
   bool in_receive_custom_ghost( EntityKey key ) const;
   bool in_send_ghost( EntityKey key) const;         // CLEANUP: only used for testing
   bool in_send_ghost( EntityKey key , int proc ) const;         // CLEANUP: only used for testing
+  bool in_send_ghost( const Ghosting & ghosting, EntityKey key, int proc) const;
   bool is_aura_ghosted_onto_another_proc( EntityKey key ) const;     // CLEANUP: used only by modification_end_for_entity_creation
   bool in_ghost( const Ghosting & ghost , EntityKey key , int proc ) const;     // CLEANUP: can be moved protected
   void shared_procs_intersection(const std::vector<EntityKey> & keys, std::vector<int> & procs ) const; // CLEANUP: only used by aero
@@ -822,6 +832,7 @@ public:
   void clear_sidesets();
   void clear_sideset(const stk::mesh::Part &part);
   std::vector<SideSet *> get_sidesets();
+  std::vector<const SideSet *> get_sidesets() const;
   void synchronize_sideset_sync_count();
 
   void clone_solo_side_id_generator(const stk::mesh::BulkData &oldBulk);
@@ -874,7 +885,6 @@ protected: //functions
 
   void internal_batch_add_to_ghosting(Ghosting &ghosting, const EntityProcVec &entitiesAndDestinationProcs); // Mod Mark
 
-  bool in_send_ghost( const Ghosting & ghosting, EntityKey key, int proc) const;
   void ghost_entities_and_fields(Ghosting & ghosting, const std::set<EntityProc , EntityLess>& new_send);
 
   void conditionally_add_entity_to_ghosting_set(const stk::mesh::Ghosting &ghosting,
@@ -959,6 +969,11 @@ protected: //functions
   void internal_verify_and_change_entity_parts( Entity entity,
                                                 const PARTVECTOR & add_parts ,
                                                 const PARTVECTOR & remove_parts); // Mod Mark
+
+  template<typename PARTVECTOR>
+  void internal_verify_and_change_entity_parts( const EntityVector& entities,
+                                                const PARTVECTOR & add_parts ,
+                                                const PARTVECTOR & remove_parts);
 
   void internal_insert_all_parts_induced_from_higher_rank_entities_to_vector(stk::mesh::Entity entity,
                                                                                stk::mesh::Entity e_to,
@@ -1512,7 +1527,7 @@ private: // data
   std::shared_ptr<stk::mesh::MeshDiagnosticObserver> m_meshDiagnosticObserver;
   stk::mesh::ElemElemGraph* m_elemElemGraph = nullptr;
   std::shared_ptr<stk::mesh::ElemElemGraphUpdater> m_elemElemGraphUpdater;
-  stk::mesh::impl::SideSetImpl<std::string> m_sideSetData;
+  stk::mesh::impl::SideSetImpl<unsigned> m_sideSetData;
 
 protected:
   stk::mesh::impl::SoloSideIdGenerator m_soloSideIdGenerator;

@@ -32,29 +32,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <stk_mesh/base/BulkData.hpp>
-#include <stddef.h>                     // for size_t, NULL
-#include <string.h>                     // for memcpy, strcmp
-#include <algorithm>                    // for sort, lower_bound, unique, etc
-#include <iostream>                     // for operator<<, basic_ostream, etc
-#include <sstream>
-#include <fstream>
-#include <iterator>                     // for back_insert_iterator, etc
-#include <set>                          // for set, set<>::iterator, etc
-#include <stk_mesh/base/Bucket.hpp>     // for Bucket, BucketIdComparator, etc
-#include <stk_mesh/base/FaceCreator.hpp>
-#include <stk_mesh/baseImpl/check_comm_list.hpp>
-#include <stk_mesh/base/GetEntities.hpp>  // for get_selected_entities
-#include <stk_mesh/base/MetaData.hpp>   // for MetaData, print_entity_key, etc
-#include <stk_mesh/baseImpl/EntityRepository.hpp>  // for EntityRepository, etc
-#include <stk_util/util/ReportHandler.hpp>  // for ThrowRequireMsg, etc
-#include <stk_util/parallel/CommSparse.hpp>  // for CommSparse
-#include <stk_util/parallel/ParallelReduce.hpp>  // for Reduce, all_reduce, etc
-#include <stk_util/util/StaticAssert.hpp>  // for StaticAssert, etc
-#include <stk_util/util/string_case_compare.hpp>
-#include <string>                       // for char_traits, string, etc
-#include <utility>                      // for pair, make_pair, swap
-#include <vector>                       // for vector, etc
 #include "stk_mesh/base/ConnectivityMap.hpp"  // for ConnectivityMap
 #include "stk_mesh/base/Entity.hpp"     // for Entity, operator<<, etc
 #include "stk_mesh/base/EntityCommDatabase.hpp"  // for pack_entity_info, etc
@@ -70,18 +47,42 @@
 #include "stk_mesh/baseImpl/MeshImplUtils.hpp"
 #include "stk_mesh/baseImpl/MeshModification.hpp"
 #include "stk_topology/topology.hpp"    // for topology, etc
+#include "stk_util/diag/StringUtil.hpp"
 #include "stk_util/parallel/Parallel.hpp"  // for ParallelMachine, etc
 #include "stk_util/util/NamedPair.hpp"
 #include "stk_util/util/PairIter.hpp"   // for PairIter
 #include "stk_util/util/SameType.hpp"   // for SameType, etc
 #include "stk_util/util/SortAndUnique.hpp"
-#include "stk_util/diag/StringUtil.hpp"
-#include <stk_util/parallel/GenerateParallelUniqueIDs.hpp>
+#include <algorithm>                    // for sort, lower_bound, unique, etc
+#include <fstream>
+#include <iostream>                     // for operator<<, basic_ostream, etc
+#include <iterator>                     // for back_insert_iterator, etc
+#include <set>                          // for set, set<>::iterator, etc
+#include <sstream>
+#include <stddef.h>                     // for size_t, NULL
+#include <stk_mesh/base/Bucket.hpp>     // for Bucket, BucketIdComparator, etc
+#include <stk_mesh/base/BulkData.hpp>
+#include <stk_mesh/base/FaceCreator.hpp>
+#include <stk_mesh/base/GetEntities.hpp>  // for get_selected_entities
+#include <stk_mesh/base/MetaData.hpp>   // for MetaData, print_entity_key, etc
+#include <stk_mesh/base/SideSetEntry.hpp>
+#include <stk_mesh/baseImpl/ElementTopologyDeletions.hpp>
+#include <stk_mesh/baseImpl/EntityRepository.hpp>  // for EntityRepository, etc
+#include <stk_mesh/baseImpl/check_comm_list.hpp>
 #include <stk_mesh/baseImpl/elementGraph/ElemElemGraph.hpp>
 #include <stk_mesh/baseImpl/elementGraph/ElemElemGraphUpdater.hpp>
 #include <stk_mesh/baseImpl/elementGraph/SideConnector.hpp>   // for SideConnector
 #include <stk_mesh/baseImpl/elementGraph/SideSharingUsingGraph.hpp>
-#include <stk_mesh/baseImpl/ElementTopologyDeletions.hpp>
+#include <stk_util/parallel/CommSparse.hpp>  // for CommSparse
+#include <stk_util/parallel/GenerateParallelUniqueIDs.hpp>
+#include <stk_util/parallel/ParallelReduce.hpp>  // for Reduce, all_reduce, etc
+#include <stk_util/util/ReportHandler.hpp>  // for ThrowRequireMsg, etc
+#include <stk_util/util/StaticAssert.hpp>  // for StaticAssert, etc
+#include <stk_util/util/string_case_compare.hpp>
+#include <string.h>                     // for memcpy, strcmp
+#include <string>                       // for char_traits, string, etc
+#include <utility>                      // for pair, make_pair, swap
+#include <vector>                       // for vector, etc
 
 namespace stk {
 namespace mesh {
@@ -1124,6 +1125,43 @@ void BulkData::internal_verify_and_change_entity_parts( Entity entity,
 
 template void BulkData::internal_verify_and_change_entity_parts(Entity, const PartVector&, const PartVector&);
 template void BulkData::internal_verify_and_change_entity_parts(Entity, const ConstPartVector&, const ConstPartVector&);
+
+template<typename PARTVECTOR>
+void BulkData::internal_verify_and_change_entity_parts( const EntityVector& entities,
+                                                        const PARTVECTOR & add_parts ,
+                                                        const PARTVECTOR & remove_parts)
+{
+    require_ok_to_modify();
+
+    OrdinalVector addPartsAndSupersets;
+    OrdinalVector removePartsAndSubsetsMinusPartsInAddPartsList;
+    OrdinalVector scratchOrdinalVec, scratchSpace;
+
+    for(Entity entity : entities) {
+#ifdef SIERRA_MIGRATION
+      if(!m_add_fmwk_data)
+      {
+          require_entity_owner(entity, parallel_rank());
+      }
+#endif //SIERRA_MIGRATION
+
+      addPartsAndSupersets.clear();
+      fill_add_parts_and_supersets(add_parts, addPartsAndSupersets);
+
+      fill_remove_parts_and_subsets_minus_parts_in_add_parts_list(remove_parts,
+                                                        addPartsAndSupersets,
+                                                        bucket(entity),
+                                                        removePartsAndSubsetsMinusPartsInAddPartsList);
+
+      internal_change_entity_parts(entity,
+                                   addPartsAndSupersets,
+                                   removePartsAndSubsetsMinusPartsInAddPartsList,
+                                   scratchOrdinalVec, scratchSpace);
+    }
+}
+
+template void BulkData::internal_verify_and_change_entity_parts(const EntityVector&, const PartVector&, const PartVector&);
+template void BulkData::internal_verify_and_change_entity_parts(const EntityVector&, const ConstPartVector&, const ConstPartVector&);
 
 template<typename PARTVECTOR>
 Entity BulkData::internal_declare_entity( EntityRank ent_rank , EntityId ent_id ,
@@ -2382,6 +2420,25 @@ void BulkData::declare_relation( Entity e_from ,
   internal_declare_relation(e_from, e_to, local_id, permut, ordinal_scratch, scratch2, scratch3);
 }
 
+void BulkData::declare_relation( Entity e_from , const std::vector<Entity>& to_entities)
+{
+#ifndef NDEBUG
+  stk::topology topo = bucket(e_from).topology();
+  ThrowAssertMsg(!to_entities.empty(), "ERROR, BulkData::declare_relation given empty to_entities vector.");
+  EntityRank rank = entity_rank(to_entities[0]);
+  ThrowAssertMsg(to_entities.size() == topo.num_sub_topology(rank), "ERROR, BulkData::declare_relation given wrong number of downward relations.");
+  for(unsigned i=1; i<to_entities.size(); ++i) {
+    ThrowAssertMsg(entity_rank(to_entities[i]) == rank, "ERROR, BulkData::declare_relation: downward relations must all have the same rank.");
+  }
+#endif
+
+  OrdinalVector scratch1, scratch2, scratch3;
+  for(unsigned i=0; i<to_entities.size(); ++i) {
+    internal_declare_relation(e_from, to_entities[i], static_cast<RelationIdentifier>(i),
+                              INVALID_PERMUTATION, scratch1, scratch2, scratch3);
+  }
+}
+
 void BulkData::declare_relation( Entity e_from ,
                                  Entity e_to ,
                                  const RelationIdentifier local_id ,
@@ -3002,6 +3059,7 @@ void BulkData::internal_change_entity_owner( const std::vector<EntityProc> & arg
       Entity entity = i->first;
       pack_entity_info(*this, buffer , entity );
       pack_field_values(*this, buffer , entity );
+      pack_sideset_info(*this, buffer , entity );
 
       if (unique_list_of_send_closure.empty() || entity_key(unique_list_of_send_closure.back()) != entity_key(entity)) {
         unique_list_of_send_closure.push_back(entity);
@@ -3016,9 +3074,16 @@ void BulkData::internal_change_entity_owner( const std::vector<EntityProc> & arg
       Entity entity = i->first;
       pack_entity_info(*this, buffer , entity );
       pack_field_values(*this, buffer , entity );
+      pack_sideset_info(*this, buffer , entity );
     }
 
     comm.communicate();
+
+    for ( std::set<EntityProc,EntityLess>::iterator
+          i = send_closure.begin() ; i != send_closure.end() ; ++i ) {
+      Entity entity = i->first;
+      remove_element_entries_from_sidesets(*this, entity);
+    }
 
     OrdinalVector partOrdinals;
     OrdinalVector scratchOrdinalVec, scratchSpace;
@@ -3070,6 +3135,8 @@ void BulkData::internal_change_entity_owner( const std::vector<EntityProc> & arg
         if ( ! unpack_field_values(*this, buf , entity , error_msg ) ) {
           ++error_count ;
         }
+
+        unpack_sideset_info( buf, *this, entity);
       }
     }
 
@@ -3144,6 +3211,12 @@ Ghosting & BulkData::internal_create_ghosting( const std::string & name )
     ThrowErrorMsgIf( error, "Parallel name inconsistency");
   }
 #endif
+
+  for(Ghosting* ghosting : ghostings()) {
+    if (ghosting->name() == name) {
+      return *ghosting;
+    }
+  }
 
   Ghosting * const g =
     new Ghosting( *this , name , m_ghosting.size() , m_meshModification.synchronized_count() );
@@ -5581,6 +5654,23 @@ void BulkData::change_entity_parts( Entity entity,
 template void BulkData::change_entity_parts(Entity, const PartVector&, const PartVector&);
 template void BulkData::change_entity_parts(Entity, const ConstPartVector&, const ConstPartVector&);
 
+template<typename PARTVECTOR>
+void BulkData::change_entity_parts( const EntityVector& entities,
+    const PARTVECTOR & add_parts ,
+    const PARTVECTOR & remove_parts)
+{
+    bool stkMeshRunningUnderFramework = m_add_fmwk_data;
+    if(!stkMeshRunningUnderFramework)
+    {
+        internal_throw_error_if_manipulating_internal_part_memberships(add_parts);
+        internal_throw_error_if_manipulating_internal_part_memberships(remove_parts);
+    }
+    internal_verify_and_change_entity_parts(entities, add_parts, remove_parts);
+} 
+  
+template void BulkData::change_entity_parts(const EntityVector&, const PartVector&, const PartVector&);
+template void BulkData::change_entity_parts(const EntityVector&, const ConstPartVector&, const ConstPartVector&);
+
 void BulkData::batch_change_entity_parts( const stk::mesh::EntityVector& entities,
                           const std::vector<PartVector>& add_parts,
                           const std::vector<PartVector>& remove_parts)
@@ -5715,7 +5805,7 @@ void BulkData::internal_change_entity_parts(
     }
 }
 
-void BulkData::internal_move_entity_to_new_bucket(stk::mesh::Entity entity, const OrdinalVector &newBucketPartList, OrdinalVector& scratchSpace)
+void BulkData::internal_move_entity_to_new_bucket(stk::mesh::Entity entity, const OrdinalVector &newBucketPartList, OrdinalVector& /*scratchSpace*/)
 {
     const MeshIndex &meshIndex = mesh_index(entity);
     Bucket *bucketOld = meshIndex.bucket;
@@ -5727,12 +5817,12 @@ void BulkData::internal_move_entity_to_new_bucket(stk::mesh::Entity entity, cons
             m_meshModification.set_shared_entity_changed_parts();
         }
 
-        m_bucket_repository.change_entity_part_membership(meshIndex, newBucketPartList, scratchSpace);
+        m_bucket_repository.change_entity_part_membership(meshIndex, newBucketPartList);
     }
     else
     {
         EntityRank rank = entity_rank(entity);
-        m_bucket_repository.add_entity_with_part_memberships(entity, rank, newBucketPartList, scratchSpace);
+        m_bucket_repository.add_entity_with_part_memberships(entity, rank, newBucketPartList);
     }
 
     notifier.notify_local_buckets_changed(entity_rank(entity));
@@ -7518,6 +7608,11 @@ void BulkData::clear_sideset(const stk::mesh::Part &part)
 }
 
 std::vector<SideSet *> BulkData::get_sidesets()
+{
+    return m_sideSetData.get_sidesets();
+}
+
+std::vector<const SideSet *> BulkData::get_sidesets() const
 {
     return m_sideSetData.get_sidesets();
 }

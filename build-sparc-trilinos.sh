@@ -5,8 +5,8 @@ if [[ ${1} != 'setup' && ${1} != 'build' ]]; then
   echo " *** Error: Argument #1 to this script must be either 'setup' or 'build'! ***"
   exit
 fi
-if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' && ${2} != 'morgan' ]]; then
-  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'cts1', 'tlcc2', 'waterman', 'morgan'! ***"
+if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' ]]; then
+  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'cts1', 'tlcc2', 'waterman'! ***"
   exit
 fi
 if [[ ${3} != 'deploy' && ${3} != '' ]]; then
@@ -35,7 +35,6 @@ TLCC2_SNB=tlcc2-snb_intel-17.0.1_openmp_openmpi-1.10.5_static   # tlcc2/snb
 
 # Testbeds
 WTRM_V100=waterman-v100_gcc-7.2.0_cuda-9.2.88_openmpi-2.1.2_static  # ats-2 surrogate
-MORG_TX2=morgan-tx2_gcc-7.2.0_openmp_openmpi-2.1.2_static           # astra surrogate
 
 # Build stuff
 MAKE_CMD='make -j16 install'
@@ -100,9 +99,6 @@ if     [[ ${1} == 'setup' ]]; then
   elif [[ ${2} == 'waterman' ]]; then
     mkdir ${WTRM_V100}_dbg_build && cd $_; ln -s ../do-cmake_trilinos_waterman-gpu_gcc_cuda_openmpi.sh do-cmake.sh; cd ..
     mkdir ${WTRM_V100}_opt_build && cd $_; ln -s ../do-cmake_trilinos_waterman-gpu_gcc_cuda_openmpi.sh do-cmake.sh; cd ..
-  elif [[ ${2} == 'morgan' ]]; then
-    mkdir ${MORG_TX2}_dbg_build && cd $_; ln -s ../do-cmake_trilinos_morgan-armtx2_gcc_openmpi.sh do-cmake.sh; cd ..
-    mkdir ${MORG_TX2}_opt_build && cd $_; ln -s ../do-cmake_trilinos_morgan-armtx2_gcc_openmpi.sh do-cmake.sh; cd ..
   fi
 elif   [[ ${1} == 'build' ]]; then
   if   [[ ${2} == 'cee-default' ]]; then
@@ -207,14 +203,6 @@ elif   [[ ${1} == 'build' ]]; then
     module purge && module load sparc-dev/cuda-gcc
     cd ${WTRM_V100}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
     cd ${WTRM_V100}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
-    
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
-
-  elif [[ ${2} == 'morgan' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/morgan/Trilinos/$DATE_STR; fi
-    module purge && module load sparc-dev/gcc-7.2.0_openmpi-2.1.2
-    cd ${MORG_TX2}_opt_build; ./do-cmake.sh opt; ${MAKE_CMD}; cd ..
-    cd ${MORG_TX2}_dbg_build; ./do-cmake.sh dbg; ${MAKE_CMD}; cd ..
     
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
   fi

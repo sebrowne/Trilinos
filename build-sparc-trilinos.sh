@@ -15,10 +15,8 @@ if [[ ${3} != 'deploy' && ${3} != '' ]]; then
 fi
 
 # CEE
-CEE_CLANG=cee-cpu_clang-5.0.1_serial_openmpi-1.10.2      # sparc development default
-CEE_CLANG2=cee-cpu_clang-5.0.1_serial_openmpi-4.0.1
-CEE_GCC=cee-cpu_gcc-7.2.0_serial_openmpi-1.10.2          # sierra development default
-CEE_GCC2=cee-cpu_gcc-7.2.0_serial_openmpi-4.0.1          # sierra development default
+CEE_CLANG=cee-cpu_clang-5.0.1_serial_openmpi-4.0.1
+CEE_GCC=cee-cpu_gcc-7.2.0_serial_openmpi-4.0.1          # sierra development default
 CEE_INTEL=cee-cpu_intel-19.0.3_serial_intelmpi-2018.4    # sierra production default
 CEE_ATS1=cee-cpu_intel-18.0.2_openmp_mpich2-3.2          # ats-1 surrogate
 CEE_ATS2=cee-gpu_cuda-9.2.88_gcc-7.2.0_openmpi-1.10.2    # ats-2 surrogate
@@ -31,10 +29,10 @@ ATS2_PWR9=ats2-pwr9_xl-2019.02.07_spmpi-2019.01.30               # ats-2/pwr9
 ATS2_PWR9_GCC=ats2-pwr9_gcc-7.3.1_spmpi-2019.01.30
 ATS2_V100=ats2-v100_cuda-9.2.148_xl-2019.02.07_spmpi-2019.01.30	# ats-2/v100
 ATS2_V100_GCC=ats2-v100_cuda-9.2.148_gcc-7.3.1_spmpi-2019.01.30
-CTS1_BDW=cts1-bdw_intel-17.0.1_openmp_openmpi-1.10.5	# cts-1/bdw
+CTS1_BDW=cts1-bdw_intel-19.0.5_openmp_openmpi-4.0.1  	 # cts-1/bdw
 CTS1_BDW_LLNL=cts1-bdw_intel-18.0.2_openmp_openmpi-2.0.3 # cts-1/bdw
 CTS1_P100=cts1-p100_gcc-6.3.1_cuda-9.2.88_openmpi-2.1.1  # cts-1/p100
-TLCC2_SNB=tlcc2-snb_intel-17.0.1_openmp_openmpi-1.10.5   # tlcc2/snb
+TLCC2_SNB=tlcc2-snb_intel-19.0.5_openmp_openmpi-4.0.1    # tlcc2/snb
 
 # Testbeds
 WTRM_V100=waterman-v100_gcc-7.2.0_cuda-9.2.88_openmpi-2.1.2 # ats-2 surrogate
@@ -87,20 +85,10 @@ if     [[ ${1} == 'setup' ]]; then
     setup ${CEE_CLANG} dbg do-cmake_trilinos_cee-cpu_clang_openmpi.sh shared
     setup ${CEE_CLANG} opt do-cmake_trilinos_cee-cpu_clang_openmpi.sh shared
 
-    setup ${CEE_CLANG2} dbg do-cmake_trilinos_cee-cpu_clang_openmpi.sh static
-    setup ${CEE_CLANG2} opt do-cmake_trilinos_cee-cpu_clang_openmpi.sh static
-    setup ${CEE_CLANG2} dbg do-cmake_trilinos_cee-cpu_clang_openmpi.sh shared
-    setup ${CEE_CLANG2} opt do-cmake_trilinos_cee-cpu_clang_openmpi.sh shared
-
     setup ${CEE_GCC} dbg do-cmake_trilinos_cee-cpu_gcc_openmpi.sh static
     setup ${CEE_GCC} opt do-cmake_trilinos_cee-cpu_gcc_openmpi.sh static
     setup ${CEE_GCC} dbg do-cmake_trilinos_cee-cpu_gcc_openmpi.sh shared
     setup ${CEE_GCC} opt do-cmake_trilinos_cee-cpu_gcc_openmpi.sh shared
-
-    setup ${CEE_GCC2} dbg do-cmake_trilinos_cee-cpu_gcc_openmpi.sh static
-    setup ${CEE_GCC2} opt do-cmake_trilinos_cee-cpu_gcc_openmpi.sh static
-    setup ${CEE_GCC2} dbg do-cmake_trilinos_cee-cpu_gcc_openmpi.sh shared
-    setup ${CEE_GCC2} opt do-cmake_trilinos_cee-cpu_gcc_openmpi.sh shared
 
   elif [[ ${2} == 'cee-advanced' ]]; then
     setup ${CEE_INTEL} dbg do-cmake_trilinos_cee-cpu_intel_intelmpi.sh static
@@ -164,23 +152,11 @@ elif   [[ ${1} == 'build' ]]; then
     build ${CEE_CLANG} opt "${MAKE_CMD}" shared
     build ${CEE_CLANG} dbg "${MAKE_CMD}" shared
 
-    module purge && module load sparc-dev/clang-5.0.1_openmpi-4.0.1
-    build ${CEE_CLANG2} opt "${MAKE_CMD}" static
-    build ${CEE_CLANG2} dbg "${MAKE_CMD}" static
-    build ${CEE_CLANG2} opt "${MAKE_CMD}" shared
-    build ${CEE_CLANG2} dbg "${MAKE_CMD}" shared
-  
     module purge && module load sparc-dev/gcc
     build ${CEE_GCC} opt "${MAKE_CMD}" static
     build ${CEE_GCC} dbg "${MAKE_CMD}" static
     build ${CEE_GCC} opt "${MAKE_CMD}" shared
     build ${CEE_GCC} dbg "${MAKE_CMD}" shared
-
-    module purge && module load sparc-dev/gcc-7.2.0_openmpi-4.0.1
-    build ${CEE_GCC2} opt "${MAKE_CMD}" static
-    build ${CEE_GCC2} dbg "${MAKE_CMD}" static
-    build ${CEE_GCC2} opt "${MAKE_CMD}" shared
-    build ${CEE_GCC2} dbg "${MAKE_CMD}" shared
    
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 

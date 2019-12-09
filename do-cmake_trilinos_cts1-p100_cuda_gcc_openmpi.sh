@@ -1,4 +1,10 @@
 #!/bin/bash
+
+if [[ ${TMPDIR} ]] && [[ ! -d ${TMPDIR} ]]
+then
+    mkdir -p ${TMPDIR}
+fi
+
 EXTRA_ARGS=$@
 
 COMPILER_DIR=${COMPILER_ROOT}

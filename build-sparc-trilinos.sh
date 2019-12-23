@@ -5,8 +5,8 @@ if [[ ${1} != 'setup' && ${1} != 'build' ]]; then
   echo " *** Error: Argument #1 to this script must be either 'setup' or 'build'! ***"
   exit
 fi
-if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' ]]; then
-  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'cts1', 'tlcc2', 'waterman'! ***"
+if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'van1' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' ]]; then
+  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'van1', 'cts1', 'tlcc2', 'waterman'! ***"
   exit
 fi
 if [[ ${3} != 'deploy' && ${3} != '' ]]; then
@@ -29,6 +29,7 @@ ATS2_PWR9=ats2-pwr9_xl-2019.02.07_spmpi-2019.01.30               # ats-2/pwr9
 ATS2_PWR9_GCC=ats2-pwr9_gcc-7.3.1_spmpi-2019.01.30
 ATS2_V100=ats2-v100_cuda-9.2.148_xl-2019.02.07_spmpi-2019.01.30	# ats-2/v100
 ATS2_V100_GCC=ats2-v100_cuda-9.2.148_gcc-7.3.1_spmpi-2019.01.30
+VAN1_TX2=van1-tx2_arm-19.2_openmpi-3.1.4
 CTS1_BDW=cts1-bdw_intel-19.0.5_openmp_openmpi-4.0.1  	 # cts-1/bdw
 CTS1_BDW_LLNL=cts1-bdw_intel-18.0.2_openmp_openmpi-2.0.3 # cts-1/bdw
 CTS1_P100=cts1-p100_gcc-6.3.1_cuda-9.2.88_openmpi-2.1.1  # cts-1/p100
@@ -122,6 +123,10 @@ if     [[ ${1} == 'setup' ]]; then
 
     setup ${ATS2_V100_GCC} dbg do-cmake_trilinos_ats2-v100_cuda_gcc_spmpi.sh static
     setup ${ATS2_V100_GCC} opt do-cmake_trilinos_ats2-v100_cuda_gcc_spmpi.sh static
+
+  elif [[ ${2} == 'van1' ]]; then
+    setup ${VAN1_TX2} dbg do-cmake_trilinos_van1-tx2_arm_openmpi.sh static
+    setup ${VAN1_TX2} opt do-cmake_trilinos_van1-tx2_arm_openmpi.sh static
 
   elif [[ ${2} == 'cts1' ]]; then
     setup ${CTS1_BDW} dbg do-cmake_trilinos_cts1-bdw_intel_openmpi.sh static
@@ -220,6 +225,15 @@ elif   [[ ${1} == 'build' ]]; then
     module unload sparc-dev/cuda-xl && module load sparc-dev/cuda-9.2.148_gcc-7.3.1_spmpi-2019.01.30
     build ${ATS2_V100_GCC} opt "${MAKE_CMD}" static
     build ${ATS2_V100_GCC} dbg "${MAKE_CMD}" static
+
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+
+  elif [[ ${2} == 'van1' ]]; then
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/van1-tx2/Trilinos/$DATE_STR; fi
+
+    module unload sparc-dev && module load sparc-dev/arm-19.2_openmpi-3.1.4
+    build ${VAN1_TX2} opt "${MAKE_CMD}" static
+    build ${VAN1_TX2} dbg "${MAKE_CMD}" static
 
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 

@@ -268,7 +268,7 @@ elif   [[ ${1} == 'build' ]]; then
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 
   elif [[ ${2} == 'waterman' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/waterman/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/waterman-gpu/Trilinos/$DATE_STR; fi
 
     module purge && module load sparc-dev/cuda-gcc
     build ${WTRM_V100} opt "${MAKE_CMD}" static

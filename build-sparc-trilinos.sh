@@ -41,7 +41,7 @@ WTRM_V100=waterman-v100_gcc-7.2.0_cuda-9.2.88_openmpi-2.1.2 # ats-2 surrogate
 # Build stuff
 MAKE_CMD='make -j16 install'
 DATE_STR=`date +%Y-%m-%d`
-DATE_STR=2019-12-06/00000001
+DATE_STR=2019-12-06/00000000
 echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 function setup

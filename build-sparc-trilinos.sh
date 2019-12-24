@@ -274,6 +274,6 @@ elif   [[ ${1} == 'build' ]]; then
     build ${WTRM_V100} opt "${MAKE_CMD}" static
     build ${WTRM_V100} dbg "${MAKE_CMD}" static
     
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-dev $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
   fi
 fi

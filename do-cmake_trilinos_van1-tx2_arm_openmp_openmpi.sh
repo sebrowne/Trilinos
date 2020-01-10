@@ -1,61 +1,58 @@
 #!/bin/bash
 EXTRA_ARGS=$@
 
-COMPILER_DIR=${COMPILER_ROOT}
-MPI_DIR=${MPI_ROOT}
-BLAS_DIR=${CBLAS_ROOT}
-LAPACK_DIR=${CBLAS_ROOT}
-HDF5_DIR=${HDF5_ROOT}
-NETCDF_DIR=${NETCDF_ROOT}
-PNETCDF_DIR=${PNETCDF_ROOT}
-ZLIB_DIR=/usr/lib64
-CGNS_DIR=${CGNS_ROOT}
-BOOST_DIR=${BOOST_ROOT}
-METIS_DIR=${METIS_ROOT}
-PARMETIS_DIR=${PARMETIS_ROOT}
-SUPERLUDIST_DIR=${SUPERLUDIST_ROOT}
+COMPILER_DIR=
+MPI_DIR=${MPI_DIR}
+BLAS_DIR=${ARMPL_DIR}
+LAPACK_DIR=${ARMPL_DIR}
+HDF5_DIR=${HDF5_DIR}
+NETCDF_DIR=${NETCDF_DIR}
+PNETCDF_DIR=${PNETCDF_DIR}
+ZLIB_DIR=${ZLIB_DIR}
+CGNS_DIR=${CGNS_DIR}
+BOOST_DIR=${BOOST_DIR}
+METIS_DIR=${METIS_DIR}
+PARMETIS_DIR=${PARMETIS_DIR}
+SUPERLUDIST_DIR=${SUPERLU_DIST_DIR}
 
-EXTRA_C_FLAGS="-mkl -xAVX"
-EXTRA_CXX_FLAGS="-mkl -xAVX"
-EXTRA_F_FLAGS="-mkl -xAVX"
-LINK_FLAGS="-mkl -xAVX"
+BUILD_TYPE=RELEASE
+BUILD_SUFFIX=opt
+BUILD_C_FLAGS=""
+BUILD_CXX_FLAGS=""
+BUILD_F_FLAGS=""
+BUILD_LINK_FLAGS=""
 
-TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
-
-# Shouldn't need to change anything below this line
-if [[ ${1} == 'static' || ${2} == 'static' ]]
+if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
 then
-  LINK_SHARED=OFF
-  LINK_SUFFIX=static
-elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
-then
-  LINK_SHARED=ON
-  LINK_SUFFIX=shared
-else
-  echo " *** Warning: 'static' or 'shared' LINK_TYPE is an optional argument to this script.  Defaulting to 'static'."
-  LINK_SHARED=OFF
-  LINK_SUFFIX=static
-fi
-
-if [[ ${1} == 'opt' || ${2} == 'opt' ]]
-then
-  BUILD_TYPE=RELEASE
-  BUILD_SUFFIX=opt
+  :
 elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
 else
-  echo " *** Warning: 'opt' or 'dbg' BUILD_TYPE is an optional argument to this script.  Defaulting to 'opt'."
-  BUILD_TYPE=RELEASE
-  BUILD_SUFFIX=opt
+  echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
 fi
 
+LINK_SHARED=OFF
+LINK_SUFFIX=static
+
+if   [[ ${1} == 'static' || ${2} == 'static' ]]
+then
+  :
+elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
+then
+  LINK_SHARED=ON
+  LINK_SUFFIX=shared
+else
+  echo " *** You may specify 'static' or 'shared' to this configuration script. Defaulting to 'static'!"
+fi
+
+TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
 TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_openmp_${SPARC_MPI}_${LINK_SUFFIX}_${BUILD_SUFFIX}
 
 echo " *** Installing in: ${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR}"
-sleep 5
+sleep 3
 
 rm -f CMakeCache.txt; rm -rf CMakeFiles
 
@@ -69,10 +66,10 @@ cmake \
    -D CMAKE_CXX_COMPILER="mpicxx" \
    -D CMAKE_Fortran_COMPILER="mpif90" \
    \
-   -D CMAKE_C_FLAGS="$EXTRA_C_FLAGS" \
-   -D CMAKE_CXX_FLAGS="$EXTRA_CXX_FLAGS" \
-   -D CMAKE_Fortran_FLAGS="$EXTRA_F_FLAGS" \
-   -D CMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
+   -D CMAKE_C_FLAGS="$BUILD_C_FLAGS" \
+   -D CMAKE_CXX_FLAGS="$BUILD_CXX_FLAGS" \
+   -D CMAKE_Fortran_FLAGS="$BUILD_F_FLAGS" \
+   -D CMAKE_EXE_LINKER_FLAGS="$BUILD_LINK_FLAGS" \
    \
    -D Trilinos_VERBOSE_CONFIGURE=FALSE \
    -D Trilinos_ENABLE_ALL_PACKAGES=OFF \
@@ -104,7 +101,7 @@ cmake \
    -D Trilinos_ENABLE_Amesos=ON \
    -D Trilinos_ENABLE_Stratimikos=ON \
    -D Trilinos_ENABLE_Anasazi=ON \
-   -D Anasazi_ENABLE_RBGen=ON \
+   -D Anasazi_ENABLE_RBGen=OFF \
    -D Trilinos_ENABLE_Ifpack=ON \
    -D Trilinos_ENABLE_ML=ON \
    -D Trilinos_ENABLE_Teko=ON \
@@ -125,6 +122,7 @@ cmake \
    -D Trilinos_ENABLE_MueLu=ON \
    -D MueLu_ENABLE_Epetra=OFF \
    -D Xpetra_ENABLE_Epetra=OFF \
+   -D Xpetra_ENABLE_EpetraExt=OFF \
    -D Trilinos_ENABLE_Zoltan2=ON \
    -D Trilinos_ENABLE_STKMesh=OFF \
    -D Trilinos_ENABLE_STKIO=OFF \
@@ -132,20 +130,36 @@ cmake \
    -D Trilinos_ENABLE_STKSearch=ON \
    -D Trilinos_ENABLE_STKUtil=ON \
    -D Trilinos_ENABLE_STKTopology=OFF \
-   -D Trilinos_ENABLE_STKSimd=ON\
+   -D Trilinos_ENABLE_STKSimd=ON \
+   -D Trilinos_ENABLE_Pamgen=OFF \
+   -D Trilinos_ENABLE_Intrepid2=OFF \
    \
    -D Trilinos_ENABLE_ShyLU=ON \
-   -D Trilinos_ENABLE_ShyLU_DDCore=OFF \
+   -D Trilinos_ENABLE_ShyLU_DD=OFF \
+   -D Trilinos_ENABLE_ShyLU_Node=ON \
    -D Trilinos_ENABLE_ShyLU_NodeHTS=ON \
-   -D ShyLU_NodeHTS_ENABLE_TESTS=OFF \
+   -D Trilinos_ENABLE_ShyLU_NodeTacho=OFF \
    \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
    -D Kokkos_ENABLE_Serial=OFF \
    -D Kokkos_ENABLE_OpenMP=ON \
    -D Kokkos_ENABLE_Pthread=OFF \
+   -D TPL_ENABLE_CUDA=OFF \
    -D Kokkos_ENABLE_Cuda=OFF \
    -D Kokkos_ENABLE_Cuda_UVM=OFF \
+   -D KOKKOS_ARCH="ARMv8-TX2" \
+   \
+   -D KOKKOS_ENABLE_DEPRECATED_CODE=OFF \
+   -D Tpetra_ENABLE_DEPRECATED_CODE=OFF  \
+   -D Belos_HIDE_DEPRECATED_CODE=ON  \
+   -D Epetra_HIDE_DEPRECATED_CODE=ON  \
+   -D Ifpack2_HIDE_DEPRECATED_CODE=ON \
+   -D Ifpack2_ENABLE_DEPRECATED_CODE=OFF \
+   -D MueLu_ENABLE_DEPRECATED_CODE=OFF \
+   -D STK_HIDE_DEPRECATED_CODE=ON \
+   -D Teuchos_HIDE_DEPRECATED_CODE=ON\
+   -D Thyra_HIDE_DEPRECATED_CODE=ON \
    \
    -D Trilinos_ENABLE_SEACAS=ON \
    -D TPL_ENABLE_X11=OFF \
@@ -153,7 +167,7 @@ cmake \
    \
    -D Trilinos_ENABLE_Gtest=ON \
    \
-   -D Trilinos_ENABLE_TriKota=ON \
+   -D Trilinos_ENABLE_TriKota=OFF \
    -D DAKOTA_ENABLE_TESTS=OFF \
    -D Trilinos_ENABLE_ROL=ON \
    \
@@ -167,12 +181,12 @@ cmake \
    -D TPL_ENABLE_BinUtils=ON \
    \
    -D TPL_ENABLE_BLAS=ON \
-   -D BLAS_LIBRARY_DIRS:PATH="${BLAS_DIR}/mkl/lib/intel64;${BLAS_DIR}/compiler/lib/intel64" \
-   -D BLAS_LIBRARY_NAMES:STRING="mkl_intel_lp64;mkl_intel_thread;mkl_core;iomp5" \
+   -D BLAS_LIBRARY_DIRS:PATH="${BLAS_DIR}/lib" \
+   -D BLAS_LIBRARY_NAMES:STRING="armpl_lp64_mp;armflang;omp" \
    \
    -D TPL_ENABLE_LAPACK=ON \
-   -D LAPACK_LIBRARY_DIRS:PATH="${LAPACK_DIR}/mkl/lib/intel64;${LAPACK_DIR}/compiler/lib/intel64" \
-   -D LAPACK_LIBRARY_NAMES:STRING="mkl_intel_lp64;mkl_intel_thread;mkl_core;iomp5" \
+   -D LAPACK_LIBRARY_DIRS:PATH="${LAPACK_DIR}/lib" \
+   -D LAPACK_LIBRARY_NAMES:STRING="armpl_lp64_mp;armflang;omp" \
    \
    -D TPL_ENABLE_Boost=ON \
    -D Boost_INCLUDE_DIRS:PATH=${BOOST_DIR}/include \

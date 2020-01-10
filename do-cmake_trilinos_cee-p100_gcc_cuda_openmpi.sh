@@ -21,57 +21,50 @@ METIS_DIR=${METIS_ROOT}
 PARMETIS_DIR=${PARMETIS_ROOT}
 SUPERLUDIST_DIR=${SUPERLUDIST_ROOT}
 
-EXTRA_C_FLAGS=""
-EXTRA_CXX_FLAGS=""
-EXTRA_F_FLAGS=""
-LINK_FLAGS=""
+BUILD_TYPE=RELEASE
+BUILD_SUFFIX=opt
+BUILD_C_FLAGS=""
+BUILD_CXX_FLAGS=""
+BUILD_F_FLAGS=""
+BUILD_LINK_FLAGS=""
 
-TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
-
-# Shouldn't need to change anything below this line
-if [[ ${1} == 'static' || ${2} == 'static' ]]
+if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
 then
-  LINK_SHARED=OFF
-  LINK_SUFFIX=static
-  EXTRA_C_FLAGS="-fPIC"
-  EXTRA_CXX_FLAGS="-fPIC"
-  EXTRA_F_FLAGS="-fPIC"
-elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
-then
-  LINK_SHARED=ON
-  LINK_SUFFIX=shared
-  EXTRA_C_FLAGS=""
-  EXTRA_CXX_FLAGS=""
-  EXTRA_F_FLAGS=""
-else
-  echo " *** Warning: 'static' or 'shared' LINK_TYPE is an optional argument to this script.  Defaulting to 'static'."
-  LINK_SHARED=OFF
-  LINK_SUFFIX=static
-  EXTRA_C_FLAGS="-fPIC"
-  EXTRA_CXX_FLAGS="-fPIC"
-  EXTRA_F_FLAGS="-fPIC"
-fi
-
-if [[ ${1} == 'opt' || ${2} == 'opt' ]]
-then
-  BUILD_TYPE=RELEASE
-  BUILD_SUFFIX=opt
+  :
 elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
-  EXTRA_CXX_FLAGS="$EXTRA_CXX_FLAGS -lineinfo"
+  BUILD_C_FLAGS=""
+  BUILD_CXX_FLAGS="-lineinfo"
+  BUILD_F_FLAGS=""
 else
-  echo " *** Warning: 'opt' or 'dbg' BUILD_TYPE is an optional argument to this script.  Defaulting to 'opt'."
-  BUILD_TYPE=RELEASE
-  BUILD_SUFFIX=opt
+  echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
 fi
 
+LINK_SHARED=OFF
+LINK_SUFFIX=static
+
+if   [[ ${1} == 'static' || ${2} == 'static' ]]
+then
+  :
+  BUILD_C_FLAGS="$BUILD_C_FLAGS -fPIC"
+  BUILD_CXX_FLAGS="$BUILD_CXX_FLAGS -fPIC"
+  BUILD_F_FLAGS="$BUILD_F_FLAGS -fPIC"
+elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
+then
+  LINK_SHARED=ON
+  LINK_SUFFIX=shared
+else
+  echo " *** You may specify 'static' or 'shared' to this configuration script. Defaulting to 'static'!"
+fi
+
+TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
 TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_${SPARC_MPI}_${LINK_SUFFIX}_${BUILD_SUFFIX}
 
 echo " *** Installing in: ${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR}"
-sleep 5
+sleep 3
 
 rm -f CMakeCache.txt; rm -rf CMakeFiles
 
@@ -85,10 +78,10 @@ cmake \
    -D CMAKE_CXX_COMPILER="mpicxx" \
    -D CMAKE_Fortran_COMPILER="mpif90" \
    \
-   -D CMAKE_C_FLAGS="$EXTRA_C_FLAGS" \
-   -D CMAKE_CXX_FLAGS="$EXTRA_CXX_FLAGS" \
-   -D CMAKE_Fortran_FLAGS="$EXTRA_F_FLAGS" \
-   -D CMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
+   -D CMAKE_C_FLAGS="$BUILD_C_FLAGS" \
+   -D CMAKE_CXX_FLAGS="$BUILD_CXX_FLAGS" \
+   -D CMAKE_Fortran_FLAGS="$BUILD_F_FLAGS" \
+   -D CMAKE_EXE_LINKER_FLAGS="$BUILD_LINK_FLAGS" \
    -D Trilinos_CXX11_FLAGS="-std=c++11 --expt-extended-lambda" \
    \
    -D Trilinos_VERBOSE_CONFIGURE=FALSE \
@@ -134,7 +127,6 @@ cmake \
    -D Trilinos_ENABLE_Tpetra=ON \
    -D Tpetra_INST_SERIAL=ON \
    -D Tpetra_INST_OPENMP=OFF \
-   -D Tpetra_BCRS_Point_Import=ON \
    -D Trilinos_ENABLE_Belos=ON \
    -D Trilinos_ENABLE_Amesos2=ON \
    -D Amesos2_ENABLE_Epetra=OFF \
@@ -143,6 +135,7 @@ cmake \
    -D Trilinos_ENABLE_MueLu=ON \
    -D MueLu_ENABLE_Epetra=OFF \
    -D Xpetra_ENABLE_Epetra=OFF \
+   -D Xpetra_ENABLE_EpetraExt=OFF \
    -D Trilinos_ENABLE_Zoltan2=ON \
    -D Trilinos_ENABLE_STKMesh=OFF \
    -D Trilinos_ENABLE_STKIO=OFF \
@@ -150,9 +143,8 @@ cmake \
    -D Trilinos_ENABLE_STKSearch=ON \
    -D Trilinos_ENABLE_STKUtil=ON \
    -D Trilinos_ENABLE_STKTopology=OFF \
-   -D Trilinos_ENABLE_STKSimd=ON\
+   -D Trilinos_ENABLE_STKSimd=ON \
    -D Trilinos_ENABLE_Pamgen=OFF \
-   \
    -D Trilinos_ENABLE_Intrepid2=OFF \
    \
    -D Trilinos_ENABLE_ShyLU=OFF \
@@ -166,12 +158,23 @@ cmake \
    -D Kokkos_ENABLE_Serial=ON \
    -D Kokkos_ENABLE_OpenMP=OFF \
    -D Kokkos_ENABLE_Pthread=OFF \
+   -D TPL_ENABLE_CUDA=ON \
    -D Kokkos_ENABLE_Cuda=ON \
    -D Kokkos_ENABLE_Cuda_UVM=ON \
+   -D KOKKOS_ARCH="Pascal60" \
    -D Kokkos_ENABLE_Cuda_Lambda=ON \
    -D Kokkos_ENABLE_Cuda_Relocatable_Device_Code=OFF \
-   -D TPL_ENABLE_CUDA=ON \
-   -D KOKKOS_ARCH="Pascal60" \
+   \
+   -D KOKKOS_ENABLE_DEPRECATED_CODE=OFF \
+   -D Tpetra_ENABLE_DEPRECATED_CODE=OFF  \
+   -D Belos_HIDE_DEPRECATED_CODE=ON  \
+   -D Epetra_HIDE_DEPRECATED_CODE=ON  \
+   -D Ifpack2_HIDE_DEPRECATED_CODE=ON \
+   -D Ifpack2_ENABLE_DEPRECATED_CODE=OFF \
+   -D MueLu_ENABLE_DEPRECATED_CODE=OFF \
+   -D STK_HIDE_DEPRECATED_CODE=ON \
+   -D Teuchos_HIDE_DEPRECATED_CODE=ON\
+   -D Thyra_HIDE_DEPRECATED_CODE=ON \
    \
    -D Trilinos_ENABLE_SEACAS=ON \
    -D TPL_ENABLE_X11=OFF \

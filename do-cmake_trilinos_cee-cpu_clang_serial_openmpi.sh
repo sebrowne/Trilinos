@@ -15,33 +15,47 @@ METIS_DIR=${METIS_ROOT}
 PARMETIS_DIR=${PARMETIS_ROOT}
 SUPERLUDIST_DIR=${SUPERLUDIST_ROOT}
 
-EXTRA_C_FLAGS="-mkl -xCORE-AVX2"
-EXTRA_CXX_FLAGS="-mkl -xCORE-AVX2"
-EXTRA_F_FLAGS="-mkl -xCORE-AVX2"
-LINK_FLAGS="-mkl -xCORE-AVX2"
+BUILD_TYPE=RELEASE
+BUILD_SUFFIX=opt
+BUILD_C_FLAGS=""
+BUILD_CXX_FLAGS=""
+BUILD_F_FLAGS=""
+BUILD_LINK_FLAGS="-ldl"
 
-TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
-
-# Shouldn't need to change anything below this line
-if [[ ${1} == 'opt' || ${2} == 'opt' ]]
+if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
 then
-  BUILD_TYPE=RELEASE
-  BUILD_SUFFIX=opt
+  :
 elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
 else
-  echo " *** Warning: 'opt' or 'dbg' BUILD_TYPE is an optional argument to this script.  Defaulting to 'opt'."
-  BUILD_TYPE=RELEASE
-  BUILD_SUFFIX=opt
+  echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
 fi
 
+LINK_SHARED=OFF
+LINK_SUFFIX=static
+
+if   [[ ${1} == 'static' || ${2} == 'static' ]]
+then
+  :
+  BUILD_C_FLAGS="-fPIC ${BUILD_C_FLAGS}"
+  BUILD_CXX_FLAGS="-fPIC ${BUILD_CXX_FLAGS}"
+  BUILD_F_FLAGS="-fPIC ${BUILD_F_FLAGS}"
+elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
+then
+  LINK_SHARED=ON
+  LINK_SUFFIX=shared
+else
+  echo " *** You may specify 'static' or 'shared' to this configuration script. Defaulting to 'static'!"
+fi
+
+TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
-TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_openmp_${SPARC_MPI}_static_${BUILD_SUFFIX}
+TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_serial_${SPARC_MPI}_${LINK_SUFFIX}_${BUILD_SUFFIX}
 
 echo " *** Installing in: ${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR}"
-sleep 5
+sleep 3
 
 rm -f CMakeCache.txt; rm -rf CMakeFiles
 
@@ -49,20 +63,16 @@ cmake \
    -D CMAKE_VERBOSE_MAKEFILE=FALSE \
    -D CMAKE_INSTALL_PREFIX:PATH=${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR} \
    -D CMAKE_BUILD_TYPE:STRING=${BUILD_TYPE} \
-   -D BUILD_SHARED_LIBS=OFF \
+   -D BUILD_SHARED_LIBS=${LINK_SHARED} \
    \
-   -D TPL_FIND_SHARED_LIBS=OFF \
-   -D Trilinos_LINK_SEARCH_START_STATIC=ON \
-   -D CMAKE_SKIP_INSTALL_RPATH=ON \
+   -D CMAKE_C_COMPILER="mpicc" \
+   -D CMAKE_CXX_COMPILER="mpicxx" \
+   -D CMAKE_Fortran_COMPILER="mpif90" \
    \
-   -D CMAKE_C_COMPILER="cc" \
-   -D CMAKE_CXX_COMPILER="CC" \
-   -D CMAKE_Fortran_COMPILER="ftn" \
-   \
-   -D CMAKE_C_FLAGS="$EXTRA_C_FLAGS" \
-   -D CMAKE_CXX_FLAGS="$EXTRA_CXX_FLAGS" \
-   -D CMAKE_Fortran_FLAGS="$EXTRA_F_FLAGS" \
-   -D CMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
+   -D CMAKE_C_FLAGS="$BUILD_C_FLAGS" \
+   -D CMAKE_CXX_FLAGS="$BUILD_CXX_FLAGS" \
+   -D CMAKE_Fortran_FLAGS="$BUILD_F_FLAGS" \
+   -D CMAKE_EXE_LINKER_FLAGS="$BUILD_LINK_FLAGS" \
    \
    -D Trilinos_VERBOSE_CONFIGURE=FALSE \
    -D Trilinos_ENABLE_ALL_PACKAGES=OFF \
@@ -84,7 +94,7 @@ cmake \
    -D Teuchos_ENABLE_COMPLEX=OFF \
    -D Zoltan_ENABLE_ULLONG_IDS=ON \
    \
-   -D Trilinos_ENABLE_OpenMP=ON \
+   -D Trilinos_ENABLE_OpenMP=OFF \
    -D TPL_ENABLE_Pthread=OFF \
    \
    -D Trilinos_ENABLE_Teuchos=ON \
@@ -105,8 +115,8 @@ cmake \
    -D Trilinos_ENABLE_Stokhos=OFF \
    -D Trilinos_ENABLE_Panzer=OFF \
    -D Trilinos_ENABLE_Tpetra=ON \
-   -D Tpetra_INST_SERIAL=OFF \
-   -D Tpetra_INST_OPENMP=ON \
+   -D Tpetra_INST_SERIAL=ON \
+   -D Tpetra_INST_OPENMP=OFF \
    -D Trilinos_ENABLE_Belos=ON \
    -D Trilinos_ENABLE_Amesos2=ON \
    -D Amesos2_ENABLE_Epetra=OFF \
@@ -123,21 +133,35 @@ cmake \
    -D Trilinos_ENABLE_STKSearch=ON \
    -D Trilinos_ENABLE_STKUtil=ON \
    -D Trilinos_ENABLE_STKTopology=OFF \
-   -D Trilinos_ENABLE_STKSimd=ON\
+   -D Trilinos_ENABLE_STKSimd=ON \
+   -D Trilinos_ENABLE_Pamgen=OFF \
+   -D Trilinos_ENABLE_Intrepid2=OFF \
    \
    -D Trilinos_ENABLE_ShyLU=ON \
-   -D Trilinos_ENABLE_ShyLU_DDCore=OFF \
+   -D Trilinos_ENABLE_ShyLU_DD=OFF \
+   -D Trilinos_ENABLE_ShyLU_Node=ON \
    -D Trilinos_ENABLE_ShyLU_NodeHTS=ON \
-   -D ShyLU_NodeHTS_ENABLE_TESTS=OFF \
+   -D Trilinos_ENABLE_ShyLU_NodeTacho=OFF \
    \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
-   -D Kokkos_ENABLE_Serial=OFF \
-   -D Kokkos_ENABLE_OpenMP=ON \
+   -D Kokkos_ENABLE_Serial=ON \
+   -D Kokkos_ENABLE_OpenMP=OFF \
    -D Kokkos_ENABLE_Pthread=OFF \
+   -D TPL_ENABLE_CUDA=OFF \
    -D Kokkos_ENABLE_Cuda=OFF \
    -D Kokkos_ENABLE_Cuda_UVM=OFF \
-   -D KOKKOS_ARCH="HSW" \
+   \
+   -D KOKKOS_ENABLE_DEPRECATED_CODE=OFF \
+   -D Tpetra_ENABLE_DEPRECATED_CODE=OFF  \
+   -D Belos_HIDE_DEPRECATED_CODE=ON  \
+   -D Epetra_HIDE_DEPRECATED_CODE=ON  \
+   -D Ifpack2_HIDE_DEPRECATED_CODE=ON \
+   -D Ifpack2_ENABLE_DEPRECATED_CODE=OFF \
+   -D MueLu_ENABLE_DEPRECATED_CODE=OFF \
+   -D STK_HIDE_DEPRECATED_CODE=ON \
+   -D Teuchos_HIDE_DEPRECATED_CODE=ON\
+   -D Thyra_HIDE_DEPRECATED_CODE=ON \
    \
    -D Trilinos_ENABLE_SEACAS=ON \
    -D TPL_ENABLE_X11=OFF \
@@ -145,12 +169,12 @@ cmake \
    \
    -D Trilinos_ENABLE_Gtest=ON \
    \
-   -D Trilinos_ENABLE_TriKota=ON \
+   -D Trilinos_ENABLE_TriKota=OFF \
    -D DAKOTA_ENABLE_TESTS=OFF \
    -D Trilinos_ENABLE_ROL=ON \
    \
    -D TPL_ENABLE_MPI=ON \
-   -D MPI_USE_COMPILER_WRAPPERS=OFF \
+   -D MPI_USE_COMPILER_WRAPPERS=ON \
    -D MPI_BASE_DIR:PATH=${MPI_DIR} \
    -D MPI_EXEC:PATH="mpirun" \
    -D MPI_EXEC_MAX_NUMPROCS:STRING="8" \
@@ -159,11 +183,11 @@ cmake \
    -D TPL_ENABLE_BinUtils=ON \
    \
    -D TPL_ENABLE_BLAS=ON \
-   -D BLAS_LIBRARY_DIRS:PATH="${BLAS_DIR}/mkl/lib/intel64;${BLAS_DIR}/compiler/lib/intel64" \
+   -D BLAS_LIBRARY_DIRS:PATH="${BLAS_DIR}/mkl/lib/intel64;${BLAS_DIR}/lib/intel64" \
    -D BLAS_LIBRARY_NAMES:STRING="mkl_intel_lp64;mkl_intel_thread;mkl_core;iomp5" \
    \
    -D TPL_ENABLE_LAPACK=ON \
-   -D LAPACK_LIBRARY_DIRS:PATH="${LAPACK_DIR}/mkl/lib/intel64;${LAPACK_DIR}/compiler/lib/intel64" \
+   -D LAPACK_LIBRARY_DIRS:PATH="${LAPACK_DIR}/mkl/lib/intel64;${LAPACK_DIR}/lib/intel64" \
    -D LAPACK_LIBRARY_NAMES:STRING="mkl_intel_lp64;mkl_intel_thread;mkl_core;iomp5" \
    \
    -D TPL_ENABLE_Boost=ON \
@@ -199,7 +223,7 @@ cmake \
    -D SuperLUDist_LIBRARY_DIRS:PATH=${SUPERLUDIST_DIR}/lib \
    -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist" \
    \
-   -D Trilinos_EXTRA_LINK_FLAGS:STRING="-L${MPI_DIR}/lib -lmpich" \
+   -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi" \
    \
    ${EXTRA_ARGS} \
    ${TRILINOS_HOME}

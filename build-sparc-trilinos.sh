@@ -38,8 +38,8 @@ WTRM_V100=waterman-v100_gcc-7.2.0_cuda-9.2.88_openmpi-2.1.2         # ats-2 surr
 
 # Build stuff
 MAKE_CMD='make -j16 install'
-DATE_STR=`date +%Y-%m-%d`
-DATE_STR=2019-12-06/00000000
+DATE_STR=`date +%Y-%m-%d`/00000000
+#DATE_STR=2019-12-06/00000000
 echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 function setup
@@ -56,10 +56,14 @@ function setup
 
 function build
 {
-  linktype=${4:-static}
+  linktype=${4:?}
   builddir=${1:?}_${linktype:?}_${2:?}_build
   echo "Building configuration '${2:?}' with link type '${linktype:?}' in directory '${builddir:?}'"
   cd ${builddir:?}
+  if [[ ${5} ]]
+  then
+      export TRIL_INSTALL_PATH=${5}
+  fi
   ./do-cmake.sh ${linktype:?} ${2:?}
   if [ $? != 0 ]
   then
@@ -77,6 +81,19 @@ function build
   cd ../
 }
 
+function set_permissions
+{
+    if [[ $(hostname) == *"waterman"* ]]
+    then
+        group=wg-aero-dev
+    else
+        group=wg-aero-usr
+    fi
+    chgrp -R ${group} ${1:?}
+    chmod -R g+rX ${1:?}
+}
+
+
 if     [[ ${1} == 'setup' ]]; then
   if   [[ ${2} == 'cee-default' ]]; then
     setup ${CEE_CLANG} dbg do-cmake_trilinos_cee-cpu_clang_serial_openmpi.sh static
@@ -84,20 +101,39 @@ if     [[ ${1} == 'setup' ]]; then
     setup ${CEE_CLANG} dbg do-cmake_trilinos_cee-cpu_clang_serial_openmpi.sh shared
     setup ${CEE_CLANG} opt do-cmake_trilinos_cee-cpu_clang_serial_openmpi.sh shared
 
+    setup mini_${CEE_CLANG} dbg do-cmake_minitrilinos_cee-cpu_clang_serial_openmpi.sh static
+    setup mini_${CEE_CLANG} opt do-cmake_minitrilinos_cee-cpu_clang_serial_openmpi.sh static
+    setup mini_${CEE_CLANG} dbg do-cmake_minitrilinos_cee-cpu_clang_serial_openmpi.sh shared
+    setup mini_${CEE_CLANG} opt do-cmake_minitrilinos_cee-cpu_clang_serial_openmpi.sh shared
+
     setup ${CEE_GCC} dbg do-cmake_trilinos_cee-cpu_gcc_serial_openmpi.sh static
     setup ${CEE_GCC} opt do-cmake_trilinos_cee-cpu_gcc_serial_openmpi.sh static
     setup ${CEE_GCC} dbg do-cmake_trilinos_cee-cpu_gcc_serial_openmpi.sh shared
     setup ${CEE_GCC} opt do-cmake_trilinos_cee-cpu_gcc_serial_openmpi.sh shared
 
+    setup mini_${CEE_GCC} dbg do-cmake_minitrilinos_cee-cpu_gcc_serial_openmpi.sh static
+    setup mini_${CEE_GCC} opt do-cmake_minitrilinos_cee-cpu_gcc_serial_openmpi.sh static
+    setup mini_${CEE_GCC} dbg do-cmake_minitrilinos_cee-cpu_gcc_serial_openmpi.sh shared
+    setup mini_${CEE_GCC} opt do-cmake_minitrilinos_cee-cpu_gcc_serial_openmpi.sh shared
+
   elif [[ ${2} == 'cee-advanced' ]]; then
     setup ${CEE_INTEL} dbg do-cmake_trilinos_cee-cpu_intel_serial_intelmpi.sh static
     setup ${CEE_INTEL} opt do-cmake_trilinos_cee-cpu_intel_serial_intelmpi.sh static
 
+    setup mini_${CEE_INTEL} dbg do-cmake_minitrilinos_cee-cpu_intel_serial_intelmpi.sh static
+    setup mini_${CEE_INTEL} opt do-cmake_minitrilinos_cee-cpu_intel_serial_intelmpi.sh static
+
     setup ${CEE_ATS1} dbg do-cmake_trilinos_cee-cpu_intel_openmp_mpich.sh static
     setup ${CEE_ATS1} opt do-cmake_trilinos_cee-cpu_intel_openmp_mpich.sh static
 
+    setup mini_${CEE_ATS1} dbg do-cmake_minitrilinos_cee-cpu_intel_openmp_mpich.sh static
+    setup mini_${CEE_ATS1} opt do-cmake_minitrilinos_cee-cpu_intel_openmp_mpich.sh static
+
     setup ${CEE_ATS2} dbg do-cmake_trilinos_cee-p100_gcc_cuda_openmpi.sh static
     setup ${CEE_ATS2} opt do-cmake_trilinos_cee-p100_gcc_cuda_openmpi.sh static
+
+    setup mini_${CEE_ATS2} dbg do-cmake_minitrilinos_cee-p100_gcc_cuda_openmpi.sh static
+    setup mini_${CEE_ATS2} opt do-cmake_minitrilinos_cee-p100_gcc_cuda_openmpi.sh static
 
   elif [[ ${2} == 'ats1' ]]; then
     setup ${ATS1_HSW} dbg do-cmake_trilinos_ats1-hsw_intel_openmp_mpich.sh static
@@ -140,123 +176,166 @@ if     [[ ${1} == 'setup' ]]; then
   fi
 elif   [[ ${1} == 'build' ]]; then
   if   [[ ${2} == 'cee-default' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6/Trilinos/$DATE_STR; fi
-    
+    if [[ ${3} == 'deploy' ]]
+    then
+        TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6/Trilinos/${DATE_STR}
+        MINITRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6/minitrilinos/${DATE_STR}
+    fi
+
     module purge && module load sparc-dev/clang
-    build ${CEE_CLANG} opt "${MAKE_CMD}" static
-    build ${CEE_CLANG} dbg "${MAKE_CMD}" static
-    build ${CEE_CLANG} opt "${MAKE_CMD}" shared
-    build ${CEE_CLANG} dbg "${MAKE_CMD}" shared
+    build ${CEE_CLANG} opt "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${CEE_CLANG} dbg "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${CEE_CLANG} opt "${MAKE_CMD}" shared ${TRIL_INSTALL_PATH}
+    build ${CEE_CLANG} dbg "${MAKE_CMD}" shared ${TRIL_INSTALL_PATH}
+
+    build mini_${CEE_CLANG} opt "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
+    build mini_${CEE_CLANG} dbg "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
+    build mini_${CEE_CLANG} opt "${MAKE_CMD}" shared ${MINITRIL_INSTALL_PATH}
+    build mini_${CEE_CLANG} dbg "${MAKE_CMD}" shared ${MINITRIL_INSTALL_PATH}
 
     module purge && module load sparc-dev/gcc
-    build ${CEE_GCC} opt "${MAKE_CMD}" static
-    build ${CEE_GCC} dbg "${MAKE_CMD}" static
-    build ${CEE_GCC} opt "${MAKE_CMD}" shared
-    build ${CEE_GCC} dbg "${MAKE_CMD}" shared
-   
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    build ${CEE_GCC} opt "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${CEE_GCC} dbg "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${CEE_GCC} opt "${MAKE_CMD}" shared ${TRIL_INSTALL_PATH}
+    build ${CEE_GCC} dbg "${MAKE_CMD}" shared ${TRIL_INSTALL_PATH}
+
+    build mini_${CEE_GCC} opt "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
+    build mini_${CEE_GCC} dbg "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
+    build mini_${CEE_GCC} opt "${MAKE_CMD}" shared ${MINITRIL_INSTALL_PATH}
+    build mini_${CEE_GCC} dbg "${MAKE_CMD}" shared ${MINITRIL_INSTALL_PATH}
+
+    if [[ ${3} == 'deploy' ]]
+    then
+        set_permissions ${TRIL_INSTALL_PATH}
+        set_permissions ${MINITRIL_INSTALL_PATH}
+    fi
 
   elif [[ ${2} == 'cee-advanced' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]
+    then
+        TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6/Trilinos/${DATE_STR}
+        MINITRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6/minitrilinos/${DATE_STR}
+    fi
   
     module purge && module load sparc-dev/intel
-    build ${CEE_INTEL} opt "${MAKE_CMD}" static
-    build ${CEE_INTEL} dbg "${MAKE_CMD}" static
-  
+    build ${CEE_INTEL} opt "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${CEE_INTEL} dbg "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+
+    build mini_${CEE_INTEL} opt "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
+    build mini_${CEE_INTEL} dbg "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
+
     module purge && module load sparc-dev/intel-18.0.2_mpich2-3.2
-    build ${CEE_ATS1} opt "${MAKE_CMD}" static
-    build ${CEE_ATS1} dbg "${MAKE_CMD}" static
-  
+    build ${CEE_ATS1} opt "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${CEE_ATS1} dbg "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+
+    build mini_${CEE_ATS1} opt "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
+    build mini_${CEE_ATS1} dbg "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
+
     module purge && module load sparc-dev/cuda-9.2.88_gcc-7.2.0_openmpi-4.0.1
-    build ${CEE_ATS2} opt "${MAKE_CMD}" static
-    build ${CEE_ATS2} dbg "${MAKE_CMD}" static
-    
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
-    
+    build ${CEE_ATS2} opt "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${CEE_ATS2} dbg "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+
+    build mini_${CEE_ATS2} opt "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
+    build mini_${CEE_ATS2} dbg "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
+
+    if [[ ${3} == 'deploy' ]]
+    then
+        set_permissions ${TRIL_INSTALL_PATH}
+        set_permissions ${MINITRIL_INSTALL_PATH}
+    fi
+
   elif [[ ${2} == 'ats1' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-hsw/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]
+    then
+        HSW_TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-hsw/Trilinos/$DATE_STR
+        KNL_TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-knl/Trilinos/$DATE_STR
+    fi
 
     module unload sparc-dev/intel-knl && module load sparc-dev/intel-hsw
-    build ${ATS1_HSW} opt "${MAKE_CMD}" static
-    build ${ATS1_HSW} dbg "${MAKE_CMD}" static
-
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
-    
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-knl/Trilinos/$DATE_STR; fi
+    build ${ATS1_HSW} opt "${MAKE_CMD}" static ${HSW_TRIL_INSTALL_PATH}
+    build ${ATS1_HSW} dbg "${MAKE_CMD}" static ${HSW_TRIL_INSTALL_PATH}
 
     module unload sparc-dev/intel-hsw && module load sparc-dev/intel-knl
-    build ${ATS1_KNL} opt "${MAKE_CMD}" static
-    build ${ATS1_KNL} dbg "${MAKE_CMD}" static
+    build ${ATS1_KNL} opt "${MAKE_CMD}" static ${KNL_TRIL_INSTALL_PATH}
+    build ${ATS1_KNL} dbg "${MAKE_CMD}" static ${KNL_TRIL_INSTALL_PATH}
 
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]
+    then
+        set_permissions ${HSW_TRIL_INSTALL_PATH}
+        set_permissions ${KNL_TRIL_INSTALL_PATH}
+    fi
 
   elif [[ ${2} == 'ats2' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-pwr9/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]
+    then
+        PWR9_TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-pwr9/Trilinos/$DATE_STR
+        V100_TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-v100/Trilinos/$DATE_STR
+    fi
 
     module unload sparc-dev/cuda-xl && module load sparc-dev/xl
-    build ${ATS2_PWR9_XLC} opt "${MAKE_CMD}" static
-    build ${ATS2_PWR9_XLC} dbg "${MAKE_CMD}" static
+    build ${ATS2_PWR9_XLC} opt "${MAKE_CMD}" static ${PWR9_TRIL_INSTALL_PATH}
+    build ${ATS2_PWR9_XLC} dbg "${MAKE_CMD}" static ${PWR9_TRIL_INSTALL_PATH}
 
     module unload sparc-dev/xl && module load sparc-dev/gcc-7.3.1_spmpi-2019.01.30
-    build ${ATS2_PWR9_GCC} opt "${MAKE_CMD}" static
-    build ${ATS2_PWR9_GCC} dbg "${MAKE_CMD}" static
-
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
- 
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-v100/Trilinos/$DATE_STR; fi
+    build ${ATS2_PWR9_GCC} opt "${MAKE_CMD}" static ${PWR9_TRIL_INSTALL_PATH}
+    build ${ATS2_PWR9_GCC} dbg "${MAKE_CMD}" static ${PWR9_TRIL_INSTALL_PATH}
 
     module unload sparc-dev/gcc-7.3.1_spmpi-2019.01.30 && module load sparc-dev/cuda-xl
-    build ${ATS2_V100_XLC} opt "${MAKE_CMD}" static
-    build ${ATS2_V100_XLC} dbg "${MAKE_CMD}" static
+    build ${ATS2_V100_XLC} opt "${MAKE_CMD}" static ${V100_TRIL_INSTALL_PATH}
+    build ${ATS2_V100_XLC} dbg "${MAKE_CMD}" static ${V100_TRIL_INSTALL_PATH}
 
     module unload sparc-dev/cuda-xl && module load sparc-dev/cuda-9.2.148_gcc-7.3.1_spmpi-2019.01.30
-    build ${ATS2_V100_GCC} opt "${MAKE_CMD}" static
-    build ${ATS2_V100_GCC} dbg "${MAKE_CMD}" static
+    build ${ATS2_V100_GCC} opt "${MAKE_CMD}" static ${V100_TRIL_INSTALL_PATH}
+    build ${ATS2_V100_GCC} dbg "${MAKE_CMD}" static ${V100_TRIL_INSTALL_PATH}
 
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]
+    then
+        set_permissions ${PWR9_TRIL_INSTALL_PATH}
+        set_permissions ${V100_TRIL_INSTALL_PATH}
+    fi
 
   elif [[ ${2} == 'van1' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/van1-tx2/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]; then TRIL_INSTALL_PATH=/projects/sparc/tpls/van1-tx2/Trilinos/${DATE_STR}; fi
 
     module unload sparc-dev && module load sparc-dev/arm-19.2_openmpi-3.1.4
     build ${VAN1_TX2} opt "${MAKE_CMD}" static
     build ${VAN1_TX2} dbg "${MAKE_CMD}" static
 
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then set_permissions ${TRIL_INSTALL_PATH}; fi
 
   elif [[ ${2} == 'cts1' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-bdw/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]; then TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-bdw/Trilinos/${DATE_STR}; fi
 
     module purge && module load sparc-dev/intel
-    build ${CTS1_BDW} opt "${MAKE_CMD}" static
-    build ${CTS1_BDW} dbg "${MAKE_CMD}" static
+    build ${CTS1_BDW} opt "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${CTS1_BDW} dbg "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
 
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then set_permissions ${TRIL_INSTALL_PATH}; fi
   
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-p100/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]; then TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-p100/Trilinos/${DATE_STR}; fi
 
     module purge && module load sparc-dev/cuda-gcc
-    build ${CTS1_P100} opt "${MAKE_CMD}" static
-    build ${CTS1_P100} dbg "${MAKE_CMD}" static
+    build ${CTS1_P100} opt "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${CTS1_P100} dbg "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
 
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then set_permissions ${TRIL_INSTALL_PATH}; fi
 
   elif [[ ${2} == 'tlcc2' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/tlcc2-snb/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]; then TRIL_INSTALL_PATH=/projects/sparc/tpls/tlcc2-snb/Trilinos/${DATE_STR}; fi
 
     module purge && module load sparc-dev/intel
-    build ${TLCC2_SNB} opt "${MAKE_CMD}" static
-    build ${TLCC2_SNB} dbg "${MAKE_CMD}" static
+    build ${TLCC2_SNB} opt "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${TLCC2_SNB} dbg "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
     
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then set_permissions ${TRIL_INSTALL_PATH}; fi
 
   elif [[ ${2} == 'waterman' ]]; then
-    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/waterman-gpu/Trilinos/$DATE_STR; fi
+    if [[ ${3} == 'deploy' ]]; then TRIL_INSTALL_PATH=/projects/sparc/tpls/waterman-gpu/Trilinos/${DATE_STR}; fi
 
     module purge && module load sparc-dev/cuda-gcc
-    build ${WTRM_V100} opt "${MAKE_CMD}" static
-    build ${WTRM_V100} dbg "${MAKE_CMD}" static
+    build ${WTRM_V100} opt "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
+    build ${WTRM_V100} dbg "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
     
-    if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-dev $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+    if [[ ${3} == 'deploy' ]]; then set_permissions ${TRIL_INSTALL_PATH}; fi
   fi
 fi

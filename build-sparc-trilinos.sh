@@ -167,7 +167,7 @@ elif   [[ ${1} == 'build' ]]; then
     build ${CEE_ATS1} opt "${MAKE_CMD}" static
     build ${CEE_ATS1} dbg "${MAKE_CMD}" static
   
-    module purge && module load sparc-dev/cuda-9.2.88_gcc-7.2.0_openmpi-4.0.1
+    module purge && module load sparc-dev/cuda-9.2.88_gcc-7.2.0_openmpi-4.0.2
     build ${CEE_ATS2} opt "${MAKE_CMD}" static
     build ${CEE_ATS2} dbg "${MAKE_CMD}" static
     

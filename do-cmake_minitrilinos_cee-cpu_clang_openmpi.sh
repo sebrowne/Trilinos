@@ -20,12 +20,11 @@ BUILD_SUFFIX=opt
 BUILD_C_FLAGS=""
 BUILD_CXX_FLAGS=""
 BUILD_F_FLAGS=""
-BUILD_LINK_FLAGS=""
-
-if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
+BUILD_LINK_FLAGS="-ldl"
+if   [[ ${1} == 'opt' || ${2} == 'opt' || ${3} == 'opt' ]]
 then
   :
-elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
+elif [[ ${1} == 'dbg' || ${2} == 'dbg' || ${3} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
@@ -35,11 +34,13 @@ fi
 
 LINK_SHARED=OFF
 LINK_SUFFIX=static
-
-if   [[ ${1} == 'static' || ${2} == 'static' ]]
+if   [[ ${1} == 'static' || ${2} == 'static' || ${3} == 'static' ]]
 then
   :
-elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
+  BUILD_C_FLAGS="-fPIC ${BUILD_C_FLAGS}"
+  BUILD_CXX_FLAGS="-fPIC ${BUILD_CXX_FLAGS}"
+  BUILD_F_FLAGS="-fPIC ${BUILD_F_FLAGS}"
+elif [[ ${1} == 'shared' || ${2} == 'shared' || ${3} == 'shared' ]]
 then
   LINK_SHARED=ON
   LINK_SUFFIX=shared
@@ -47,9 +48,23 @@ else
   echo " *** You may specify 'static' or 'shared' to this configuration script. Defaulting to 'static'!"
 fi
 
+USING_SERIAL=ON
+USING_OPENMP=OFF
+if   [[ ${1} == 'serial' || ${2} == 'serial' || ${3} == 'serial' ]]
+then
+  USING_SERIAL=ON
+  USING_OPENMP=OFF
+elif [[ ${1} == 'openmp' || ${2} == 'openmp' || ${3} == 'openmp' ]]
+then
+  USING_OPENMP=OFF
+  USING_SERIAL=ON
+else
+  echo " *** You may specify 'serial' or 'openmp' to this configuration script. Defaulting to 'serial'!"
+fi
+
 TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
-TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_openmp_${SPARC_MPI}_${LINK_SUFFIX}_${BUILD_SUFFIX}
+TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_serial_${SPARC_MPI}_${LINK_SUFFIX}_${BUILD_SUFFIX}
 
 echo " *** Installing in: ${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR}"
 sleep 3
@@ -80,20 +95,22 @@ cmake \
    \
    -D Trilinos_ENABLE_EXPLICIT_INSTANTIATION=ON \
    \
-   -D Trilinos_ENABLE_OpenMP=ON \
+   -D Trilinos_ENABLE_OpenMP=${USING_OPENMP:?} \
    -D TPL_ENABLE_Pthread=OFF \
    \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
-   -D Kokkos_ENABLE_Serial=OFF \
-   -D Kokkos_ENABLE_OpenMP=ON \
+   -D Kokkos_ENABLE_Serial=${USING_SERIAL:?} \
+   -D Kokkos_ENABLE_OpenMP=${USING_OPENMP:?} \
    -D Kokkos_ENABLE_Pthread=OFF \
    -D TPL_ENABLE_CUDA=OFF \
    -D Kokkos_ENABLE_Cuda=OFF \
    -D Kokkos_ENABLE_Cuda_UVM=OFF \
+   \
    -D KOKKOS_ENABLE_DEPRECATED_CODE=OFF \
    \
    -D Trilinos_ENABLE_SEACAS=ON \
+   -D SEACAS_ENABLE_Kokkos=OFF \
    \
    -D TPL_ENABLE_MPI=ON \
    \
@@ -110,6 +127,11 @@ cmake \
    -D CGNS_LIBRARY_DIRS:PATH="${CGNS_DIR}/lib" \
    -D CGNS_LIBRARY_NAMES:STRING="cgns" \
    \
+   -D Trilinos_ENABLE_Pamgen=OFF \
+   -D TPL_ENABLE_X11=OFF \
+   -D TPL_ENABLE_Matio=OFF \
+   \
+   -D Zoltan_ENABLE_ULLONG_IDS=ON \
    -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi" \
    \
    ${EXTRA_ARGS} \

@@ -146,7 +146,6 @@ cmake \
    -D HDF5_ROOT:PATH="${HDF5_DIR}" \
    -D HDF5_NO_SYSTEM_PATHS=ON \
    \
-   -D TPL_ENABLE_Pnetcdf=${USING_MPI:?} \
    -D PNetCDF_ROOT:PATH="${PNETCDF_DIR}" \
    \
    -D TPL_ENABLE_Netcdf=ON \

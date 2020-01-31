@@ -21,10 +21,10 @@ BUILD_C_FLAGS=""
 BUILD_CXX_FLAGS=""
 BUILD_F_FLAGS=""
 BUILD_LINK_FLAGS=""
-if   [[ ${1} == 'opt' || ${2} == 'opt' || ${3} == 'opt' ]]
+if   [[ ${1} == 'opt' || ${2} == 'opt' || ${3} == 'opt' || ${4} == 'opt' ]]
 then
   :
-elif [[ ${1} == 'dbg' || ${2} == 'dbg' || ${3} == 'dbg' ]]
+elif [[ ${1} == 'dbg' || ${2} == 'dbg' || ${3} == 'dbg' || ${4} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
@@ -34,18 +34,43 @@ fi
 
 LINK_SHARED=OFF
 LINK_SUFFIX=static
-if   [[ ${1} == 'static' || ${2} == 'static' || ${3} == 'static' ]]
+if   [[ ${1} == 'static' || ${2} == 'static' || ${3} == 'static' || ${4} == 'static' ]]
 then
   :
   BUILD_C_FLAGS="-fPIC ${BUILD_C_FLAGS}"
   BUILD_CXX_FLAGS="-fPIC ${BUILD_CXX_FLAGS}"
   BUILD_F_FLAGS="-fPIC ${BUILD_F_FLAGS}"
-elif [[ ${1} == 'shared' || ${2} == 'shared' || ${3} == 'shared' ]]
+elif [[ ${1} == 'shared' || ${2} == 'shared' || ${3} == 'shared' || ${4} == 'shared' ]]
 then
   LINK_SHARED=ON
   LINK_SUFFIX=shared
 else
   echo " *** You may specify 'static' or 'shared' to this configuration script. Defaulting to 'static'!"
+fi
+
+USING_SERIAL=ON
+USING_OPENMP=OFF
+if   [[ ${1} == 'serial' || ${2} == 'serial' || ${3} == 'serial' || ${4} == 'serial' ]]
+then
+  USING_SERIAL=ON
+  USING_OPENMP=OFF
+elif [[ ${1} == 'openmp' || ${2} == 'openmp' || ${3} == 'openmp' || ${4} == 'openmp' ]]
+then
+  USING_OPENMP=OFF
+  USING_SERIAL=ON
+else
+  echo " *** You may specify 'serial' or 'openmp' to this configuration script. Defaulting to 'serial'!"
+fi
+
+USING_MPI=ON
+if   [[ ${1} == 'mpi' || ${2} == 'mpi' || ${3} == 'mpi' || ${4} == 'mpi' ]]
+then
+  USING_MPI=ON
+elif [[ ${1} == 'nompi' || ${2} == 'nompi' || ${3} == 'nompi' || ${4} == 'nompi' ]]
+then
+  USING_MPI=OFF
+else
+  echo " *** You may specify 'mpi' or 'nompi' to this configuration script. Defaulting to 'mpi'!"
 fi
 
 USING_SERIAL=ON
@@ -64,7 +89,25 @@ fi
 
 TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
-TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_serial_${SPARC_MPI}_${LINK_SUFFIX}_${BUILD_SUFFIX}
+
+if [[ "${USING_MPI:-}" == "OFF" ]]
+then
+    C_COMPILER=${SERIAL_CC}
+    CXX_COMPILER=${SERIAL_CXX}
+    Fortran_COMPILER=${SERIAL_FC}
+    HDF5_DIR=${SPARC_SERIAL_HDF5_ROOT}
+    NETCDF_DIR=${SPARC_SERIAL_NETCDF_ROOT}
+    CGNS_DIR=${SPARC_SERIAL_CGNS_ROOT}
+    EXTRA_LINK_FLAGS=""
+    TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_serial_nompi_${LINK_SUFFIX}_${BUILD_SUFFIX}
+elif [[ "${USING_MPI:-}" == "ON" ]]
+then
+    C_COMPILER="mpicc"
+    CXX_COMPILER="mpicxx"
+    Fortran_COMPILER="mpif90"
+    EXTRA_LINK_FLAGS="-lmpi"
+    TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_serial_${SPARC_MPI}_${LINK_SUFFIX}_${BUILD_SUFFIX}
+fi
 
 echo " *** Installing in: ${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR}"
 sleep 3
@@ -77,9 +120,9 @@ cmake \
    -D CMAKE_BUILD_TYPE:STRING=${BUILD_TYPE} \
    -D BUILD_SHARED_LIBS=${LINK_SHARED} \
    \
-   -D CMAKE_C_COMPILER="mpicc" \
-   -D CMAKE_CXX_COMPILER="mpicxx" \
-   -D CMAKE_Fortran_COMPILER="mpif90" \
+   -D CMAKE_C_COMPILER=${C_COMPILER} \
+   -D CMAKE_CXX_COMPILER=${CXX_COMPILER} \
+   -D CMAKE_Fortran_COMPILER=${Fortran_COMPILER} \
    \
    -D CMAKE_C_FLAGS="$BUILD_C_FLAGS" \
    -D CMAKE_CXX_FLAGS="$BUILD_CXX_FLAGS" \
@@ -112,15 +155,16 @@ cmake \
    -D Trilinos_ENABLE_SEACAS=ON \
    -D SEACAS_ENABLE_Kokkos=OFF \
    \
-   -D TPL_ENABLE_MPI=ON \
+   -D TPL_ENABLE_MPI=${USING_MPI:?} \
    \
-   -D HDF5_ROOT:PATH=${HDF5_DIR} \
+   -D HDF5_ROOT:PATH="${HDF5_DIR}" \
    -D HDF5_NO_SYSTEM_PATHS=ON \
    \
-   -D PNetCDF_ROOT:PATH=${PNETCDF_DIR} \
+   -D TPL_ENABLE_Pnetcdf=${USING_MPI:?} \
+   -D PNetCDF_ROOT:PATH="${PNETCDF_DIR}" \
    \
    -D TPL_ENABLE_Netcdf=ON \
-   -D NetCDF_ROOT:PATH=${NETCDF_DIR} \
+   -D NetCDF_ROOT:PATH="${NETCDF_DIR}" \
    \
    -D TPL_ENABLE_CGNS=ON \
    -D CGNS_INCLUDE_DIRS:PATH="${CGNS_DIR}/include" \
@@ -132,7 +176,7 @@ cmake \
    -D TPL_ENABLE_Matio=OFF \
    \
    -D Zoltan_ENABLE_ULLONG_IDS=ON \
-   -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi" \
+   -D Trilinos_EXTRA_LINK_FLAGS:STRING="${EXTRA_LINK_FLAGS}" \
    \
    ${EXTRA_ARGS} \
    ${TRILINOS_HOME}

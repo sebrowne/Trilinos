@@ -22,12 +22,12 @@ CEE_ATS1=cee-cpu_intel-18.0.2_openmp_mpich2-3.2         # ats-1 surrogate
 CEE_ATS2=cee-p100_cuda-9.2.88_gcc-7.2.0_openmpi-4.0.1   # ats-2 surrogate
 
 # HPCs
-ATS1_HSW=ats1-hsw_intel-18.0.2_openmp_mpich-7.7.4	            # ats-1/hsw
-ATS1_KNL=ats1-knl_intel-18.0.2_openmp_mpich-7.7.4	            # ats-1/knl
-ATS2_PWR9_XLC=ats2-pwr9_xl-2019.02.07_serial_spmpi-2019.01.30       # ats-2/pwr9/xl
-ATS2_PWR9_GCC=ats2-pwr9_gcc-7.3.1_serial_spmpi-2019.01.30           # ats-2/pwr9/gcc
-ATS2_V100_XLC=ats2-v100_cuda-9.2.148_xl-2019.02.07_spmpi-2019.01.30 # ats-2/v100/xl
-ATS2_V100_GCC=ats2-v100_cuda-9.2.148_gcc-7.3.1_spmpi-2019.01.30	    # ats-2/v100/gcc
+ATS1_HSW=ats1-hsw_intel-19.0.4_openmp_mpich-7.7.6	            # ats-1/hsw
+ATS1_KNL=ats1-knl_intel-19.0.4_openmp_mpich-7.7.6	            # ats-1/knl
+ATS2_PWR9_XLC=ats2-pwr9_xl-2019.08.20_serial_spmpi-2019.06.24       # ats-2/pwr9/xl
+ATS2_PWR9_GCC=ats2-pwr9_gcc-7.3.1_serial_spmpi-2019.06.24           # ats-2/pwr9/gcc
+ATS2_V100_XLC=ats2-v100_cuda-10.1.243_xl-2019.08.20_spmpi-2019.06.24 # ats-2/v100/xl
+ATS2_V100_GCC=ats2-v100_cuda-10.1.243_gcc-7.3.1_spmpi-2019.06.24     # ats-2/v100/gcc
 CTS1_BDW=cts1-bdw_intel-19.0.5_openmp_openmpi-4.0.1  	            # cts-1/bdw
 CTS1_P100=cts1-p100_gcc-6.3.1_cuda-9.2.88_openmpi-2.1.1             # cts-1/p100
 TLCC2_SNB=tlcc2-snb_intel-19.0.5_openmp_openmpi-4.0.1               # tlcc2/snb
@@ -38,8 +38,8 @@ WTRM_V100=waterman-v100_gcc-7.2.0_cuda-9.2.88_openmpi-2.1.2         # ats-2 surr
 
 # Build stuff
 MAKE_CMD='make -j16 install'
-DATE_STR=`date +%Y-%m-%d`/00000000
-#DATE_STR=2019-12-06/00000000
+DATE_STR=`date +%Y-%m-%d`
+DATE_STR=2020-01-17/00000000
 echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 function setup
@@ -231,7 +231,7 @@ elif   [[ ${1} == 'build' ]]; then
     build mini_${CEE_ATS1} opt "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
     build mini_${CEE_ATS1} dbg "${MAKE_CMD}" static ${MINITRIL_INSTALL_PATH}
 
-    module purge && module load sparc-dev/cuda-9.2.88_gcc-7.2.0_openmpi-4.0.1
+    module purge && module load sparc-dev/cuda-9.2.88_gcc-7.2.0_openmpi-4.0.2
     build ${CEE_ATS2} opt "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
     build ${CEE_ATS2} dbg "${MAKE_CMD}" static ${TRIL_INSTALL_PATH}
 
@@ -272,19 +272,19 @@ elif   [[ ${1} == 'build' ]]; then
         V100_TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-v100/Trilinos/$DATE_STR
     fi
 
-    module unload sparc-dev/cuda-xl && module load sparc-dev/xl
+    module load sparc-dev/xl
     build ${ATS2_PWR9_XLC} opt "${MAKE_CMD}" static ${PWR9_TRIL_INSTALL_PATH}
     build ${ATS2_PWR9_XLC} dbg "${MAKE_CMD}" static ${PWR9_TRIL_INSTALL_PATH}
 
-    module unload sparc-dev/xl && module load sparc-dev/gcc-7.3.1_spmpi-2019.01.30
+    module unload sparc-dev/xl && module load sparc-dev/gcc
     build ${ATS2_PWR9_GCC} opt "${MAKE_CMD}" static ${PWR9_TRIL_INSTALL_PATH}
     build ${ATS2_PWR9_GCC} dbg "${MAKE_CMD}" static ${PWR9_TRIL_INSTALL_PATH}
 
-    module unload sparc-dev/gcc-7.3.1_spmpi-2019.01.30 && module load sparc-dev/cuda-xl
+    module unload sparc-dev/gcc && module load sparc-dev/cuda-xl
     build ${ATS2_V100_XLC} opt "${MAKE_CMD}" static ${V100_TRIL_INSTALL_PATH}
     build ${ATS2_V100_XLC} dbg "${MAKE_CMD}" static ${V100_TRIL_INSTALL_PATH}
 
-    module unload sparc-dev/cuda-xl && module load sparc-dev/cuda-9.2.148_gcc-7.3.1_spmpi-2019.01.30
+    module unload sparc-dev/cuda-xl && module load sparc-dev/cuda-gcc
     build ${ATS2_V100_GCC} opt "${MAKE_CMD}" static ${V100_TRIL_INSTALL_PATH}
     build ${ATS2_V100_GCC} dbg "${MAKE_CMD}" static ${V100_TRIL_INSTALL_PATH}
 

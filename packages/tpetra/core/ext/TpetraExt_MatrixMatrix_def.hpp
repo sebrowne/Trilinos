@@ -249,7 +249,7 @@ void Multiply(
 #ifdef HAVE_TPETRA_MMM_TIMINGS
   } //stop MM_importExtract here
   //stop the setup timer, and start the multiply timer
-  MM = rcp(new TimeMonitor(*TimeMonitor::getNewTimer(prefix_mmm + std::string("MMM All Multiply"))));
+  MM = Teuchos::null; MM = rcp(new TimeMonitor(*TimeMonitor::getNewTimer(prefix_mmm + std::string("MMM All Multiply"))));
 #endif
 
   // Call the appropriate method to perform the actual multiplication.
@@ -569,9 +569,7 @@ add (const Scalar& alpha,
   if(transposeB)
   {
     RowMatrixTransposer<Scalar, LocalOrdinal, GlobalOrdinal, Node> transposer(Brcp);
-    RCP<ParameterList> transposeParams(new ParameterList);
-    transposeParams->set ("sort", false);
-    Brcp = transposer.createTranspose(transposeParams);
+    Brcp = transposer.createTranspose();
   }
   //Check that A,B are fillComplete before getting B's column map
   TEUCHOS_TEST_FOR_EXCEPTION
@@ -684,14 +682,11 @@ add (const Scalar& alpha,
 #endif // HAVE_TPETRA_DEBUG
 
   using Teuchos::ParameterList;
-  RCP<ParameterList> transposeParams (new ParameterList);
-  transposeParams->set ("sort", false);
-
   // Form the explicit transpose of A if necessary.
   RCP<const crs_matrix_type> Aprime = rcpFromRef(A);
   if (transposeA) {
     transposer_type transposer (Aprime);
-    Aprime = transposer.createTranspose (transposeParams);
+    Aprime = transposer.createTranspose ();
   }
 
 #ifdef HAVE_TPETRA_DEBUG
@@ -711,7 +706,7 @@ add (const Scalar& alpha,
       std::cerr << os.str ();
     }
     transposer_type transposer (Bprime);
-    Bprime = transposer.createTranspose (transposeParams);
+    Bprime = transposer.createTranspose ();
   }
 #ifdef HAVE_TPETRA_DEBUG
   TEUCHOS_TEST_FOR_EXCEPTION(Bprime.is_null (), std::logic_error,
@@ -766,7 +761,8 @@ add (const Scalar& alpha,
   }
   auto Alocal = Aprime->getLocalMatrix();
   auto Blocal = Bprime->getLocalMatrix();
-  if(Alocal.numRows() == 0)
+  LO numLocalRows = Alocal.numRows();
+  if(numLocalRows == 0)
   {
     //KokkosKernels spadd assumes rowptrs.extent(0) + 1 == nrows,
     //but an empty Tpetra matrix is allowed to have rowptrs.extent(0) == 0.
@@ -779,10 +775,10 @@ add (const Scalar& alpha,
   auto Bcolmap = Bprime->getColMap();
   if(!matchingColMaps)
   {
-    typedef typename AddKern::global_col_inds_array global_col_inds_array;
+    using global_col_inds_array = typename AddKern::global_col_inds_array;
 #ifdef HAVE_TPETRA_MMM_TIMINGS
-      MM = Teuchos::null;
-      MM = rcp(new TimeMonitor(*TimeMonitor::getNewTimer(prefix_mmm + std::string("mismatched col map full kernel"))));
+    MM = Teuchos::null;
+    MM = rcp(new TimeMonitor(*TimeMonitor::getNewTimer(prefix_mmm + std::string("mismatched col map full kernel"))));
 #endif
     //use kernel that converts col indices in both A and B to common domain map before adding
     auto AlocalColmap = Acolmap->getLocalMap();
@@ -817,6 +813,10 @@ add (const Scalar& alpha,
                               col_inds_array, global_col_inds_array,
                               typename map_type::local_map_type>
         (localColinds, globalColinds, CcolMap->getLocalMap()));
+    //TODO: use KokkosKernels batched sort on device as soon as it's available
+    //But now, have to sort on host (using UVM)
+    exec_space().fence();
+    Tpetra::Import_Util::sortCrsEntries(rowptrs, localColinds, vals);
     C.setAllValues(rowptrs, localColinds, vals);
     C.fillComplete(CDomainMap, CRangeMap, params);
     if(!doFillComplete)
@@ -1526,9 +1526,9 @@ template<class CrsMatrixType>
 size_t C_estimate_nnz(CrsMatrixType & A, CrsMatrixType &B){
   // Follows the NZ estimate in ML's ml_matmatmult.c
   size_t Aest = 100, Best=100;
-  if (A.getNodeNumEntries() > 0)
-    Aest = (A.getNodeNumRows() > 0)?  A.getNodeNumEntries()/A.getNodeNumRows() : 100;
-  if (B.getNodeNumEntries() > 0)
+  if (A.getNodeNumEntries() >= A.getNodeNumRows())
+    Aest = (A.getNodeNumRows() > 0) ? A.getNodeNumEntries()/A.getNodeNumRows() : 100;
+  if (B.getNodeNumEntries() >= B.getNodeNumRows())
     Best = (B.getNodeNumRows() > 0) ? B.getNodeNumEntries()/B.getNodeNumRows() : 100;
 
   size_t nnzperrow = (size_t)(sqrt((double)Aest) + sqrt((double)Best) - 1);
@@ -3378,6 +3378,20 @@ template \
                      const CrsMatrix<SCALAR, LO, GO, NODE>& B, \
                      const Teuchos::RCP<const Map<LO, GO, NODE> >& domainMap, \
                      const Teuchos::RCP<const Map<LO, GO, NODE> >& rangeMap, \
+                     const Teuchos::RCP<Teuchos::ParameterList>& params); \
+\
+  template \
+  void \
+  MatrixMatrix::add< SCALAR , LO, GO , NODE > \
+                    (const SCALAR & alpha, \
+                     const bool transposeA, \
+                     const CrsMatrix< SCALAR , LO, GO , NODE >& A, \
+                     const SCALAR& beta, \
+                     const bool transposeB, \
+                     const CrsMatrix< SCALAR , LO, GO , NODE >& B, \
+                     CrsMatrix< SCALAR , LO, GO , NODE >& C, \
+                     const Teuchos::RCP<const Map<LO, GO , NODE > >& domainMap, \
+                     const Teuchos::RCP<const Map<LO, GO , NODE > >& rangeMap, \
                      const Teuchos::RCP<Teuchos::ParameterList>& params); \
 \
   template struct MMdetails::AddKernels<SCALAR, LO, GO, NODE>;

@@ -138,7 +138,7 @@ cmake \
    -D Trilinos_ENABLE_Intrepid2=OFF \
    \
    -D Trilinos_ENABLE_ShyLU=ON \
-   -D Trilinos_ENABLE_ShyLU_DD=OFF \
+   -D Trilinos_ENABLE_ShyLU_DD=ON \
    -D Trilinos_ENABLE_ShyLU_Node=ON \
    -D Trilinos_ENABLE_ShyLU_NodeHTS=ON \
    -D Trilinos_ENABLE_ShyLU_NodeTacho=OFF \

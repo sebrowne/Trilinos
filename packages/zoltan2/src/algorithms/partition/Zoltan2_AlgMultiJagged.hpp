@@ -59,6 +59,7 @@
 #include <Tpetra_Distributor.hpp>
 #include <Teuchos_StandardParameterEntryValidators.hpp>
 #include <Teuchos_ParameterList.hpp>
+#include <Kokkos_Sort.hpp>
 
 #include <algorithm>    // std::sort
 #include <vector>
@@ -2967,6 +2968,13 @@ void AlgMJ<mj_scalar_t, mj_lno_t, mj_gno_t, mj_part_t,
   // max for next concurrentPartCount elements, reduce sum for the last
   // concurrentPartCount elements.
   if(this->comm->getSize()  > 1) {
+    // We're using explicit host here as Spectrum MPI would fail
+    // with the prior HostMirror UVMSpace to UVMSpace setup.
+    auto host_local_min_max_total =
+      Kokkos::create_mirror_view(Kokkos::HostSpace(), local_min_max_total);
+    auto host_global_min_max_total =
+      Kokkos::create_mirror_view(Kokkos::HostSpace(), global_min_max_total);
+    Kokkos::deep_copy(host_local_min_max_total, local_min_max_total);
     Teuchos::MultiJaggedCombinedMinMaxTotalReductionOp<int, mj_scalar_t>
       reductionOp(current_concurrent_num_parts,
         current_concurrent_num_parts, current_concurrent_num_parts);
@@ -2975,10 +2983,11 @@ void AlgMJ<mj_scalar_t, mj_lno_t, mj_gno_t, mj_part_t,
         *(this->comm),
       reductionOp,
       3 * current_concurrent_num_parts,
-      local_min_max_total.data(),
-      global_min_max_total.data());
+      host_local_min_max_total.data(),
+      host_global_min_max_total.data());
     }
     Z2_THROW_OUTSIDE_ERROR(*(this->mj_env))
+    Kokkos::deep_copy(global_min_max_total, host_global_min_max_total);
   }
   else {
     mj_part_t s = 3 * current_concurrent_num_parts;
@@ -3311,15 +3320,14 @@ void AlgMJ<mj_scalar_t, mj_lno_t, mj_gno_t, mj_part_t,mj_node_t>::mj_1D_part(
 
     // now sum up the results of mpi processors.
     if(!bSingleProcess) {
-      // Not sure yet how we do device reduction with operator
-      // For initial test copy to host and do it there, then copy back
-      typename decltype(total_part_weight_left_right_closests)::HostMirror
-        host_total_part_weight_left_right_closests =
-        Kokkos::create_mirror_view(total_part_weight_left_right_closests);
-      typename decltype(global_total_part_weight_left_right_closests)
-        ::HostMirror host_global_total_part_weight_left_right_closests =
-        Kokkos::create_mirror_view(
-          global_total_part_weight_left_right_closests);
+      // We're using explicit host here as Spectrum MPI would fail
+      // with the prior HostMirror UVMSpace to UVMSpace setup.
+      auto host_total_part_weight_left_right_closests =
+        Kokkos::create_mirror_view(Kokkos::HostSpace(),
+        total_part_weight_left_right_closests);
+      auto host_global_total_part_weight_left_right_closests =
+        Kokkos::create_mirror_view(Kokkos::HostSpace(),
+        global_total_part_weight_left_right_closests);
 
       Kokkos::deep_copy(host_total_part_weight_left_right_closests,
         total_part_weight_left_right_closests);
@@ -3603,8 +3611,8 @@ struct ArrayCombinationReducer {
       dst.ptr[n] = 0;
     }
 
-    for(int n = value_count_weights + 2;
-      n < value_count_weights + value_count_rightleft - 2; n += 2) {
+    for(int n = value_count_weights;
+      n < value_count_weights + value_count_rightleft; n += 2) {
       dst.ptr[n]   = -max_scalar;
       dst.ptr[n+1] =  max_scalar;
     }
@@ -3752,8 +3760,8 @@ struct ReduceWeightsFunctor {
       for(int n = 0; n < value_count_weights; ++n) {
         shared_ptr[n] = 0;
       }
-      for(int n = value_count_weights + 2;
-        n < value_count_weights + value_count_rightleft - 2; n += 2) {
+      for(int n = value_count_weights;
+        n < value_count_weights + value_count_rightleft; n += 2) {
         shared_ptr[n]   = -max_scalar;
         shared_ptr[n+1] =  max_scalar;
       }
@@ -4758,9 +4766,13 @@ mj_create_new_partitions(
     }
   }, total_on_cut);
 
-  Kokkos::View<mj_lno_t *, device_t> track_on_cuts(
-    "track_on_cuts", // would do WithoutInitialization but need last init to 0
-    total_on_cut + 1); // extra index to use for tracking
+  Kokkos::View<mj_lno_t *, device_t> track_on_cuts;
+  if(total_on_cut > 0) {
+    track_on_cuts = Kokkos::View<mj_lno_t *, device_t>(
+      "track_on_cuts", // would do WithoutInitialization but need last init to 0
+      total_on_cut + 1); // extra index to use for tracking
+  }
+
 
   // here we need to parallel reduce an array to count coords in each part
   // atomically adding, especially for low part count would kill us
@@ -4821,6 +4833,14 @@ mj_create_new_partitions(
   }
   delete [] reduce_array;
 #endif
+
+  // the last member is utility used for atomically inserting the values.
+  // Sorting here avoids potential indeterminancy in the partitioning results
+  if(track_on_cuts.size() > 0) { // size 0 unused, or size is minimum of 2
+    auto track_on_cuts_sort = Kokkos::subview(track_on_cuts,
+      std::pair<mj_lno_t, mj_lno_t>(0, track_on_cuts.size() - 1)); // do not sort last element
+    Kokkos::sort(track_on_cuts_sort);
+  }
 
   bool uniform_weights0 = this->mj_uniform_weights(0);
   Kokkos::parallel_for(

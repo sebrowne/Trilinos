@@ -43,7 +43,7 @@ ONYX_BDW=dod-onyx-bdw_intel-17.0.5_openmp_mpich-7.6.3
 # Build stuff
 MAKE_CMD='make -j16 install'
 DATE_STR=`date +%Y-%m-%d`
-DATE_STR=2020-01-17/00000000
+DATE_STR=2020-02-20/00000000
 echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 function setup

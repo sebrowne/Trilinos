@@ -31,7 +31,7 @@ ATS2_V100_GCC=ats2-v100_cuda-10.1.243_gcc-7.3.1_spmpi-2019.06.24     # ats-2/v10
 CTS1_BDW=cts1-bdw_intel-19.0.5_openmp_openmpi-4.0.1  	            # cts-1/bdw
 CTS1_P100=cts1-p100_gcc-6.3.1_cuda-9.2.88_openmpi-2.1.1             # cts-1/p100
 TLCC2_SNB=tlcc2-snb_intel-19.0.5_openmp_openmpi-4.0.1               # tlcc2/snb
-VAN1_TX2=van1-tx2_arm-19.2_openmp_openmpi-3.1.4                     # van-1/tx2
+VAN1_TX2=van1-tx2_arm-20.0_openmp_openmpi-4.0.2                     # van-1/tx2
 
 # Testbeds
 WTRM_V100=waterman-v100_gcc-7.2.0_cuda-9.2.88_openmpi-2.1.2         # ats-2 surrogate
@@ -235,7 +235,7 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'van1' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/van1-tx2/Trilinos/$DATE_STR; fi
 
-    module unload sparc-dev && module load sparc-dev/arm-19.2_openmpi-3.1.4
+    module unload sparc-dev && module load sparc-dev/arm-20.0_openmpi-4.0.2
     build ${VAN1_TX2} opt "${MAKE_CMD}" static
     build ${VAN1_TX2} dbg "${MAKE_CMD}" static
 

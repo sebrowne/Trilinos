@@ -5,8 +5,8 @@ if [[ ${1} != 'setup' && ${1} != 'build' ]]; then
   echo " *** Error: Argument #1 to this script must be either 'setup' or 'build'! ***"
   exit
 fi
-if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'van1' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' && ${2} != 'dod-exca'  && ${2} != 'dod-onyx' ]]; then
-  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'van1', 'cts1', 'tlcc2', 'waterman', 'dod-exca', 'dod-onyx'! ***"
+if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'van1' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' && ${2} != 'dod-cent' && ${2} != 'dod-exca' && ${2} != 'dod-onyx' ]]; then
+  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'van1', 'cts1', 'tlcc2', 'waterman', 'dod-cent', 'dod-exca', 'dod-onyx'! ***"
   exit
 fi
 if [[ ${3} != 'deploy' && ${3} != '' ]]; then
@@ -24,9 +24,9 @@ CEE_ATS2=cee-p100_cuda-9.2.88_gcc-7.2.0_openmpi-4.0.1   # ats-2 surrogate
 # HPCs
 ATS1_HSW=ats1-hsw_intel-19.0.4_openmp_mpich-7.7.6	            # ats-1/hsw
 ATS1_KNL=ats1-knl_intel-19.0.4_openmp_mpich-7.7.6	            # ats-1/knl
-ATS2_PWR9_XLC=ats2-pwr9_xl-2019.08.20_serial_spmpi-2019.06.24       # ats-2/pwr9/xl
+ATS2_PWR9_XLC=ats2-pwr9_xl-2019.12.23_serial_spmpi-rolling       # ats-2/pwr9/xl
 ATS2_PWR9_GCC=ats2-pwr9_gcc-7.3.1_serial_spmpi-2019.06.24           # ats-2/pwr9/gcc
-ATS2_V100_XLC=ats2-v100_cuda-10.1.243_xl-2019.08.20_spmpi-2019.06.24 # ats-2/v100/xl
+ATS2_V100_XLC=ats2-v100_cuda-10.1.243_xl-2019.12.23_spmpi-rolling # ats-2/v100/xl
 ATS2_V100_GCC=ats2-v100_cuda-10.1.243_gcc-7.3.1_spmpi-2019.06.24     # ats-2/v100/gcc
 CTS1_BDW=cts1-bdw_intel-19.0.5_openmp_openmpi-4.0.1  	            # cts-1/bdw
 CTS1_P100=cts1-p100_gcc-6.3.1_cuda-9.2.88_openmpi-2.1.1             # cts-1/p100
@@ -37,6 +37,7 @@ VAN1_TX2=van1-tx2_arm-19.2_openmp_openmpi-3.1.4                     # van-1/tx2
 WTRM_V100=waterman-v100_gcc-7.2.0_cuda-9.2.88_openmpi-2.1.2         # ats-2 surrogate
 
 # DoD HPCs
+CENT_BDW=dod-cent-bdw_intel-17.0.1_openmp_sgimpt-2.15
 EXCA_HSW=dod-exca-hsw_intel-17.0.1_openmp_mpich-7.2.4
 ONYX_BDW=dod-onyx-bdw_intel-17.0.5_openmp_mpich-7.6.3
 
@@ -142,6 +143,10 @@ if     [[ ${1} == 'setup' ]]; then
     setup ${WTRM_V100} dbg do-cmake_trilinos_waterman-v100_gcc_cuda_openmpi.sh static
     setup ${WTRM_V100} opt do-cmake_trilinos_waterman-v100_gcc_cuda_openmpi.sh static
 
+  elif [[ ${2} == 'dod-cent' ]]; then
+    setup ${CENT_BDW} dbg do-cmake_trilinos_dod-cent-bdw_intel_openmp_sgimpt.sh static
+    setup ${CENT_BDW} opt do-cmake_trilinos_dod-cent-bdw_intel_openmp_sgimpt.sh static
+
   elif [[ ${2} == 'dod-exca' ]]; then
     setup ${EXCA_HSW} dbg do-cmake_trilinos_dod-exca-hsw_intel_openmp_mpich.sh static
     setup ${EXCA_HSW} opt do-cmake_trilinos_dod-exca-hsw_intel_openmp_mpich.sh static
@@ -205,11 +210,11 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'ats2' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-pwr9/Trilinos/$DATE_STR; fi
 
-    module unload sparc-dev/cuda-10.1.243_xl-2019.08.20_spmpi-2019.06.24 && module load sparc-dev/xl-2019.08.20_spmpi-2019.06.24
+    module load sparc-dev/xl-2019.12.23_spmpi-rolling
     build ${ATS2_PWR9_XLC} opt "${MAKE_CMD}" static
     build ${ATS2_PWR9_XLC} dbg "${MAKE_CMD}" static
 
-    module unload sparc-dev/xl-2019.08.20_spmpi-2019.06.24 && module load sparc-dev/gcc-7.3.1_spmpi-2019.06.24
+    module unload sparc-dev/xl-2019.12.23_spmpi-rolling && module load sparc-dev/gcc-7.3.1_spmpi-2019.06.24
     build ${ATS2_PWR9_GCC} opt "${MAKE_CMD}" static
     build ${ATS2_PWR9_GCC} dbg "${MAKE_CMD}" static
 
@@ -217,11 +222,11 @@ elif   [[ ${1} == 'build' ]]; then
  
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-v100/Trilinos/$DATE_STR; fi
 
-    module unload sparc-dev/gcc-7.3.1_spmpi-2019.06.24 && module load sparc-dev/cuda-10.1.243_xl-2019.08.20_spmpi-2019.06.24
+    module unload sparc-dev/gcc-7.3.1_spmpi-2019.06.24 && module load sparc-dev/cuda-10.1.243_xl-2019.12.23_spmpi-rolling
     build ${ATS2_V100_XLC} opt "${MAKE_CMD}" static
     build ${ATS2_V100_XLC} dbg "${MAKE_CMD}" static
 
-    module unload sparc-dev/cuda-10.1.243_xl-2019.08.20_spmpi-2019.06.24 && module load sparc-dev/cuda-10.1.243_gcc-7.3.1_spmpi-2019.06.24
+    module unload sparc-dev/cuda-10.1.243_xl-2019.12.23_spmpi-rolling && module load sparc-dev/cuda-10.1.243_gcc-7.3.1_spmpi-2019.06.24
     build ${ATS2_V100_GCC} opt "${MAKE_CMD}" static
     build ${ATS2_V100_GCC} dbg "${MAKE_CMD}" static
 
@@ -270,6 +275,15 @@ elif   [[ ${1} == 'build' ]]; then
     build ${WTRM_V100} dbg "${MAKE_CMD}" static
     
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-dev $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+
+  elif [[ ${2} == 'dod-cent' ]]; then
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/usr/cta/unsupported/sparc/tpls/dod-cent-bdw/Trilinos/$DATE_STR; fi
+    
+    module load sparc-dev/intel-17.0.1_sgimpt-2.15
+    build ${CENT_BDW} opt "${MAKE_CMD}" static
+    build ${CENT_BDW} dbg "${MAKE_CMD}" static
+    
+    if [[ ${3} == 'deploy' ]]; then chgrp -R sparcusr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
 
   elif [[ ${2} == 'dod-exca' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/usr/cta/unsupported/sparc/tpls/dod-exca-hsw/Trilinos/$DATE_STR; fi

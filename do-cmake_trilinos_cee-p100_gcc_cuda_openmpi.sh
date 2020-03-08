@@ -9,12 +9,12 @@ EXTRA_ARGS=$@
 
 COMPILER_DIR=${COMPILER_ROOT}
 MPI_DIR=${MPI_ROOT}
-BLAS_DIR=${BLAS_ROOT}
-LAPACK_DIR=${LAPACK_ROOT}
+BLAS_DIR=${CBLAS_ROOT}
+LAPACK_DIR=${CBLAS_ROOT}
 HDF5_DIR=${HDF5_ROOT}
 NETCDF_DIR=${NETCDF_ROOT}
 PNETCDF_DIR=${PNETCDF_ROOT}
-ZLIB_DIR=${ZLIB_ROOT}
+ZLIB_DIR=/usr/lib64
 CGNS_DIR=${CGNS_ROOT}
 BOOST_DIR=${BOOST_ROOT}
 METIS_DIR=${METIS_ROOT}
@@ -35,9 +35,9 @@ elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
-  BUILD_C_FLAGS=""
-  BUILD_CXX_FLAGS="-lineinfo"
-  BUILD_F_FLAGS=""
+  BUILD_C_FLAGS="$BUILD_C_FLAGS"
+  BUILD_CXX_FLAGS="$BUILD_CXX_FLAGS -lineinfo"
+  BUILD_F_FLAGS="$BUILD_F_FLAGS"
 else
   echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
 fi
@@ -155,17 +155,17 @@ cmake \
    \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
-   -D Kokkos_ENABLE_Serial=ON \
-   -D Kokkos_ENABLE_OpenMP=OFF \
-   -D Kokkos_ENABLE_Pthread=OFF \
+   -D Kokkos_ENABLE_SERIAL=ON \
+   -D Kokkos_ENABLE_OPENMP=OFF \
+   -D Kokkos_ENABLE_PTHREAD=OFF \
    -D TPL_ENABLE_CUDA=ON \
-   -D Kokkos_ENABLE_Cuda=ON \
-   -D Kokkos_ENABLE_Cuda_UVM=ON \
-   -D KOKKOS_ARCH="Pascal60" \
-   -D Kokkos_ENABLE_Cuda_Lambda=ON \
-   -D Kokkos_ENABLE_Cuda_Relocatable_Device_Code=OFF \
+   -D Kokkos_ENABLE_CUDA=ON \
+   -D Kokkos_ENABLE_CUDA_UVM=ON \
+   -D Kokkos_ARCH_PASCAL60=ON \
+   -D Kokkos_ENABLE_CUDA_LAMBDA=ON \
+   -D Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=OFF \
    \
-   -D KOKKOS_ENABLE_DEPRECATED_CODE=OFF \
+   -D Kokkos_ENABLE_DEPRECATED_CODE=OFF \
    -D Tpetra_ENABLE_DEPRECATED_CODE=OFF  \
    -D Belos_HIDE_DEPRECATED_CODE=ON  \
    -D Epetra_HIDE_DEPRECATED_CODE=ON  \
@@ -196,12 +196,12 @@ cmake \
    -D TPL_ENABLE_BinUtils=OFF \
    \
    -D TPL_ENABLE_BLAS=ON \
-   -D BLAS_LIBRARY_DIRS:PATH="${BLAS_DIR}/lib" \
-   -D BLAS_LIBRARY_NAMES:STRING="blas" \
+   -D BLAS_LIBRARY_DIRS:PATH="${BLAS_DIR}/mkl/lib/intel64;${BLAS_DIR}/lib/intel64" \
+   -D BLAS_LIBRARY_NAMES:STRING="mkl_intel_lp64;mkl_intel_thread;mkl_core;iomp5" \
    \
    -D TPL_ENABLE_LAPACK=ON \
-   -D LAPACK_LIBRARY_DIRS:PATH="${LAPACK_DIR}/lib" \
-   -D LAPACK_LIBRARY_NAMES:STRING="lapack" \
+   -D LAPACK_LIBRARY_DIRS:PATH="${LAPACK_DIR}/mkl/lib/intel64;${LAPACK_DIR}/lib/intel64" \
+   -D LAPACK_LIBRARY_NAMES:STRING="mkl_intel_lp64;mkl_intel_thread;mkl_core;iomp5" \
    \
    -D TPL_ENABLE_Boost=ON \
    -D Boost_INCLUDE_DIRS:PATH=${BOOST_DIR}/include \
@@ -236,7 +236,7 @@ cmake \
    -D SuperLUDist_LIBRARY_DIRS:PATH=${SUPERLUDIST_DIR}/lib \
    -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist" \
    \
-   -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi -ldl -lgomp" \
+   -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi -ldl" \
    \
    ${EXTRA_ARGS} \
    ${TRILINOS_HOME}

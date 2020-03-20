@@ -5,8 +5,8 @@ if [[ ${1} != 'setup' && ${1} != 'build' ]]; then
   echo " *** Error: Argument #1 to this script must be either 'setup' or 'build'! ***"
   exit
 fi
-if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'van1' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' && ${2} != 'dod-cent' && ${2} != 'dod-exca' && ${2} != 'dod-onyx' ]]; then
-  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'van1', 'cts1', 'tlcc2', 'waterman', 'dod-cent', 'dod-exca', 'dod-onyx'! ***"
+if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'van1' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' && ${2} != 'dod-cent' && ${2} != 'dod-exca' && ${2} != 'dod-onyx' && ${2} != 'dod-mstg' ]]; then
+  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'van1', 'cts1', 'tlcc2', 'waterman', 'dod-cent', 'dod-exca', 'dod-onyx', 'dod-mstg'! ***"
   exit
 fi
 if [[ ${3} != 'deploy' && ${3} != '' ]]; then
@@ -40,6 +40,7 @@ WTRM_V100=waterman-v100_gcc-7.2.0_cuda-9.2.88_openmpi-2.1.2         # ats-2 surr
 CENT_BDW=dod-cent-bdw_intel-17.0.1_openmp_sgimpt-2.15
 EXCA_HSW=dod-exca-hsw_intel-17.0.1_openmp_mpich-7.2.4
 ONYX_BDW=dod-onyx-bdw_intel-17.0.5_openmp_mpich-7.6.3
+MSTG_SKX=dod-mstg-skx_intel-18.0.3_openmp_hpempt-2.20
 
 # Build stuff
 MAKE_CMD='make -j16 install'
@@ -154,6 +155,10 @@ if     [[ ${1} == 'setup' ]]; then
   elif [[ ${2} == 'dod-onyx' ]]; then
     setup ${ONYX_BDW} dbg do-cmake_trilinos_dod-onyx-bdw_intel_openmp_mpich.sh static
     setup ${ONYX_BDW} opt do-cmake_trilinos_dod-onyx-bdw_intel_openmp_mpich.sh static
+
+  elif [[ ${2} == 'dod-mstg' ]]; then
+    setup ${MSTG_SKX} dbg do-cmake_trilinos_dod-mstg-skx_intel_openmp_hpempt.sh static
+    setup ${MSTG_SKX} opt do-cmake_trilinos_dod-mstg-skx_intel_openmp_hpempt.sh static
   fi
 elif   [[ ${1} == 'build' ]]; then
   if   [[ ${2} == 'cee-default' ]]; then
@@ -300,6 +305,15 @@ elif   [[ ${1} == 'build' ]]; then
     module load sparc-dev/intel-17.0.5_mpich-7.6.3
     build ${ONYX_BDW} opt "${MAKE_CMD}" static
     build ${ONYX_BDW} dbg "${MAKE_CMD}" static
+    
+    if [[ ${3} == 'deploy' ]]; then chgrp -R sparcusr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
+
+  elif [[ ${2} == 'dod-mstg' ]]; then
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/p/work1/projects/sparc/tpls/dod-mstg-skx/Trilinos/$DATE_STR; fi
+    
+    module load sparc-dev/intel-18.0.3_hpempt-2.20
+    build ${MSTG_SKX} opt "${MAKE_CMD}" static
+    build ${MSTG_SKX} dbg "${MAKE_CMD}" static
     
     if [[ ${3} == 'deploy' ]]; then chgrp -R sparcusr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
   fi

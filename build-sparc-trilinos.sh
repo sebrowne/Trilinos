@@ -5,8 +5,9 @@ if [[ ${1} != 'setup' && ${1} != 'build' ]]; then
   echo " *** Error: Argument #1 to this script must be either 'setup' or 'build'! ***"
   exit
 fi
-if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'van1' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' && ${2} != 'dod-cent' && ${2} != 'dod-exca' && ${2} != 'dod-onyx' && ${2} != 'dod-mstg' ]]; then
-  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'van1', 'cts1', 'tlcc2', 'waterman', 'dod-cent', 'dod-exca', 'dod-onyx', 'dod-mstg'! ***"
+
+if [[ ${2} != 'cee-default' && ${2} != 'cee-advanced' && ${2} != 'ats1' && ${2} != 'ats2' && ${2} != 'van1' && ${2} != 'cts1' && ${2} != 'tlcc2' && ${2} != 'waterman' && ${2} != 'dod-cent' && ${2} != 'dod-exca' && ${2} != 'dod-onyx' && ${2} != 'dod-mstg' && ${2} != 'macos' ]]; then
+  echo " *** Error: Argument #2 to this script must be one of the following: 'cee-default', 'cee-advanced', 'ats1', 'ats2', 'van1', 'cts1', 'tlcc2', 'waterman', 'dod-cent', 'dod-exca', 'dod-onyx', 'dod-mstg'!, 'macos' ***"
   exit
 fi
 if [[ ${3} != 'deploy' && ${3} != '' ]]; then
@@ -41,6 +42,9 @@ CENT_BDW=dod-cent-bdw_intel-17.0.1_openmp_sgimpt-2.15
 EXCA_HSW=dod-exca-hsw_intel-17.0.1_openmp_mpich-7.2.4
 ONYX_BDW=dod-onyx-bdw_intel-17.0.5_openmp_mpich-7.6.3
 MSTG_SKX=dod-mstg-skx_intel-18.0.3_openmp_hpempt-2.20
+
+# MacOS
+MACOS_CLANG=macos-cpu_clang-10.0.1_serial_openmpi-4.0.3
 
 # Build stuff
 MAKE_CMD='make -j16 install'
@@ -159,6 +163,11 @@ if     [[ ${1} == 'setup' ]]; then
   elif [[ ${2} == 'dod-mstg' ]]; then
     setup ${MSTG_SKX} dbg do-cmake_trilinos_dod-mstg-skx_intel_openmp_hpempt.sh static
     setup ${MSTG_SKX} opt do-cmake_trilinos_dod-mstg-skx_intel_openmp_hpempt.sh static
+  
+  elif [[ ${2} == 'macos' ]]; then
+    setup ${MACOS_CLANG} dbg do-cmake_trilinos_macos-cpu_clang_serial_openmpi.sh static
+    setup ${MACOS_CLANG} opt do-cmake_trilinos_macos-cpu_clang_serial_openmpi.sh static
+
   fi
 elif   [[ ${1} == 'build' ]]; then
   if   [[ ${2} == 'cee-default' ]]; then
@@ -314,7 +323,13 @@ elif   [[ ${1} == 'build' ]]; then
     module load sparc-dev/intel-18.0.3_hpempt-2.20
     build ${MSTG_SKX} opt "${MAKE_CMD}" static
     build ${MSTG_SKX} dbg "${MAKE_CMD}" static
+  
+  elif [[ ${2} == 'macos' ]]; then
+    if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/macOS-10.14/Trilinos/$DATE_STR; fi
+    
+    build ${MACOS_CLANG} opt "${MAKE_CMD}" static
+    build ${MACOS_CLANG} dbg "${MAKE_CMD}" static
     
     if [[ ${3} == 'deploy' ]]; then chgrp -R sparcusr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
   fi
-fi
+

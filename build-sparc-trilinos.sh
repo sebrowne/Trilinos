@@ -332,4 +332,5 @@ elif   [[ ${1} == 'build' ]]; then
     
     if [[ ${3} == 'deploy' ]]; then chgrp -R sparcusr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
   fi
+fi
 

@@ -27,6 +27,7 @@ BUILD_C_FLAGS=""
 BUILD_CXX_FLAGS=""
 BUILD_F_FLAGS=""
 BUILD_LINK_FLAGS=""
+BOUNDS_CHECKING=OFF
 
 if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
 then
@@ -38,6 +39,7 @@ then
   BUILD_C_FLAGS="$BUILD_C_FLAGS"
   BUILD_CXX_FLAGS="$BUILD_CXX_FLAGS -lineinfo"
   BUILD_F_FLAGS="$BUILD_F_FLAGS"
+  BOUNDS_CHECKING=ON
 else
   echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
 fi
@@ -161,6 +163,7 @@ cmake \
    -D Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=OFF \
    \
    -D Kokkos_ENABLE_DEPRECATED_CODE=OFF \
+   -D Kokkos_ENABLE_DEBUG_BOUNDS_CHECK=${BOUNDS_CHECKING} \
    -D Tpetra_ENABLE_DEPRECATED_CODE=OFF  \
    -D Belos_HIDE_DEPRECATED_CODE=ON  \
    -D Epetra_HIDE_DEPRECATED_CODE=ON  \

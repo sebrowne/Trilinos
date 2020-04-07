@@ -21,6 +21,7 @@ BUILD_C_FLAGS=""
 BUILD_CXX_FLAGS=""
 BUILD_F_FLAGS=""
 BUILD_LINK_FLAGS="-ldl"
+BOUNDS_CHECKING=OFF
 
 if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
 then
@@ -29,6 +30,7 @@ elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
+  BOUNDS_CHECKING=ON
 else
   echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
 fi
@@ -153,6 +155,7 @@ cmake \
    -D Kokkos_ENABLE_CUDA_UVM=OFF \
    \
    -D Kokkos_ENABLE_DEPRECATED_CODE=OFF \
+   -D Kokkos_ENABLE_DEBUG_BOUNDS_CHECK=${BOUNDS_CHECKING} \
    -D Tpetra_ENABLE_DEPRECATED_CODE=OFF  \
    -D Belos_HIDE_DEPRECATED_CODE=ON  \
    -D Epetra_HIDE_DEPRECATED_CODE=ON  \

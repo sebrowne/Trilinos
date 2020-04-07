@@ -16,7 +16,7 @@ if [[ ${3} != 'deploy' && ${3} != '' ]]; then
 fi
 
 # CEE
-CEE_CLANG=cee-cpu_clang-5.0.1_serial_openmpi-4.0.1
+CEE_CLANG=cee-cpu_clang-9.0.1_serial_openmpi-4.0.2
 CEE_GCC=cee-cpu_gcc-7.2.0_serial_openmpi-4.0.1          # sierra development default
 CEE_INTEL=cee-cpu_intel-19.0.3_serial_intelmpi-2018.4   # sierra production default
 CEE_ATS1=cee-cpu_intel-18.0.2_openmp_mpich2-3.2         # ats-1 surrogate

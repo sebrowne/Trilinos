@@ -27,6 +27,7 @@ BUILD_C_FLAGS="-O3"
 BUILD_CXX_FLAGS="-O3"
 BUILD_F_FLAGS="-O3"
 BUILD_LINK_FLAGS=""
+BOUNDS_CHECKING=OFF
 
 if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
 then
@@ -38,6 +39,7 @@ then
   BUILD_C_FLAGS=""
   BUILD_CXX_FLAGS="-lineinfo"
   BUILD_F_FLAGS=""
+  BOUNDS_CHECKING=ON
 else
   echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
 fi
@@ -151,17 +153,18 @@ cmake \
    -D Trilinos_ENABLE_ShyLU_NodeTacho=OFF \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
-   -D Kokkos_ENABLE_Serial=ON \
-   -D Kokkos_ENABLE_OpenMP=OFF \
-   -D Kokkos_ENABLE_Pthread=OFF \
+   -D Kokkos_ENABLE_SERIAL=ON \
+   -D Kokkos_ENABLE_OPENMP=OFF \
+   -D Kokkos_ENABLE_PTHREAD=OFF \
    -D TPL_ENABLE_CUDA=ON \
-   -D Kokkos_ENABLE_Cuda=ON \
-   -D Kokkos_ENABLE_Cuda_UVM=ON \
-   -D KOKKOS_ARCH="Volta70" \
-   -D Kokkos_ENABLE_Cuda_Lambda=ON \
-   -D Kokkos_ENABLE_Cuda_Relocatable_Device_Code=OFF \
+   -D Kokkos_ENABLE_CUDA=ON \
+   -D Kokkos_ENABLE_CUDA_UVM=ON \
+   -D Kokkos_ARCH="Volta70" \
+   -D Kokkos_ENABLE_CUDA_LAMBDA=ON \
+   -D Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=OFF \
    \
-   -D KOKKOS_ENABLE_DEPRECATED_CODE=OFF \
+   -D Kokkos_ENABLE_DEPRECATED_CODE=OFF \
+   -D Kokkos_ENABLE_DEBUG_BOUNDS_CHECK=${BOUNDS_CHECKING} \
    -D Tpetra_ENABLE_DEPRECATED_CODE=OFF  \
    -D Belos_HIDE_DEPRECATED_CODE=ON  \
    -D Epetra_HIDE_DEPRECATED_CODE=ON  \

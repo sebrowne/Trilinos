@@ -21,6 +21,7 @@ BUILD_C_FLAGS="-mkl -qoverride-limits"
 BUILD_CXX_FLAGS="-mkl -qoverride-limits"
 BUILD_F_FLAGS="-mkl -qoverride-limits"
 BUILD_LINK_FLAGS="-mkl"
+BOUNDS_CHECKING=OFF
 
 if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
 then
@@ -32,6 +33,7 @@ then
   BUILD_C_FLAGS="-mkl"
   BUILD_CXX_FLAGS="-mkl"
   BUILD_F_FLAGS="-mkl"
+  BOUNDS_CHECKING=ON
 else
   echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
 fi
@@ -133,15 +135,16 @@ cmake \
    -D Trilinos_ENABLE_ShyLU_NodeTacho=OFF \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
-   -D Kokkos_ENABLE_Serial=OFF \
-   -D Kokkos_ENABLE_OpenMP=ON \
-   -D Kokkos_ENABLE_Pthread=OFF \
+   -D Kokkos_ENABLE_SERIAL=OFF \
+   -D Kokkos_ENABLE_OPENMP=ON \
+   -D Kokkos_ENABLE_PTHREAD=OFF \
    -D TPL_ENABLE_CUDA=OFF \
-   -D Kokkos_ENABLE_Cuda=OFF \
-   -D Kokkos_ENABLE_Cuda_UVM=OFF \
-   -D KOKKOS_ARCH="HSW" \
+   -D Kokkos_ENABLE_CUDA=OFF \
+   -D Kokkos_ENABLE_CUDA_UVM=OFF \
+   -D Kokkos_ARCH="HSW" \
    \
-   -D KOKKOS_ENABLE_DEPRECATED_CODE=OFF \
+   -D Kokkos_ENABLE_DEPRECATED_CODE=OFF \
+   -D Kokkos_ENABLE_DEBUG_BOUNDS_CHECK=${BOUNDS_CHECKING} \
    -D Tpetra_ENABLE_DEPRECATED_CODE=OFF  \
    -D Belos_HIDE_DEPRECATED_CODE=ON  \
    -D Epetra_HIDE_DEPRECATED_CODE=ON  \

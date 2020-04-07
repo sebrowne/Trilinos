@@ -49,7 +49,7 @@ MACOS_CLANG=macos-cpu_clang-10.0.1_serial_openmpi-4.0.3
 # Build stuff
 MAKE_CMD='make -j16 install'
 DATE_STR=`date +%Y-%m-%d`
-DATE_STR=2020-04-03/00000000
+DATE_STR=2020-04-07/00000000
 echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 function setup

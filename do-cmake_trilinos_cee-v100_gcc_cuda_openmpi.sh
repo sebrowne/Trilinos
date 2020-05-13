@@ -26,18 +26,17 @@ BUILD_SUFFIX=opt
 BUILD_C_FLAGS=""
 BUILD_CXX_FLAGS=""
 BUILD_F_FLAGS=""
-BUILD_LINK_FLAGS=""
+BUILD_LINK_FLAGS="-ldl"
+BOUNDS_CHECKING=OFF
 
-if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
+if   [[ ${1} == 'opt' || ${2} == 'opt' || ${3} == 'opt' ]]
 then
   :
-elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
+elif [[ ${1} == 'dbg' || ${2} == 'dbg' || ${3} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
-  BUILD_C_FLAGS="$BUILD_C_FLAGS"
-  BUILD_CXX_FLAGS="$BUILD_CXX_FLAGS -lineinfo"
-  BUILD_F_FLAGS="$BUILD_F_FLAGS"
+  BOUNDS_CHECKING=ON
 else
   echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
 fi
@@ -45,18 +44,32 @@ fi
 LINK_SHARED=OFF
 LINK_SUFFIX=static
 
-if   [[ ${1} == 'static' || ${2} == 'static' ]]
+if   [[ ${1} == 'static' || ${2} == 'static' || ${3} == 'static' ]]
 then
   :
   BUILD_C_FLAGS="$BUILD_C_FLAGS -fPIC"
   BUILD_CXX_FLAGS="$BUILD_CXX_FLAGS -fPIC"
   BUILD_F_FLAGS="$BUILD_F_FLAGS -fPIC"
-elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
+elif [[ ${1} == 'shared' || ${2} == 'shared' || ${3} == 'shared' ]]
 then
   LINK_SHARED=ON
   LINK_SUFFIX=shared
 else
   echo " *** You may specify 'static' or 'shared' to this configuration script. Defaulting to 'static'!"
+fi
+
+USING_SERIAL=ON
+USING_OPENMP=OFF
+if   [[ ${1} == 'serial' || ${2} == 'serial' || ${3} == 'serial' ]]
+then
+  USING_SERIAL=ON
+  USING_OPENMP=OFF
+elif [[ ${1} == 'openmp' || ${2} == 'openmp' || ${3} == 'openmp' ]]
+then
+  USING_OPENMP=OFF
+  USING_SERIAL=ON
+else
+  echo " *** You may specify 'serial' or 'openmp' to this configuration script. Defaulting to 'serial'!"
 fi
 
 TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
@@ -125,8 +138,8 @@ cmake \
    -D Trilinos_ENABLE_Stokhos=OFF \
    -D Trilinos_ENABLE_Panzer=OFF \
    -D Trilinos_ENABLE_Tpetra=ON \
-   -D Tpetra_INST_SERIAL=ON \
-   -D Tpetra_INST_OPENMP=OFF \
+   -D Tpetra_INST_SERIAL=${USING_SERIAL:?} \
+   -D Tpetra_INST_OPENMP=${USING_OPENMP:?} \
    -D Trilinos_ENABLE_Belos=ON \
    -D Trilinos_ENABLE_Amesos2=ON \
    -D Amesos2_ENABLE_Epetra=OFF \
@@ -155,8 +168,8 @@ cmake \
    \
    -D Trilinos_ENABLE_Kokkos=ON \
    -D Trilinos_ENABLE_KokkosCore=ON \
-   -D Kokkos_ENABLE_SERIAL=ON \
-   -D Kokkos_ENABLE_OPENMP=OFF \
+   -D Kokkos_ENABLE_SERIAL=${USING_SERIAL:?} \
+   -D Kokkos_ENABLE_OPENMP=${USING_OPENMP:?} \
    -D Kokkos_ENABLE_PTHREAD=OFF \
    -D TPL_ENABLE_CUDA=ON \
    -D Kokkos_ENABLE_CUDA=ON \

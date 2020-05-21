@@ -31,8 +31,14 @@ then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
   BOUNDS_CHECKING=ON
+elif [[ ${1} == 'asan' || ${2} == 'asan' || ${3} == 'asan' ]]
+then
+  BUILD_TYPE=RELEASE
+  BUILD_SUFFIX=asan
+  BUILD_C_FLAGS="-g -O1 -fsanitize=address -fno-omit-frame-pointer"
+  BUILD_CXX_FLAGS="-g -O1 -fsanitize=address -fno-omit-frame-pointer"
 else
-  echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
+  echo " *** You may specify 'opt', 'dbg', or 'asan' to this configuration script. Defaulting to 'opt'! ***"
 fi
 
 LINK_SHARED=OFF

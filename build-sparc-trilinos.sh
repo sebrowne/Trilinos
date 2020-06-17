@@ -16,26 +16,23 @@ if [[ ${3} != 'deploy' && ${3} != '' ]]; then
 fi
 
 # CEE
-CEE_CLANG=cee-cpu_clang-9.0.1_serial_openmpi-4.0.2
-CEE_GCC=cee-cpu_gcc-7.2.0_serial_openmpi-4.0.1          # sierra development default
+CEE_CLANG=cee-cpu_clang-9.0.1_serial_openmpi-4.0.3
+CEE_GCC=cee-cpu_gcc-7.2.0_serial_openmpi-4.0.3          # sierra development default
 CEE_INTEL=cee-cpu_intel-19.0.3_serial_intelmpi-2018.4   # sierra production default
 CEE_ATS1=cee-cpu_intel-18.0.2_openmp_mpich2-3.2         # ats-1 surrogate
-CEE_ATS2=cee-p100_cuda-9.2.88_gcc-7.2.0_openmpi-4.0.1   # ats-2 surrogate
+CEE_ATS2=cee-v100_cuda-10.1.243_gcc-7.2.0_openmpi-4.0.3   # ats-2 surrogate
 
 # HPCs
 ATS1_HSW=ats1-hsw_intel-19.0.4_openmp_mpich-7.7.6	            # ats-1/hsw
 ATS1_KNL=ats1-knl_intel-19.0.4_openmp_mpich-7.7.6	            # ats-1/knl
-ATS2_PWR9_XLC=ats2-pwr9_xl-2019.12.23_serial_spmpi-rolling       # ats-2/pwr9/xl
-ATS2_PWR9_GCC=ats2-pwr9_gcc-7.3.1_serial_spmpi-2019.06.24           # ats-2/pwr9/gcc
-ATS2_V100_XLC=ats2-v100_cuda-10.1.243_xl-2019.12.23_spmpi-rolling # ats-2/v100/xl
-ATS2_V100_GCC=ats2-v100_cuda-10.1.243_gcc-7.3.1_spmpi-2019.06.24     # ats-2/v100/gcc
-CTS1_BDW=cts1-bdw_intel-19.0.5_openmp_openmpi-4.0.1  	            # cts-1/bdw
+ATS2_PWR9_XLC=ats2-pwr9_xl-2020.03.18_serial_spmpi-rolling       # ats-2/pwr9/xl
+ATS2_PWR9_GCC=ats2-pwr9_gcc-7.3.1_serial_spmpi-rolling           # ats-2/pwr9/gcc
+ATS2_V100_XLC=ats2-v100_cuda-10.1.243_xl-2020.03.18_spmpi-rolling # ats-2/v100/xl
+ATS2_V100_GCC=ats2-v100_cuda-10.1.243_gcc-7.3.1_spmpi-rolling     # ats-2/v100/gcc
+CTS1_BDW=cts1-bdw_intel-19.0.4_openmp_openmpi-4.0.3  	            # cts-1/bdw
 CTS1_P100=cts1-p100_gcc-6.3.1_cuda-9.2.88_openmpi-2.1.1             # cts-1/p100
-TLCC2_SNB=tlcc2-snb_intel-19.0.5_openmp_openmpi-4.0.1               # tlcc2/snb
-VAN1_TX2=van1-tx2_arm-20.0_openmp_openmpi-4.0.2                     # van-1/tx2
-
-# Testbeds
-WTRM_V100=waterman-v100_gcc-7.2.0_cuda-9.2.88_openmpi-2.1.2         # ats-2 surrogate
+TLCC2_SNB=tlcc2-snb_intel-19.0.4_openmp_openmpi-4.0.3               # tlcc2/snb
+VAN1_TX2=van1-tx2_arm-20.1_openmp_openmpi-4.0.3                     # van-1/tx2
 
 # DoD HPCs
 CENT_BDW=dod-cent-bdw_intel-17.0.1_openmp_sgimpt-2.15
@@ -180,14 +177,14 @@ elif   [[ ${1} == 'build' ]]; then
   if   [[ ${2} == 'cee-default' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6/Trilinos/$DATE_STR; fi
     
-    module purge && module load sparc-dev/clang
+    module unload sparc-dev && module load sparc-dev/clang
     build ${CEE_CLANG} opt "${MAKE_CMD}" static
     build ${CEE_CLANG} dbg "${MAKE_CMD}" static
     build ${CEE_CLANG} asan "${MAKE_CMD}" static
     build ${CEE_CLANG} opt "${MAKE_CMD}" shared
     build ${CEE_CLANG} dbg "${MAKE_CMD}" shared
 
-    module purge && module load sparc-dev/gcc
+    module unload sparc-dev && module load sparc-dev/gcc
     build ${CEE_GCC} opt "${MAKE_CMD}" static
     build ${CEE_GCC} dbg "${MAKE_CMD}" static
     build ${CEE_GCC} opt "${MAKE_CMD}" shared
@@ -197,33 +194,33 @@ elif   [[ ${1} == 'build' ]]; then
 
   elif [[ ${2} == 'cee-advanced' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cee-rhel6/Trilinos/$DATE_STR; fi
-  
-    module purge && module load sparc-dev/intel
+
+    module unload sparc-dev && module load sparc-dev/intel
     build ${CEE_INTEL} opt "${MAKE_CMD}" static
     build ${CEE_INTEL} dbg "${MAKE_CMD}" static
-  
-    module purge && module load sparc-dev/intel-18.0.2_mpich2-3.2
+
+    module unload sparc-dev && module load sparc-dev/intel-18.0.2_mpich2-3.2
     build ${CEE_ATS1} opt "${MAKE_CMD}" static
     build ${CEE_ATS1} dbg "${MAKE_CMD}" static
-  
-    module purge && module load sparc-dev/cuda-9.2.88_gcc-7.2.0_openmpi-4.0.2
+
+    module unload sparc-dev && module load sparc-dev/cuda-10.1.243_gcc-7.2.0_openmpi-4.0.3
     build ${CEE_ATS2} opt "${MAKE_CMD}" static
     build ${CEE_ATS2} dbg "${MAKE_CMD}" static
-    
+
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
-    
+
   elif [[ ${2} == 'ats1' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-hsw/Trilinos/$DATE_STR; fi
 
-    module unload sparc-dev/intel-19.0.4_mpich-7.7.6_knl && module load sparc-dev/intel-19.0.4_mpich-7.7.6_hsw
+    module unload sparc-dev && module load sparc-dev/intel-19.0.4_mpich-7.7.6_hsw
     build ${ATS1_HSW} opt "${MAKE_CMD}" static
     build ${ATS1_HSW} dbg "${MAKE_CMD}" static
 
     if [[ ${3} == 'deploy' ]]; then chgrp -R wg-aero-usr $TRIL_INSTALL_PATH; chmod -R g+rX $TRIL_INSTALL_PATH; fi
-    
+
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats1-knl/Trilinos/$DATE_STR; fi
 
-    module unload sparc-dev/intel-19.0.4_mpich-7.7.6_hsw && module load sparc-dev/intel-19.0.4_mpich-7.7.6_knl
+    module unload sparc-dev && module load sparc-dev/intel-19.0.4_mpich-7.7.6_knl
     build ${ATS1_KNL} opt "${MAKE_CMD}" static
     build ${ATS1_KNL} dbg "${MAKE_CMD}" static
 
@@ -232,11 +229,11 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'ats2' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-pwr9/Trilinos/$DATE_STR; fi
 
-    module load sparc-dev/xl-2019.12.23_spmpi-rolling
+    module unload sparc-dev && module load sparc-dev/xl-2020.03.18_spmpi-rolling
     build ${ATS2_PWR9_XLC} opt "${MAKE_CMD}" static
     build ${ATS2_PWR9_XLC} dbg "${MAKE_CMD}" static
 
-    module unload sparc-dev/xl-2019.12.23_spmpi-rolling && module load sparc-dev/gcc-7.3.1_spmpi-2019.06.24
+    module unload sparc-dev && module load sparc-dev/gcc-7.3.1_spmpi-rolling
     build ${ATS2_PWR9_GCC} opt "${MAKE_CMD}" static
     build ${ATS2_PWR9_GCC} dbg "${MAKE_CMD}" static
 
@@ -244,11 +241,11 @@ elif   [[ ${1} == 'build' ]]; then
  
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/ats2-v100/Trilinos/$DATE_STR; fi
 
-    module unload sparc-dev/gcc-7.3.1_spmpi-2019.06.24 && module load sparc-dev/cuda-10.1.243_xl-2019.12.23_spmpi-rolling
+    module unload sparc-dev && module load sparc-dev/cuda-10.1.243_xl-2020.03.18_spmpi-rolling
     build ${ATS2_V100_XLC} opt "${MAKE_CMD}" static
     build ${ATS2_V100_XLC} dbg "${MAKE_CMD}" static
 
-    module unload sparc-dev/cuda-10.1.243_xl-2019.12.23_spmpi-rolling && module load sparc-dev/cuda-10.1.243_gcc-7.3.1_spmpi-2019.06.24
+    module unload sparc-dev && module load sparc-dev/cuda-10.1.243_gcc-7.3.1_spmpi-rolling
     build ${ATS2_V100_GCC} opt "${MAKE_CMD}" static
     build ${ATS2_V100_GCC} dbg "${MAKE_CMD}" static
 
@@ -257,7 +254,7 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'van1' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/van1-tx2/Trilinos/$DATE_STR; fi
 
-    module unload sparc-dev && module load sparc-dev/arm-20.0_openmpi-4.0.2
+    module unload sparc-dev && module load sparc-dev/arm-20.1_openmpi-4.0.3
     build ${VAN1_TX2} opt "${MAKE_CMD}" static
     build ${VAN1_TX2} dbg "${MAKE_CMD}" static
 
@@ -266,7 +263,7 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'cts1' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-bdw/Trilinos/$DATE_STR; fi
 
-    module purge && module load sparc-dev/intel
+    module unload sparc-dev && module load sparc-dev/intel
     build ${CTS1_BDW} opt "${MAKE_CMD}" static
     build ${CTS1_BDW} dbg "${MAKE_CMD}" static
 
@@ -274,7 +271,7 @@ elif   [[ ${1} == 'build' ]]; then
   
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/cts1-p100/Trilinos/$DATE_STR; fi
 
-    module purge && module load sparc-dev/cuda-gcc
+    module unload sparc-dev && module load sparc-dev/cuda-gcc
     build ${CTS1_P100} opt "${MAKE_CMD}" static
     build ${CTS1_P100} dbg "${MAKE_CMD}" static
 
@@ -283,7 +280,7 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'tlcc2' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/tlcc2-snb/Trilinos/$DATE_STR; fi
 
-    module purge && module load sparc-dev/intel
+    module unload sparc-dev && module load sparc-dev/intel
     build ${TLCC2_SNB} opt "${MAKE_CMD}" static
     build ${TLCC2_SNB} dbg "${MAKE_CMD}" static
     
@@ -292,7 +289,7 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'waterman' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/projects/sparc/tpls/waterman-gpu/Trilinos/$DATE_STR; fi
 
-    module purge && module load sparc-dev/cuda-gcc
+    module unload sparc-dev && module load sparc-dev/cuda-gcc
     build ${WTRM_V100} opt "${MAKE_CMD}" static
     build ${WTRM_V100} dbg "${MAKE_CMD}" static
     
@@ -301,7 +298,7 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'dod-cent' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/usr/cta/unsupported/sparc/tpls/dod-cent-bdw/Trilinos/$DATE_STR; fi
     
-    module load sparc-dev/intel-17.0.1_sgimpt-2.15
+    module unload sparc-dev && module load sparc-dev/intel-17.0.1_sgimpt-2.15
     build ${CENT_BDW} opt "${MAKE_CMD}" static
     build ${CENT_BDW} dbg "${MAKE_CMD}" static
     
@@ -310,7 +307,7 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'dod-exca' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/usr/cta/unsupported/sparc/tpls/dod-exca-hsw/Trilinos/$DATE_STR; fi
     
-    module load sparc-dev/intel-17.0.1_mpich-7.2.4
+    module unload sparc-dev && module load sparc-dev/intel-17.0.1_mpich-7.2.4
     build ${EXCA_HSW} opt "${MAKE_CMD}" static
     build ${EXCA_HSW} dbg "${MAKE_CMD}" static
     
@@ -319,7 +316,7 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'dod-onyx' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/p/app/unsupported/sparc/tpls/dod-onyx-bdw/Trilinos/$DATE_STR; fi
     
-    module load sparc-dev/intel-17.0.5_mpich-7.6.3
+    module unload sparc-dev && module load sparc-dev/intel-17.0.5_mpich-7.6.3
     build ${ONYX_BDW} opt "${MAKE_CMD}" static
     build ${ONYX_BDW} dbg "${MAKE_CMD}" static
     
@@ -328,7 +325,7 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'dod-mstg' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/p/work1/projects/sparc/tpls/dod-mstg-skx/Trilinos/$DATE_STR; fi
     
-    module load sparc-dev/intel-18.0.3_hpempt-2.20
+    module unload sparc-dev && module load sparc-dev/intel-18.0.3_hpempt-2.20
     build ${MSTG_SKX} opt "${MAKE_CMD}" static
     build ${MSTG_SKX} dbg "${MAKE_CMD}" static
   

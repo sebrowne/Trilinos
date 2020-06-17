@@ -54,30 +54,36 @@ echo " ... Using "${DATE_STR}" for /projects/sparc/ installations ..."
 
 function setup
 {
+  configuration=${1:?}
+  variant=${2:?}
+  configure_script=${3:?}
   linktype=${4:-static}
-  builddir=${1:?}_${linktype:?}_${2:?}_build
-  echo "Setting up build directory '${builddir:?}' with configure script '${3:?}'"
+  builddir=${configuration:?}_${linktype:?}_${variant:?}_build
+  echo "Setting up build directory '${builddir:?}' with configure script '${configure_script:?}'"
   if [ ! -d ${builddir:?} ]
   then
     mkdir ${builddir:?}
   fi
-  ln -sf ../${3:?} ${builddir:?}/do-cmake.sh
+  ln -sf ../${configure_script:?} ${builddir:?}/do-cmake.sh
 }
 
 function build
 {
+  configuration=${1:?}
+  variant=${2:?}
+  make_cmd=${3:?}
   linktype=${4:-static}
-  builddir=${1:?}_${linktype:?}_${2:?}_build
-  echo "Building configuration '${2:?}' with link type '${linktype:?}' in directory '${builddir:?}'"
+  builddir=${configuration:?}_${linktype:?}_${variant:?}_build
+  echo "Building configuration '${variant:?}' with link type '${linktype:?}' in directory '${builddir:?}'"
   cd ${builddir:?}
-  ./do-cmake.sh ${linktype:?} ${2:?}
+  ./do-cmake.sh ${linktype:?} ${variant:?}
   if [ $? != 0 ]
   then
     echo "**** CONFIGURE IN DIR '${builddir:?}' FAILED ****"
     cd ../
     return
   fi
-  ${3:?}
+  ${make_cmd:?}
   if [ $? != 0 ]
   then
     echo "**** BUILD IN DIR '${builddir:?}' FAILED ****"
@@ -91,6 +97,7 @@ if     [[ ${1} == 'setup' ]]; then
   if   [[ ${2} == 'cee-default' ]]; then
     setup ${CEE_CLANG} dbg do-cmake_trilinos_cee-cpu_clang_serial_openmpi.sh static
     setup ${CEE_CLANG} opt do-cmake_trilinos_cee-cpu_clang_serial_openmpi.sh static
+    setup ${CEE_CLANG} asan do-cmake_trilinos_cee-cpu_clang_serial_openmpi.sh static
     setup ${CEE_CLANG} dbg do-cmake_trilinos_cee-cpu_clang_serial_openmpi.sh shared
     setup ${CEE_CLANG} opt do-cmake_trilinos_cee-cpu_clang_serial_openmpi.sh shared
 
@@ -176,6 +183,7 @@ elif   [[ ${1} == 'build' ]]; then
     module purge && module load sparc-dev/clang
     build ${CEE_CLANG} opt "${MAKE_CMD}" static
     build ${CEE_CLANG} dbg "${MAKE_CMD}" static
+    build ${CEE_CLANG} asan "${MAKE_CMD}" static
     build ${CEE_CLANG} opt "${MAKE_CMD}" shared
     build ${CEE_CLANG} dbg "${MAKE_CMD}" shared
 

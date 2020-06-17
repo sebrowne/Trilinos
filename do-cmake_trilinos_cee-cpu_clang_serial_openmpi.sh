@@ -34,7 +34,7 @@ then
 elif [[ ${1} == 'asan' || ${2} == 'asan' || ${3} == 'asan' ]]
 then
   BUILD_SUFFIX=asan
-  BUILD_C_FLAGS="-g -O1 -fsanitize=address -fno-omit-frame-pointer"
+  BUILD_C_FLAGS="-g -O1"
   BUILD_CXX_FLAGS="-g -O1 -fsanitize=address -fno-omit-frame-pointer"
   BUILD_LINK_FLAGS="-ldl -fsanitize=address"
 else

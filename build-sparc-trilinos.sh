@@ -35,7 +35,7 @@ TLCC2_SNB=tlcc2-snb_intel-19.0.4_openmp_openmpi-4.0.3               # tlcc2/snb
 VAN1_TX2=van1-tx2_arm-20.1_openmp_openmpi-4.0.3                     # van-1/tx2
 
 # DoD HPCs
-CENT_BDW=dod-cent-bdw_intel-17.0.1_openmp_sgimpt-2.15
+CENT_BDW=dod-cent-bdw_intel-17.0.1_openmp_sgimpt-2.21
 EXCA_HSW=dod-exca-hsw_intel-17.0.1_openmp_mpich-7.2.4
 ONYX_BDW=dod-onyx-bdw_intel-17.0.5_openmp_mpich-7.6.3
 MSTG_SKX=dod-mstg-skx_intel-18.0.3_openmp_hpempt-2.20
@@ -298,7 +298,7 @@ elif   [[ ${1} == 'build' ]]; then
   elif [[ ${2} == 'dod-cent' ]]; then
     if [[ ${3} == 'deploy' ]]; then export TRIL_INSTALL_PATH=/usr/cta/unsupported/sparc/tpls/dod-cent-bdw/Trilinos/$DATE_STR; fi
     
-    module unload sparc-dev && module load sparc-dev/intel-17.0.1_sgimpt-2.15
+    module unload sparc-dev && module load sparc-dev/intel-17.0.1_sgimpt-2.21
     build ${CENT_BDW} opt "${MAKE_CMD}" static
     build ${CENT_BDW} dbg "${MAKE_CMD}" static
     

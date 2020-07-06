@@ -22,17 +22,13 @@ BUILD_CXX_FLAGS="-mkl"
 BUILD_F_FLAGS="-mkl"
 BUILD_LINK_FLAGS="-mkl"
 BOUNDS_CHECKING=OFF
-
-if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
+if   [[ ${1} == 'opt' || ${2} == 'opt' || ${3} == 'opt' ]]
 then
   :
-elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
+elif [[ ${1} == 'dbg' || ${2} == 'dbg' || ${3} == 'dbg' ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
-  BUILD_C_FLAGS="-mkl"
-  BUILD_CXX_FLAGS="-mkl"
-  BUILD_F_FLAGS="-mkl"
   BOUNDS_CHECKING=ON
 else
   echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
@@ -40,6 +36,27 @@ fi
 
 LINK_SHARED=OFF
 LINK_SUFFIX=static
+if   [[ ${1} == 'static' || ${2} == 'static' || ${3} == 'static' ]]
+then
+  :
+elif [[ ${1} == 'shared' || ${2} == 'shared' || ${3} == 'shared' ]]
+then
+  LINK_SHARED=ON
+  LINK_SUFFIX=shared
+else
+  echo " *** You may specify 'static' or 'shared' to this configuration script. Defaulting to 'static'!"
+fi
+
+BUILD_ALL_PACKAGES=ON
+if   [[ ${1} == 'full' || ${2} == 'full' || ${3} == 'full' ]]
+then
+  :
+elif [[ ${1} == 'mini' || ${2} == 'mini' || ${3} == 'mini' ]]
+then
+  BUILD_ALL_PACKAGES=OFF
+else
+  echo " *** You may specify 'full' or 'mini' to this configuration script. Defaulting to 'full'!"
+fi
 
 TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
 TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
@@ -92,49 +109,49 @@ cmake \
    -D Trilinos_ENABLE_OpenMP=ON \
    -D TPL_ENABLE_Pthread=OFF \
    \
-   -D Trilinos_ENABLE_Teuchos=ON \
-   -D Trilinos_ENABLE_Epetra=ON \
-   -D Trilinos_ENABLE_EpetraExt=ON \
-   -D Trilinos_ENABLE_AztecOO=ON \
-   -D Trilinos_ENABLE_Amesos=ON \
-   -D Trilinos_ENABLE_Stratimikos=ON \
-   -D Trilinos_ENABLE_Anasazi=ON \
+   -D Trilinos_ENABLE_Teuchos=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Epetra=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_EpetraExt=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_AztecOO=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Amesos=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Stratimikos=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Anasazi=${BUILD_ALL_PACKAGES:?} \
    -D Anasazi_ENABLE_RBGen=OFF \
-   -D Trilinos_ENABLE_Ifpack=ON \
-   -D Trilinos_ENABLE_ML=ON \
-   -D Trilinos_ENABLE_Teko=ON \
-   -D Trilinos_ENABLE_NOX=ON \
-   -D Trilinos_ENABLE_Thyra=ON \
+   -D Trilinos_ENABLE_Ifpack=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_ML=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Teko=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_NOX=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Thyra=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_Rythmos=OFF \
-   -D Trilinos_ENABLE_Sacado=ON \
+   -D Trilinos_ENABLE_Sacado=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_Stokhos=OFF \
    -D Trilinos_ENABLE_Panzer=OFF \
-   -D Trilinos_ENABLE_Tpetra=ON \
+   -D Trilinos_ENABLE_Tpetra=${BUILD_ALL_PACKAGES:?} \
    -D Tpetra_INST_SERIAL=OFF \
    -D Tpetra_INST_OPENMP=ON \
-   -D Trilinos_ENABLE_Belos=ON \
-   -D Trilinos_ENABLE_Amesos2=ON \
+   -D Trilinos_ENABLE_Belos=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Amesos2=${BUILD_ALL_PACKAGES:?} \
    -D Amesos2_ENABLE_Epetra=OFF \
    -D Amesos2_ENABLE_KLU2=ON \
-   -D Trilinos_ENABLE_Ifpack2=ON \
-   -D Trilinos_ENABLE_MueLu=ON \
+   -D Trilinos_ENABLE_Ifpack2=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_MueLu=${BUILD_ALL_PACKAGES:?} \
    -D MueLu_ENABLE_Epetra=OFF \
    -D Xpetra_ENABLE_Epetra=OFF \
    -D Xpetra_ENABLE_EpetraExt=OFF \
-   -D Trilinos_ENABLE_Zoltan2=ON \
+   -D Trilinos_ENABLE_Zoltan2=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_STKMesh=OFF \
    -D Trilinos_ENABLE_STKIO=OFF \
-   -D Trilinos_ENABLE_STKTransfer=ON \
-   -D Trilinos_ENABLE_STKSearch=ON \
-   -D Trilinos_ENABLE_STKUtil=ON \
+   -D Trilinos_ENABLE_STKTransfer=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_STKSearch=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_STKUtil=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_STKTopology=OFF \
-   -D Trilinos_ENABLE_STKSimd=ON \
+   -D Trilinos_ENABLE_STKSimd=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_Pamgen=OFF \
    -D Trilinos_ENABLE_Intrepid2=OFF \
-   -D Trilinos_ENABLE_ShyLU_NodeHTS=ON \
+   -D Trilinos_ENABLE_ShyLU_NodeHTS=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_ShyLU_NodeTacho=OFF \
-   -D Trilinos_ENABLE_Kokkos=ON \
-   -D Trilinos_ENABLE_KokkosCore=ON \
+   -D Trilinos_ENABLE_Kokkos=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_KokkosCore=${BUILD_ALL_PACKAGES:?} \
    -D Kokkos_ENABLE_SERIAL=OFF \
    -D Kokkos_ENABLE_OPENMP=ON \
    -D Kokkos_ENABLE_PTHREAD=OFF \
@@ -159,11 +176,11 @@ cmake \
    -D TPL_ENABLE_X11=OFF \
    -D TPL_ENABLE_Matio=OFF \
    \
-   -D Trilinos_ENABLE_Gtest=ON \
+   -D Trilinos_ENABLE_Gtest=${BUILD_ALL_PACKAGES:?} \
    \
    -D Trilinos_ENABLE_TriKota=OFF \
    -D DAKOTA_ENABLE_TESTS=OFF \
-   -D Trilinos_ENABLE_ROL=ON \
+   -D Trilinos_ENABLE_ROL=${BUILD_ALL_PACKAGES:?} \
    \
    -D TPL_ENABLE_MPI=ON \
    -D MPI_USE_COMPILER_WRAPPERS=OFF \

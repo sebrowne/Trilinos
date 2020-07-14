@@ -55,8 +55,8 @@ then
   USING_OPENMP=OFF
 elif [[ ${1} == 'openmp' || ${2} == 'openmp' || ${3} == 'openmp' || ${4} == 'openmp' ]]
 then
-  USING_OPENMP=OFF
-  USING_SERIAL=ON
+  USING_SERIAL=OFF
+  USING_OPENMP=ON
 else
   echo " *** You may specify 'serial' or 'openmp' to this configuration script. Defaulting to 'serial'!"
 fi

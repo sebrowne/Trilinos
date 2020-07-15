@@ -20,7 +20,7 @@ BUILD_SUFFIX=opt
 BUILD_C_FLAGS=""
 BUILD_CXX_FLAGS=""
 BUILD_F_FLAGS=""
-BUILD_LINK_FLAGS="-ldl"
+BUILD_LINK_FLAGS="-lm -ldl"
 BOUNDS_CHECKING=OFF
 
 if   [[ ${1} == 'opt' || ${2} == 'opt' || ${3} == 'opt' || ${4} == 'opt' ]]

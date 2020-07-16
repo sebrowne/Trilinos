@@ -184,7 +184,7 @@ cmake \
    -D TPL_ENABLE_CUDA=ON \
    -D Kokkos_ENABLE_CUDA=ON \
    -D Kokkos_ENABLE_CUDA_UVM=ON \
-   -D Kokkos_ARCH_PASCAL60=ON \
+   -D Kokkos_ARCH_VOLTA70=ON \
    -D Kokkos_ENABLE_CUDA_LAMBDA=ON \
    -D Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=OFF \
    \

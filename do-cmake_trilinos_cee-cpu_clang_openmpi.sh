@@ -1,4 +1,7 @@
 #!/bin/bash
+set -o errexit
+set -o pipefail
+
 EXTRA_ARGS=$@
 
 COMPILER_DIR=${COMPILER_ROOT}
@@ -15,83 +18,120 @@ METIS_DIR=${METIS_ROOT}
 PARMETIS_DIR=${PARMETIS_ROOT}
 SUPERLUDIST_DIR=${SUPERLUDIST_ROOT}
 
-BUILD_TYPE=RELEASE
-BUILD_SUFFIX=opt
-BUILD_C_FLAGS=""
-BUILD_CXX_FLAGS=""
-BUILD_F_FLAGS=""
-BUILD_LINK_FLAGS="-lm -ldl"
-BOUNDS_CHECKING=OFF
+TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
+TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
 
-if   [[ ${1} == 'opt' || ${2} == 'opt' || ${3} == 'opt' || ${4} == 'opt' ]]
+DEFAULT_VARIANT=opt
+DEFAULT_LINKTYPE=static
+DEFAULT_EXECUTIONSPACE=serial
+DEFAULT_PACKAGE=full
+DEFAULT_USE_MPI=mpi
+source $(dirname $(readlink -f ${0}))/config_parser.sh
+
+if [[ "${VARIANT:?}" == "opt" ]]
 then
-  :
-elif [[ ${1} == 'dbg' || ${2} == 'dbg' || ${3} == 'dbg' || ${4} == 'dbg' ]]
+  BUILD_TYPE=RELEASE
+  BUILD_SUFFIX=opt
+  BUILD_C_FLAGS=""
+  BUILD_CXX_FLAGS=""
+  BUILD_F_FLAGS=""
+  BUILD_LINK_FLAGS="-lm -ldl"
+  BOUNDS_CHECKING=OFF
+elif [[ "${VARIANT:?}" == "dbg" ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
+  BUILD_C_FLAGS=""
+  BUILD_CXX_FLAGS=""
+  BUILD_F_FLAGS=""
+  BUILD_LINK_FLAGS="-lm -ldl"
   BOUNDS_CHECKING=ON
-elif [[ ${1} == 'asan' || ${2} == 'asan' || ${3} == 'asan' || ${4} == 'asan' ]]
+elif [[ "${VARIANT:?}" == "asan" ]]
 then
+  BUILD_TYPE=RELEASE
   BUILD_SUFFIX=asan
   BUILD_C_FLAGS="-g -O1"
   BUILD_CXX_FLAGS="-g -O1 -fsanitize=address -fno-omit-frame-pointer"
+  BUILD_F_FLAGS=""
   BUILD_LINK_FLAGS="-ldl -fsanitize=address"
+  BOUNDS_CHECKING=OFF
 else
-  echo " *** You may specify 'opt', 'dbg', or 'asan' to this configuration script. Defaulting to 'opt'! ***"
+  echo "ERROR: Invalid variant '${VARIANT:?}'!" >&2
+  exit 1
 fi
 
-LINK_SHARED=OFF
-LINK_SUFFIX=static
-
-if   [[ ${1} == 'static' || ${2} == 'static' || ${3} == 'static' || ${4} == 'static' ]]
+if [[ "${LINKTYPE:?}" == "static" ]]
 then
-  :
+  LINK_SHARED=OFF
+  LINK_SUFFIX=static
   BUILD_C_FLAGS="-fPIC ${BUILD_C_FLAGS}"
   BUILD_CXX_FLAGS="-fPIC ${BUILD_CXX_FLAGS}"
   BUILD_F_FLAGS="-fPIC ${BUILD_F_FLAGS}"
-elif [[ ${1} == 'shared' || ${2} == 'shared' || ${3} == 'shared' || ${4} == 'shared' ]]
+elif [[ "${LINKTYPE:?}" == "shared" ]]
 then
   LINK_SHARED=ON
   LINK_SUFFIX=shared
 else
-  echo " *** You may specify 'static' or 'shared' to this configuration script. Defaulting to 'static'!"
+  echo "ERROR: Invalid link type '${LINKTYPE:?}'!" >&2
+  exit 1
 fi
 
-USING_SERIAL=ON
-USING_OPENMP=OFF
-if   [[ ${1} == 'serial' || ${2} == 'serial' || ${3} == 'serial' || ${4} == 'serial' ]]
+if [[ "${EXECUTIONSPACE:?}" == "serial" ]]
 then
   USING_SERIAL=ON
   USING_OPENMP=OFF
-elif [[ ${1} == 'openmp' || ${2} == 'openmp' || ${3} == 'openmp' || ${4} == 'openmp' ]]
+elif [[ "${EXECUTIONSPACE:?}" == "openmp" ]]
 then
   USING_SERIAL=OFF
   USING_OPENMP=ON
 else
-  echo " *** You may specify 'serial' or 'openmp' to this configuration script. Defaulting to 'serial'!"
+  echo "ERROR: Invalid execution space '${EXECUTIONSPACE:?}'!" >&2
+  exit 1
 fi
 
-BUILD_ALL_PACKAGES=ON
-BUILD_SEACAS=ON
-BUILD_KOKKOS=ON
-if   [[ ${1} == 'full' || ${2} == 'full' || ${3} == 'full' || ${4} == 'full' ]]
+if [[ "${PACKAGE:?}" == "full" ]]
 then
-  :
-elif [[ ${1} == 'mini' || ${2} == 'mini' || ${3} == 'mini' || ${4} == 'mini' ]]
-then
-  BUILD_ALL_PACKAGES=OFF
-elif [[ ${1} == 'seacas' || ${2} == 'seacas' || ${3} == 'seacas' || ${4} == 'seacas' ]]
+  BUILD_ALL_PACKAGES=ON
+  BUILD_SEACAS=ON
+  BUILD_KOKKOS=ON
+elif [[ "${PACKAGE:?}" == "mini" ]]
 then
   BUILD_ALL_PACKAGES=OFF
+  BUILD_SEACAS=ON
+  BUILD_KOKKOS=ON
+elif [[ "${PACKAGE:?}" == "seacas" ]]
+then
+  BUILD_ALL_PACKAGES=OFF
+  BUILD_SEACAS=ON
   BUILD_KOKKOS=OFF
 else
-  echo " *** You may specify 'full' or 'mini' to this configuration script. Defaulting to 'full'!"
+  echo "ERROR: Invalid package '${PACKAGE:?}'!" >&2
+  exit 1
 fi
 
-TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
-TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
-TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_serial_${SPARC_MPI}_${LINK_SUFFIX}_${BUILD_SUFFIX}
+if [[ "${USE_MPI:?}" == "nompi" ]]
+then
+    USING_MPI=OFF
+    C_COMPILER=${SERIAL_CC}
+    CXX_COMPILER=${SERIAL_CXX}
+    Fortran_COMPILER=${SERIAL_FC}
+    HDF5_DIR=${SPARC_SERIAL_HDF5_ROOT}
+    NETCDF_DIR=${SPARC_SERIAL_NETCDF_ROOT}
+    CGNS_DIR=${SPARC_SERIAL_CGNS_ROOT}
+    EXTRA_LINK_FLAGS=""
+    TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_nompi_${EXECUTIONSPACE}_${LINK_SUFFIX}_${BUILD_SUFFIX}
+elif [[ "${USE_MPI:?}" == "mpi" ]]
+then
+    USING_MPI=ON
+    C_COMPILER="mpicc"
+    CXX_COMPILER="mpicxx"
+    Fortran_COMPILER="mpif90"
+    EXTRA_LINK_FLAGS="-lmpi"
+    TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_${SPARC_MPI}_${EXECUTIONSPACE}_${LINK_SUFFIX}_${BUILD_SUFFIX}
+else
+  echo "ERROR: Invalid using MPI flag '${USE_MPI:?}'!" >&2
+  exit 1
+fi
 
 echo " *** Installing in: ${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR}"
 sleep 3
@@ -104,9 +144,9 @@ cmake \
    -D CMAKE_BUILD_TYPE:STRING=${BUILD_TYPE} \
    -D BUILD_SHARED_LIBS=${LINK_SHARED} \
    \
-   -D CMAKE_C_COMPILER="mpicc" \
-   -D CMAKE_CXX_COMPILER="mpicxx" \
-   -D CMAKE_Fortran_COMPILER="mpif90" \
+   -D CMAKE_C_COMPILER=${C_COMPILER} \
+   -D CMAKE_CXX_COMPILER=${CXX_COMPILER} \
+   -D CMAKE_Fortran_COMPILER=${Fortran_COMPILER} \
    \
    -D CMAKE_C_FLAGS="$BUILD_C_FLAGS" \
    -D CMAKE_CXX_FLAGS="$BUILD_CXX_FLAGS" \
@@ -133,7 +173,7 @@ cmake \
    -D Teuchos_ENABLE_COMPLEX=OFF \
    -D Zoltan_ENABLE_ULLONG_IDS=ON \
    \
-   -D Trilinos_ENABLE_OpenMP=OFF \
+   -D Trilinos_ENABLE_OpenMP=${USING_OPENMP:?} \
    -D TPL_ENABLE_Pthread=OFF \
    \
    -D Trilinos_ENABLE_Teuchos=${BUILD_ALL_PACKAGES:?} \
@@ -208,7 +248,7 @@ cmake \
    -D DAKOTA_ENABLE_TESTS=OFF \
    -D Trilinos_ENABLE_ROL=${BUILD_ALL_PACKAGES:?} \
    \
-   -D TPL_ENABLE_MPI=ON \
+   -D TPL_ENABLE_MPI=${USING_MPI:?} \
    -D MPI_USE_COMPILER_WRAPPERS=ON \
    -D MPI_BASE_DIR:PATH=${MPI_DIR} \
    -D MPI_EXEC:PATH="mpirun" \
@@ -225,10 +265,10 @@ cmake \
    -D LAPACK_LIBRARY_DIRS:PATH="${LAPACK_DIR}/mkl/lib/intel64;${LAPACK_DIR}/lib/intel64" \
    -D LAPACK_LIBRARY_NAMES:STRING="mkl_intel_lp64;mkl_intel_thread;mkl_core;iomp5" \
    \
-   -D TPL_ENABLE_Boost=ON \
+   -D TPL_ENABLE_Boost=${BUILD_ALL_PACKAGES:?} \
    -D Boost_INCLUDE_DIRS:PATH=${BOOST_DIR}/include \
    \
-   -D TPL_ENABLE_BoostLib=ON \
+   -D TPL_ENABLE_BoostLib=${BUILD_ALL_PACKAGES:?} \
    -D BoostLib_INCLUDE_DIRS:PATH=${BOOST_DIR}/include \
    -D BoostLib_LIBRARY_DIRS:PATH=${BOOST_DIR}/lib \
    \
@@ -237,28 +277,28 @@ cmake \
    \
    -D PNetCDF_ROOT:PATH=${PNETCDF_DIR} \
    \
-   -D TPL_ENABLE_Netcdf=ON \
+   -D TPL_ENABLE_Netcdf=${BUILD_SEACAS:?} \
    -D NetCDF_ROOT:PATH=${NETCDF_DIR} \
    \
-   -D TPL_ENABLE_CGNS=ON \
+   -D TPL_ENABLE_CGNS=${BUILD_SEACAS:?} \
    -D CGNS_INCLUDE_DIRS:PATH="${CGNS_DIR}/include" \
    -D CGNS_LIBRARY_DIRS:PATH="${CGNS_DIR}/lib" \
    -D CGNS_LIBRARY_NAMES:STRING="cgns" \
    \
-   -D TPL_ENABLE_METIS=ON \
+   -D TPL_ENABLE_METIS=${BUILD_ALL_PACKAGES:?} \
    -D METIS_INCLUDE_DIRS:PATH=${METIS_DIR}/include \
    -D METIS_LIBRARY_DIRS:PATH=${METIS_DIR}/lib \
    \
-   -D TPL_ENABLE_ParMETIS=ON \
+   -D TPL_ENABLE_ParMETIS=${BUILD_ALL_PACKAGES:?} \
    -D ParMETIS_INCLUDE_DIRS:PATH=${PARMETIS_DIR}/include \
    -D ParMETIS_LIBRARY_DIRS:PATH=${PARMETIS_DIR}/lib \
    \
-   -D TPL_ENABLE_SuperLUDist=ON \
+   -D TPL_ENABLE_SuperLUDist=${BUILD_ALL_PACKAGES:?} \
    -D SuperLUDist_INCLUDE_DIRS:PATH=${SUPERLUDIST_DIR}/include \
    -D SuperLUDist_LIBRARY_DIRS:PATH=${SUPERLUDIST_DIR}/lib \
    -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist" \
    \
-   -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi" \
+   -D Trilinos_EXTRA_LINK_FLAGS:STRING=${EXTRA_LINK_FLAGS} \
    \
    ${EXTRA_ARGS} \
    ${TRILINOS_HOME}

@@ -1,4 +1,6 @@
 #!/bin/bash
+set -o errexit
+set -o pipefail
 
 if [[ ${TMPDIR} ]] && [[ ! -d ${TMPDIR} ]]
 then
@@ -21,49 +23,95 @@ METIS_DIR=${METIS_ROOT}
 PARMETIS_DIR=${PARMETIS_ROOT}
 SUPERLUDIST_DIR=${SUPERLUDIST_ROOT}
 
-BUILD_TYPE=RELEASE
-BUILD_SUFFIX=opt
-BUILD_C_FLAGS=""
-BUILD_CXX_FLAGS=""
-BUILD_F_FLAGS=""
-BUILD_LINK_FLAGS=""
-BOUNDS_CHECKING=OFF
+TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
+TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
 
-if   [[ ${1} == 'opt' || ${2} == 'opt' ]]
+DEFAULT_VARIANT=opt
+DEFAULT_LINKTYPE=static
+DEFAULT_EXECUTIONSPACE=serial
+DEFAULT_PACKAGE=full
+DEFAULT_USE_MPI=mpi
+source $(dirname $(readlink -f ${0}))/config_parser.sh
+
+if [[ "${VARIANT:?}" == "opt" ]]
 then
-  :
-elif [[ ${1} == 'dbg' || ${2} == 'dbg' ]]
+  BUILD_TYPE=RELEASE
+  BUILD_SUFFIX=opt
+  BUILD_C_FLAGS=""
+  BUILD_CXX_FLAGS=""
+  BUILD_F_FLAGS=""
+  BUILD_LINK_FLAGS=""
+  BOUNDS_CHECKING=OFF
+elif [[ "${VARIANT:?}" == "dbg" ]]
 then
   BUILD_TYPE=DEBUG
   BUILD_SUFFIX=dbg
-  BUILD_C_FLAGS="$BUILD_C_FLAGS"
-  BUILD_CXX_FLAGS="$BUILD_CXX_FLAGS -lineinfo"
-  BUILD_F_FLAGS="$BUILD_F_FLAGS"
+  BUILD_C_FLAGS=""
+  BUILD_CXX_FLAGS="-lineinfo"
+  BUILD_F_FLAGS=""
   BOUNDS_CHECKING=ON
 else
-  echo " *** You may specify 'opt' or 'dbg' to this configuration script. Defaulting to 'opt'! ***"
+  echo "ERROR: Invalid variant '${VARIANT:?}'!" >&2
+  exit 1
 fi
 
-LINK_SHARED=OFF
-LINK_SUFFIX=static
-
-if   [[ ${1} == 'static' || ${2} == 'static' ]]
+if [[ "${LINKTYPE:?}" == "static" ]]
 then
-  :
+  LINK_SHARED=OFF
+  LINK_SUFFIX=static
   BUILD_C_FLAGS="$BUILD_C_FLAGS -fPIC"
   BUILD_CXX_FLAGS="$BUILD_CXX_FLAGS -fPIC"
   BUILD_F_FLAGS="$BUILD_F_FLAGS -fPIC"
-elif [[ ${1} == 'shared' || ${2} == 'shared' ]]
+elif [[ "${LINKTYPE:?}" == "shared" ]]
 then
   LINK_SHARED=ON
   LINK_SUFFIX=shared
 else
-  echo " *** You may specify 'static' or 'shared' to this configuration script. Defaulting to 'static'!"
+  echo "ERROR: Invalid link type '${LINKTYPE:?}'!" >&2
+  exit 1
 fi
 
-TRILINOS_HOME=${TRILINOS_REPO_DIR:-$(cd ..; pwd)}
-TRIL_INSTALL_PATH=${TRIL_INSTALL_PATH:-$(cd ..; pwd)}
-TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_${SPARC_MPI}_${LINK_SUFFIX}_${BUILD_SUFFIX}
+if [[ "${EXECUTIONSPACE:?}" == "serial" ]]
+then
+  USING_SERIAL=ON
+  USING_OPENMP=OFF
+elif [[ "${EXECUTIONSPACE:?}" == "openmp" ]]
+then
+  USING_SERIAL=OFF
+  USING_OPENMP=ON
+else
+  echo "ERROR: Invalid execution space '${EXECUTIONSPACE:?}'!" >&2
+  exit 1
+fi
+
+if [[ "${PACKAGE:?}" == "full" ]]
+then
+  BUILD_ALL_PACKAGES=ON
+  BUILD_SEACAS=ON
+  BUILD_KOKKOS=ON
+elif [[ "${PACKAGE:?}" == "mini" ]]
+then
+  BUILD_ALL_PACKAGES=OFF
+  BUILD_SEACAS=ON
+  BUILD_KOKKOS=ON
+elif [[ "${PACKAGE:?}" == "seacas" ]]
+then
+  BUILD_ALL_PACKAGES=OFF
+  BUILD_SEACAS=ON
+  BUILD_KOKKOS=OFF
+else
+  echo "ERROR: Invalid package '${PACKAGE:?}'!" >&2
+  exit 1
+fi
+
+if [[ "${USE_MPI:?}" == "mpi" ]]
+then
+    USING_MPI=ON
+    TRIL_INSTALL_DIR=${SPARC_ARCH}_${SPARC_COMPILER}_${SPARC_MPI}_${EXECUTIONSPACE}_${LINK_SUFFIX}_${BUILD_SUFFIX}
+else
+  echo "ERROR: Invalid using MPI flag '${USE_MPI:?}'!" >&2
+  exit 1
+fi
 
 echo " *** Installing in: ${TRIL_INSTALL_PATH}/${TRIL_INSTALL_DIR}"
 sleep 3
@@ -106,54 +154,54 @@ cmake \
    -D Teuchos_ENABLE_COMPLEX=OFF \
    -D Zoltan_ENABLE_ULLONG_IDS=ON \
    \
-   -D Trilinos_ENABLE_OpenMP=OFF \
+   -D Trilinos_ENABLE_OpenMP=${USING_OPENMP:?} \
    -D TPL_ENABLE_Pthread=OFF \
    \
-   -D Trilinos_ENABLE_Teuchos=ON \
-   -D Trilinos_ENABLE_Epetra=ON \
-   -D Trilinos_ENABLE_EpetraExt=ON \
-   -D Trilinos_ENABLE_AztecOO=ON \
-   -D Trilinos_ENABLE_Amesos=ON \
-   -D Trilinos_ENABLE_Stratimikos=ON \
-   -D Trilinos_ENABLE_Anasazi=ON \
+   -D Trilinos_ENABLE_Teuchos=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Epetra=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_EpetraExt=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_AztecOO=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Amesos=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Stratimikos=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Anasazi=${BUILD_ALL_PACKAGES:?} \
    -D Anasazi_ENABLE_RBGen=OFF \
-   -D Trilinos_ENABLE_Ifpack=ON \
-   -D Trilinos_ENABLE_ML=ON \
-   -D Trilinos_ENABLE_Teko=ON \
-   -D Trilinos_ENABLE_NOX=ON \
-   -D Trilinos_ENABLE_Thyra=ON \
+   -D Trilinos_ENABLE_Ifpack=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_ML=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Teko=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_NOX=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Thyra=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_Rythmos=OFF \
-   -D Trilinos_ENABLE_Sacado=ON \
+   -D Trilinos_ENABLE_Sacado=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_Stokhos=OFF \
    -D Trilinos_ENABLE_Panzer=OFF \
-   -D Trilinos_ENABLE_Tpetra=ON \
-   -D Tpetra_INST_SERIAL=ON \
-   -D Tpetra_INST_OPENMP=OFF \
-   -D Trilinos_ENABLE_Belos=ON \
-   -D Trilinos_ENABLE_Amesos2=ON \
+   -D Trilinos_ENABLE_Tpetra=${BUILD_ALL_PACKAGES:?} \
+   -D Tpetra_INST_SERIAL=${USING_SERIAL:?} \
+   -D Tpetra_INST_OPENMP=${USING_OPENMP:?} \
+   -D Trilinos_ENABLE_Belos=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_Amesos2=${BUILD_ALL_PACKAGES:?} \
    -D Amesos2_ENABLE_Epetra=OFF \
    -D Amesos2_ENABLE_KLU2=ON \
-   -D Trilinos_ENABLE_Ifpack2=ON \
-   -D Trilinos_ENABLE_MueLu=ON \
+   -D Trilinos_ENABLE_Ifpack2=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_MueLu=${BUILD_ALL_PACKAGES:?} \
    -D MueLu_ENABLE_Epetra=OFF \
    -D Xpetra_ENABLE_Epetra=OFF \
    -D Xpetra_ENABLE_EpetraExt=OFF \
-   -D Trilinos_ENABLE_Zoltan2=ON \
+   -D Trilinos_ENABLE_Zoltan2=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_STKMesh=OFF \
    -D Trilinos_ENABLE_STKIO=OFF \
-   -D Trilinos_ENABLE_STKTransfer=ON \
-   -D Trilinos_ENABLE_STKSearch=ON \
-   -D Trilinos_ENABLE_STKUtil=ON \
+   -D Trilinos_ENABLE_STKTransfer=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_STKSearch=${BUILD_ALL_PACKAGES:?} \
+   -D Trilinos_ENABLE_STKUtil=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_STKTopology=OFF \
-   -D Trilinos_ENABLE_STKSimd=ON \
+   -D Trilinos_ENABLE_STKSimd=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_Pamgen=OFF \
    -D Trilinos_ENABLE_Intrepid2=OFF \
    -D Trilinos_ENABLE_ShyLU_NodeHTS=OFF \
    -D Trilinos_ENABLE_ShyLU_NodeTacho=OFF \
-   -D Trilinos_ENABLE_Kokkos=ON \
-   -D Trilinos_ENABLE_KokkosCore=ON \
-   -D Kokkos_ENABLE_SERIAL=ON \
-   -D Kokkos_ENABLE_OPENMP=OFF \
+   -D Trilinos_ENABLE_Kokkos=${BUILD_KOKKOS:?} \
+   -D Trilinos_ENABLE_KokkosCore=${BUILD_KOKKOS:?} \
+   -D Kokkos_ENABLE_SERIAL=${USING_SERIAL:?} \
+   -D Kokkos_ENABLE_OPENMP=${USING_OPENMP:?} \
    -D Kokkos_ENABLE_PTHREAD=OFF \
    -D TPL_ENABLE_CUDA=ON \
    -D Kokkos_ENABLE_CUDA=ON \
@@ -174,15 +222,15 @@ cmake \
    -D Teuchos_HIDE_DEPRECATED_CODE=ON\
    -D Thyra_HIDE_DEPRECATED_CODE=ON \
    \
-   -D Trilinos_ENABLE_SEACAS=ON \
+   -D Trilinos_ENABLE_SEACAS=${BUILD_SEACAS:?} \
    -D TPL_ENABLE_X11=OFF \
    -D TPL_ENABLE_Matio=OFF \
    \
-   -D Trilinos_ENABLE_Gtest=ON \
+   -D Trilinos_ENABLE_Gtest=${BUILD_ALL_PACKAGES:?} \
    \
    -D Trilinos_ENABLE_TriKota=OFF \
    -D DAKOTA_ENABLE_TESTS=OFF \
-   -D Trilinos_ENABLE_ROL=ON \
+   -D Trilinos_ENABLE_ROL=${BUILD_ALL_PACKAGES:?} \
    \
    -D TPL_ENABLE_MPI=ON \
    -D MPI_USE_COMPILER_WRAPPERS=ON \
@@ -201,10 +249,10 @@ cmake \
    -D LAPACK_LIBRARY_DIRS:PATH="${LAPACK_DIR}/mkl/lib/intel64;${LAPACK_DIR}/lib/intel64" \
    -D LAPACK_LIBRARY_NAMES:STRING="mkl_intel_lp64;mkl_intel_thread;mkl_core;iomp5" \
    \
-   -D TPL_ENABLE_Boost=ON \
+   -D TPL_ENABLE_Boost=${BUILD_ALL_PACKAGES:?} \
    -D Boost_INCLUDE_DIRS:PATH=${BOOST_DIR}/include \
    \
-   -D TPL_ENABLE_BoostLib=ON \
+   -D TPL_ENABLE_BoostLib=${BUILD_ALL_PACKAGES:?} \
    -D BoostLib_INCLUDE_DIRS:PATH=${BOOST_DIR}/include \
    -D BoostLib_LIBRARY_DIRS:PATH=${BOOST_DIR}/lib \
    \
@@ -213,28 +261,26 @@ cmake \
    \
    -D PNetCDF_ROOT:PATH=${PNETCDF_DIR} \
    \
-   -D TPL_ENABLE_Netcdf=ON \
+   -D TPL_ENABLE_Netcdf=${BUILD_SEACAS:?} \
    -D NetCDF_ROOT:PATH=${NETCDF_DIR} \
    \
-   -D TPL_ENABLE_CGNS=ON \
+   -D TPL_ENABLE_CGNS=${BUILD_SEACAS:?} \
    -D CGNS_INCLUDE_DIRS:PATH="${CGNS_DIR}/include" \
    -D CGNS_LIBRARY_DIRS:PATH="${CGNS_DIR}/lib" \
    -D CGNS_LIBRARY_NAMES:STRING="cgns" \
    \
-   -D TPL_ENABLE_METIS=ON \
+   -D TPL_ENABLE_METIS=${BUILD_ALL_PACKAGES:?} \
    -D METIS_INCLUDE_DIRS:PATH=${METIS_DIR}/include \
    -D METIS_LIBRARY_DIRS:PATH=${METIS_DIR}/lib \
    \
-   -D TPL_ENABLE_ParMETIS=ON \
+   -D TPL_ENABLE_ParMETIS=${BUILD_ALL_PACKAGES:?} \
    -D ParMETIS_INCLUDE_DIRS:PATH=${PARMETIS_DIR}/include \
    -D ParMETIS_LIBRARY_DIRS:PATH=${PARMETIS_DIR}/lib \
    \
-   -D TPL_ENABLE_SuperLUDist=ON \
+   -D TPL_ENABLE_SuperLUDist=${BUILD_ALL_PACKAGES:?} \
    -D SuperLUDist_INCLUDE_DIRS:PATH=${SUPERLUDIST_DIR}/include \
    -D SuperLUDist_LIBRARY_DIRS:PATH=${SUPERLUDIST_DIR}/lib \
    -D SuperLUDist_LIBRARY_NAMES:STRING="superlu_dist" \
-   -DHAVE_SUPERLUDIST_ENUM_NAMESPACE:BOOL=ON \
-   -DHAVE_SUPERLUDIST_LUSTRUCTINIT_2ARG:BOOL=ON \
    \
    -D Trilinos_EXTRA_LINK_FLAGS:STRING="-lmpi -ldl" \
    \

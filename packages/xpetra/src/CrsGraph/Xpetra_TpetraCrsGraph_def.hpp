@@ -249,8 +249,7 @@ typename Xpetra::CrsGraph<LocalOrdinal,GlobalOrdinal,Node>::local_graph_type Tpe
 template<class LocalOrdinal, class GlobalOrdinal, class Node>
 void TpetraCrsGraph<LocalOrdinal,GlobalOrdinal,Node>::computeGlobalConstants() {
       // mfh 07 May 2018: See GitHub Issue #2565.
-      constexpr bool computeLocalTriangularConstants = true;
-      graph_->computeGlobalConstants(computeLocalTriangularConstants);
+      graph_->computeGlobalConstants();
     }
 
 template<class LocalOrdinal, class GlobalOrdinal, class Node>
@@ -583,7 +582,7 @@ RCP< const Tpetra::CrsGraph<LocalOrdinal, GlobalOrdinal, Node> > TpetraCrsGraph<
     local_graph_type getLocalGraph () const {
       TEUCHOS_TEST_FOR_EXCEPTION(true, Xpetra::Exceptions::RuntimeError,
                                  "Epetra does not support Kokkos::StaticCrsGraph!");
-      TEUCHOS_UNREACHABLE_RETURN((Kokkos::StaticCrsGraph<LocalOrdinal, Kokkos::LayoutLeft, execution_space>()));
+      TEUCHOS_UNREACHABLE_RETURN((local_graph_type()));
     }
 #endif
 
@@ -906,7 +905,7 @@ RCP< const Tpetra::CrsGraph<LocalOrdinal, GlobalOrdinal, Node> > TpetraCrsGraph<
     local_graph_type getLocalGraph () const {
       TEUCHOS_TEST_FOR_EXCEPTION(true, Xpetra::Exceptions::RuntimeError,
                                  "Epetra does not support Kokkos::StaticCrsGraph!");
-      TEUCHOS_UNREACHABLE_RETURN((Kokkos::StaticCrsGraph<LocalOrdinal, Kokkos::LayoutLeft, execution_space>()));
+      TEUCHOS_UNREACHABLE_RETURN((local_graph_type()));
     }
 #endif
 

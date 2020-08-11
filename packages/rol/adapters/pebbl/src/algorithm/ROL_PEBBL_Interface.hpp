@@ -31,7 +31,7 @@ private:
 
   class SnapInt : public Elementwise::UnaryFunction<Real> {
   private:
-    Real tol_;
+    const Real tol_;
   public:
     SnapInt(void) : tol_(1e-6) {}
     Real apply(const Real &x) const {
@@ -75,7 +75,7 @@ public:
 
 template<class Real>
 class ROL_PEBBL_Branching : public pebbl::branching {
-private:
+protected:
   // OptimizationProblem encapsulates the following problem
   // min        obj(x)
   // subject to xl <= x <= xu
@@ -99,7 +99,7 @@ public:
     : factory_(factory), parlist_(parlist), bHelper_(bHelper),
       verbosity_(verbosity), outStream_(outStream) {}
 
-  pebbl::branchSub* blankSub() {
+  virtual pebbl::branchSub* blankSub() {
     return new ROL_PEBBL_BranchSub<Real>(makePtrFromRef<ROL_PEBBL_Branching<Real>>(*this),verbosity_,outStream_);
   }
 
@@ -108,6 +108,8 @@ public:
   const Ptr<OptimizationProblemFactory<Real>> getProblemFactory(void) const {
     return factory_;
   }
+
+  bool haveIncumbentHeuristic() { return true; }
 
   const Ptr<ParameterList> getSolverParameters(void) const {
     return parlist_;
@@ -124,7 +126,7 @@ public:
 
 template<class Real>
 class ROL_PEBBL_BranchSub : public pebbl::branchSub {
-private:
+protected:
   const Ptr<ROL_PEBBL_Branching<Real>> branching_;
   const Ptr<BranchHelper_PEBBL<Real>> bHelper_;
   std::map<int,Real> fixed_;
@@ -133,7 +135,7 @@ private:
   Ptr<Constraint<Real>> tcon_;
   Ptr<OptimizationProblem<Real>> problem_, problem0_;
   Ptr<OptimizationSolver<Real>> solver_;
-  Ptr<Vector<Real>> solution_;
+  Ptr<Vector<Real>> solution_, rndSolution_;
   Ptr<Vector<Real>> multiplier_;
   Ptr<Vector<Real>> gradient_, dwa_;
   int nfrac_, index_;
@@ -142,6 +144,13 @@ private:
 
   const int verbosity_;
   const Ptr<std::ostream> outStream_;
+
+  class round : public Elementwise::UnaryFunction<Real> {
+  public:
+    Real apply(const Real &x) const {
+      return std::round(x);
+    }
+  } rnd;
 
 public:
   ROL_PEBBL_BranchSub(const Ptr<ROL_PEBBL_Branching<Real>> &branching,
@@ -155,6 +164,9 @@ public:
     problem0_   = branching_->getProblemFactory()->build();
     solution_   = problem0_->getSolutionVector()->clone();
     solution_->set(*problem0_->getSolutionVector());
+    rndSolution_= problem0_->getSolutionVector()->clone();
+    rndSolution_->set(*problem0_->getSolutionVector());
+    rndSolution_->applyUnary(rnd);
     gradient_   = solution_->dual().clone();
     dwa_        = gradient_->clone();
     if ( problem0_->getMultiplierVector() != nullPtr ) {
@@ -175,6 +187,8 @@ public:
     problem0_   = rpbs.branching_->getProblemFactory()->build();
     solution_   = rpbs.solution_->clone();
     solution_->set(*rpbs.solution_);
+    rndSolution_ = rpbs.rndSolution_->clone();
+    rndSolution_->set(*rpbs.rndSolution_);
     gradient_   = rpbs.gradient_->clone();
     gradient_->set(*rpbs.gradient_);
     dwa_        = rpbs.gradient_->clone();
@@ -290,6 +304,15 @@ public:
 
   bool candidateSolution() {
     return (nfrac_==0);
+  }
+
+  virtual void incumbentHeuristic() {
+    Real tol(std::sqrt(ROL_EPSILON<Real>()));
+    rndSolution_->set(*solution_);
+    rndSolution_->applyUnary(rnd);
+    problem0_->getObjective()->update(*rndSolution_);
+    Real val = problem0_->getObjective()->value(*rndSolution_,tol);
+    branching_->foundSolution(new ROL_PEBBL_Solution<Real>(*rndSolution_,val));
   }
 
   pebbl::solution* extractSolution() {

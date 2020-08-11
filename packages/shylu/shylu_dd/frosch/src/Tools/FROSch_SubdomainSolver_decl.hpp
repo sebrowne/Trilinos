@@ -99,9 +99,18 @@
 #include <Ifpack2_Details_OneLevelFactory_decl.hpp>
 #endif
 
+#ifdef HAVE_SHYLU_DDFROSCH_THYRA
+#include "Stratimikos_DefaultLinearSolverBuilder.hpp"
+#ifdef HAVE_SHYLU_DDFROSCH_IFPACK2
+#include "Teuchos_AbstractFactoryStd.hpp"
+#include "Thyra_Ifpack2PreconditionerFactory.hpp"
+#endif
+#endif
+
 
 namespace FROSch {
 
+    using namespace std;
     using namespace Teuchos;
     using namespace Xpetra;
 
@@ -255,7 +264,7 @@ namespace FROSch {
 
         \return String describing this operator
         */
-        virtual std::string description() const;
+        virtual string description() const;
 
         //! @name Access to class members
         //!@{
@@ -265,11 +274,11 @@ namespace FROSch {
 
         //! Get #IsComputed_
         bool isComputed() const;
-        
+
         int resetMatrix(ConstXMatrixPtr k,
                         bool reuseInitialize);
 
-        /*! 
+        /*!
         \brief Computes a residual using the operator
         */
         virtual void residual(const XMultiVector & X,
@@ -316,6 +325,11 @@ namespace FROSch {
 
 #ifdef HAVE_SHYLU_DDFROSCH_IFPACK2
         RCP<Ifpack2::Preconditioner<SC,LO,GO,NO> > Ifpack2Preconditioner_;
+#endif
+
+#ifdef HAVE_SHYLU_DDFROSCH_THYRA
+        mutable RCP<Thyra::MultiVectorBase<SC> > ThyraYTmp_;
+        RCP<Thyra::LinearOpWithSolveBase<SC> > LOWS_;
 #endif
 
         bool IsInitialized_ = false;

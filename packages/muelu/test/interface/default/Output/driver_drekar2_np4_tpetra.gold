@@ -12,6 +12,7 @@ smoother ->
  chebyshev: eigenvalue max iterations = 10
  chebyshev: boost factor = 1.1   [unused]
  chebyshev: min diagonal value = 2.22045e-16   [default]
+ chebyshev: eigenvalue normalization frequency = 1   [default]
  chebyshev: assume matrix does not change = 0   [default]
 
 Level 1
@@ -29,6 +30,7 @@ aggregation: drop tol = 0.02
 aggregation: Dirichlet threshold = 0   [default]
 aggregation: drop scheme = distance laplacian
 aggregation: distance laplacian algo = default   [default]
+aggregation: classical algo = default   [default]
 lightweight wrap = 1
 
 Lumping dropped entries
@@ -51,6 +53,7 @@ aggregation: enable phase 1 = 1   [default]
 aggregation: enable phase 2a = 1   [default]
 aggregation: enable phase 2b = 1   [default]
 aggregation: enable phase 3 = 1   [default]
+aggregation: phase2a include root = 1   [default]
 aggregation: preserve Dirichlet points = 0   [default]
 aggregation: allow user-specified singletons = 0   [default]
 aggregation: use interface aggregation = 0   [default]
@@ -109,6 +112,7 @@ matrixmatrix: kernel params ->
 
 Build (MueLu::RepartitionHeuristicFactory)
 repartition: start level = 1
+repartition: use map = 0   [default]
 repartition: node repartition level = -1   [default]
 repartition: min rows per proc = 2000
 repartition: target rows per proc = 0   [default]
@@ -184,6 +188,7 @@ smoother ->
  chebyshev: eigenvalue max iterations = 10
  chebyshev: boost factor = 1.1   [unused]
  chebyshev: min diagonal value = 2.22045e-16   [default]
+ chebyshev: eigenvalue normalization frequency = 1   [default]
  chebyshev: assume matrix does not change = 0   [default]
 
 Level 2
@@ -201,6 +206,7 @@ aggregation: drop tol = 0.02
 aggregation: Dirichlet threshold = 0   [default]
 aggregation: drop scheme = distance laplacian
 aggregation: distance laplacian algo = default   [default]
+aggregation: classical algo = default   [default]
 lightweight wrap = 1
 
 Lumping dropped entries
@@ -223,6 +229,7 @@ aggregation: enable phase 1 = 1   [default]
 aggregation: enable phase 2a = 1   [default]
 aggregation: enable phase 2b = 1   [default]
 aggregation: enable phase 3 = 1   [default]
+aggregation: phase2a include root = 1   [default]
 aggregation: preserve Dirichlet points = 0   [default]
 aggregation: allow user-specified singletons = 0   [default]
 aggregation: use interface aggregation = 0   [default]
@@ -281,6 +288,7 @@ matrixmatrix: kernel params ->
 
 Build (MueLu::RepartitionHeuristicFactory)
 repartition: start level = 1
+repartition: use map = 0   [default]
 repartition: node repartition level = -1   [default]
 repartition: min rows per proc = 2000
 repartition: target rows per proc = 0   [default]
@@ -331,6 +339,7 @@ smoother ->
  chebyshev: eigenvalue max iterations = 10
  chebyshev: boost factor = 1.1   [unused]
  chebyshev: min diagonal value = 2.22045e-16   [default]
+ chebyshev: eigenvalue normalization frequency = 1   [default]
  chebyshev: assume matrix does not change = 0   [default]
 
 Level 3
@@ -348,6 +357,7 @@ aggregation: drop tol = 0.02
 aggregation: Dirichlet threshold = 0   [default]
 aggregation: drop scheme = distance laplacian
 aggregation: distance laplacian algo = default   [default]
+aggregation: classical algo = default   [default]
 lightweight wrap = 1
 
 Lumping dropped entries
@@ -370,6 +380,7 @@ aggregation: enable phase 1 = 1   [default]
 aggregation: enable phase 2a = 1   [default]
 aggregation: enable phase 2b = 1   [default]
 aggregation: enable phase 3 = 1   [default]
+aggregation: phase2a include root = 1   [default]
 aggregation: preserve Dirichlet points = 0   [default]
 aggregation: allow user-specified singletons = 0   [default]
 aggregation: use interface aggregation = 0   [default]
@@ -428,6 +439,7 @@ matrixmatrix: kernel params ->
 
 Build (MueLu::RepartitionHeuristicFactory)
 repartition: start level = 1
+repartition: use map = 0   [default]
 repartition: node repartition level = -1   [default]
 repartition: min rows per proc = 2000
 repartition: target rows per proc = 0   [default]

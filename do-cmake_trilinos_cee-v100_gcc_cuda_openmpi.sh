@@ -188,6 +188,7 @@ cmake \
    -D Trilinos_ENABLE_Thyra=${BUILD_ALL_PACKAGES:?} \
    -D Trilinos_ENABLE_Rythmos=OFF \
    -D Trilinos_ENABLE_Sacado=${BUILD_ALL_PACKAGES:?} \
+   -D Sacado_SFAD_INIT_DEFAULT_CONSTRUCTOR=ON \
    -D Trilinos_ENABLE_Stokhos=OFF \
    -D Trilinos_ENABLE_Panzer=OFF \
    -D Trilinos_ENABLE_Tpetra=${BUILD_ALL_PACKAGES:?} \

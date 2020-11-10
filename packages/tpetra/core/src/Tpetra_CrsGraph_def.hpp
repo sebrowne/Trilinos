@@ -394,7 +394,7 @@ namespace Tpetra {
   template <class LocalOrdinal, class GlobalOrdinal, class Node>
   CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::
   CrsGraph (const Teuchos::RCP<const map_type>& rowMap,
-            const Kokkos::DualView<const size_t*, execution_space>& numEntPerRow,
+            const Kokkos::DualView<const size_t*, device_type>& numEntPerRow,
             const ProfileType /* pftype */,
             const Teuchos::RCP<Teuchos::ParameterList>& params) :
     dist_object_type (rowMap)
@@ -434,7 +434,7 @@ namespace Tpetra {
   CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::
   CrsGraph (const Teuchos::RCP<const map_type>& rowMap,
             const Teuchos::RCP<const map_type>& colMap,
-            const Kokkos::DualView<const size_t*, execution_space>& numEntPerRow,
+            const Kokkos::DualView<const size_t*, device_type>& numEntPerRow,
             const ProfileType /* pftype */,
             const Teuchos::RCP<Teuchos::ParameterList>& params) :
     dist_object_type (rowMap)
@@ -652,6 +652,8 @@ namespace Tpetra {
     k_lclInds1D_ = lclGraph_.entries;
     k_rowPtrs_ = lclGraph_.row_map;
 
+    set_need_sync_host_uvm_access(); // lclGraph_ potentially still in a kernel
+
     const bool callComputeGlobalConstants = params.get () == nullptr ||
       params->get ("compute global constants", true);
 
@@ -695,6 +697,8 @@ namespace Tpetra {
 
     k_lclInds1D_ = lclGraph_.entries;
     k_rowPtrs_ = lclGraph_.row_map;
+
+    set_need_sync_host_uvm_access(); // lclGraph_ potentially still in a kernel
 
     if (! params.is_null() && params->isParameter("sorted") &&
         ! params->get<bool>("sorted")) {
@@ -1290,7 +1294,7 @@ namespace Tpetra {
   {
     using Kokkos::subview;
     typedef LocalOrdinal LO;
-    typedef Kokkos::View<const LO*, execution_space,
+    typedef Kokkos::View<const LO*, device_type,
       Kokkos::MemoryUnmanaged> row_view_type;
 
     if (rowinfo.allocSize == 0) {
@@ -1346,7 +1350,7 @@ namespace Tpetra {
   {
     using Kokkos::subview;
     typedef LocalOrdinal LO;
-    typedef Kokkos::View<LO*, execution_space,
+    typedef Kokkos::View<LO*, device_type,
       Kokkos::MemoryUnmanaged> row_view_type;
 
     if (rowinfo.allocSize == 0) { // nothing in the row to view
@@ -1375,13 +1379,13 @@ namespace Tpetra {
 
   template <class LocalOrdinal, class GlobalOrdinal, class Node>
   Kokkos::View<const LocalOrdinal*,
-               typename CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::execution_space,
+               typename CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::device_type,
                Kokkos::MemoryUnmanaged>
   CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::
   getLocalKokkosRowView (const RowInfo& rowInfo) const
   {
     typedef LocalOrdinal LO;
-    typedef Kokkos::View<const LO*, execution_space,
+    typedef Kokkos::View<const LO*, device_type,
       Kokkos::MemoryUnmanaged> row_view_type;
 
     if (rowInfo.allocSize == 0) {
@@ -1408,13 +1412,13 @@ namespace Tpetra {
 
   template <class LocalOrdinal, class GlobalOrdinal, class Node>
   Kokkos::View<LocalOrdinal*,
-               typename CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::execution_space,
+               typename CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::device_type,
                Kokkos::MemoryUnmanaged>
   CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::
   getLocalKokkosRowViewNonConst (const RowInfo& rowInfo)
   {
     using row_view_type = Kokkos::View<LocalOrdinal*,
-      execution_space, Kokkos::MemoryUnmanaged>;
+      device_type, Kokkos::MemoryUnmanaged>;
 
     if (rowInfo.allocSize == 0) {
       return row_view_type ();
@@ -1440,13 +1444,13 @@ namespace Tpetra {
 
   template <class LocalOrdinal, class GlobalOrdinal, class Node>
   Kokkos::View<const GlobalOrdinal*,
-               typename CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::execution_space,
+               typename CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::device_type,
                Kokkos::MemoryUnmanaged>
   CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::
   getGlobalKokkosRowView (const RowInfo& rowinfo) const
   {
     using row_view_type = Kokkos::View<const GlobalOrdinal*,
-      execution_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+      device_type, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
 
     if (rowinfo.allocSize == 0) {
       return row_view_type ();
@@ -1488,7 +1492,7 @@ namespace Tpetra {
       // that.  That touches the reference count, which costs
       // performance in a measurable way.
       using row_view_type = Kokkos::View<const GO*,
-        execution_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+        device_type, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
       row_view_type k_gblInds1D_unmanaged = k_gblInds1D_;
       using Kokkos::Compat::getConstArrayView;
       using Kokkos::subview;
@@ -1539,7 +1543,7 @@ namespace Tpetra {
       // _managed_ subview, then returns an unmanaged version of
       // that.  That touches the reference count, which costs
       // performance in a measurable way.
-      using row_view_type = Kokkos::View<GO*, execution_space,
+      using row_view_type = Kokkos::View<GO*, device_type,
         Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
       row_view_type k_gblInds1D_unmanaged = k_gblInds1D_;
       using Kokkos::Compat::getArrayView;
@@ -1829,7 +1833,7 @@ namespace Tpetra {
     const LO lclRow = static_cast<LO> (rowInfo.localRow);
 
     auto numEntries = rowInfo.numEntries;
-    using inp_view_type = View<const GO*, execution_space, MemoryUnmanaged>;
+    using inp_view_type = View<const GO*, device_type, MemoryUnmanaged>;
     inp_view_type inputInds(inputGblColInds, numInputInds);
     size_t numInserted = Details::insertCrsIndices(lclRow, k_rowPtrs_,
       this->k_gblInds1D_, numEntries, inputInds, fun);
@@ -1975,7 +1979,7 @@ namespace Tpetra {
     using Kokkos::MemoryUnmanaged;
     auto invalidCount = Teuchos::OrdinalTraits<size_t>::invalid();
 
-    using inp_view_type = View<const GO*, execution_space, MemoryUnmanaged>;
+    using inp_view_type = View<const GO*, device_type, MemoryUnmanaged>;
     inp_view_type inputInds(indices.getRawPtr(), indices.size());
 
     size_t numFound = 0;
@@ -2962,6 +2966,9 @@ namespace Tpetra {
     noRedundancies_      = true;
     k_lclInds1D_         = columnIndices;
     k_rowPtrs_           = rowPointers;
+
+    set_need_sync_host_uvm_access(); // columnIndices and rowPointers potentially still in a kernel
+
     // Storage MUST be packed, since the interface doesn't give any
     // way to indicate any extra space at the end of each row.
     storageStatus_       = Details::STORAGE_1D_PACKED;
@@ -3024,7 +3031,7 @@ namespace Tpetra {
         // FIXME (mfh 24 Mar 2015) If CUDA UVM, running in the host's
         // execution space would avoid the double copy.
         //
-        View<size_t*, layout_type ,execution_space > ptr_st ("Tpetra::CrsGraph::ptr", size);
+        View<size_t*, layout_type, device_type> ptr_st ("Tpetra::CrsGraph::ptr", size);
         Kokkos::deep_copy (ptr_st, ptr_in);
         // Copy on device (casting from size_t to row_offset_type,
         // with bounds checking if necessary) to ptr_rot.  This
@@ -3034,13 +3041,14 @@ namespace Tpetra {
       }
     }
 
-    Kokkos::View<LocalOrdinal*, layout_type , execution_space > k_ind =
+    Kokkos::View<LocalOrdinal*, layout_type, device_type> k_ind =
       Kokkos::Compat::getKokkosViewDeepCopy<device_type> (columnIndices ());
     setAllIndices (ptr_rot, k_ind);
   }
 
 
   template <class LocalOrdinal, class GlobalOrdinal, class Node>
+  TPETRA_DEPRECATED
   void
   CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::
   getNumEntriesPerLocalRowUpperBound (Teuchos::ArrayRCP<const size_t>& boundPerLocalRow,
@@ -4016,6 +4024,8 @@ namespace Tpetra {
 
     // Build the local graph.
     lclGraph_ = local_graph_type (ind_d, ptr_d_const);
+
+    set_need_sync_host_uvm_access(); // make sure kernel setup of indices is fenced before a host access
   }
 
   template <class LocalOrdinal, class GlobalOrdinal, class Node>
@@ -4374,16 +4384,6 @@ namespace Tpetra {
       Teuchos::OrdinalTraits<size_t>::invalid();
 
     using LO = local_ordinal_type;
-
-    // KJ: This one is a bit different from the above. Conservatively thinking,
-    // we also need the fence here as lclGraph_.row_map is on UVM and it can be
-    // still updated. In practice, the local graph construction should be done
-    // before this is called. This routine is computeLocalConstants. If we want
-    // a better code, we need a flag stating that the local graph is completed
-    // and safe to use it without fence.
-    // For now, I recommend to put the fence. Defining the state of local
-    // object can be improvements in the code.
-    execution_space().fence ();
 
     auto ptr = this->lclGraph_.row_map;
     const LO lclNumRows = ptr.extent(0) == 0 ?
@@ -4946,7 +4946,8 @@ namespace Tpetra {
    const Kokkos::DualView<const local_ordinal_type*,
      buffer_device_type>& permuteToLIDs,
    const Kokkos::DualView<const local_ordinal_type*,
-     buffer_device_type>& permuteFromLIDs)
+     buffer_device_type>& permuteFromLIDs,
+   const CombineMode /*CM*/)
   {
     using std::endl;
     using LO = local_ordinal_type;
@@ -5194,6 +5195,8 @@ namespace Tpetra {
       TEUCHOS_ASSERT( k_rowPtrs_.extent(0) == row_ptrs_beg.extent(0) );
     }
     this->k_rowPtrs_ = row_ptrs_beg;
+
+    set_need_sync_host_uvm_access(); // need fence before host UVM access of k_rowPtrs_
   }
 
   template <class LocalOrdinal, class GlobalOrdinal, class Node>
@@ -5232,14 +5235,6 @@ namespace Tpetra {
     std::unique_ptr<padding_type> padding(
       new padding_type(myRank, numSameIDs,
                        permuteFromLIDs.extent(0)));
-
-    // We're accessing data on host, so make sure all device
-    // computations on the graphs' data are done.
-    //
-    // NOTE (mfh 08 Feb 2020) If we ever get rid of this fence, look
-    // carefully in computeCrsPaddingFor{Same,Permuted}IDs to see if
-    // we need a fence there.
-    Kokkos::fence();
 
     computeCrsPaddingForSameIDs(*padding, source,
                                 static_cast<LO>(numSameIDs));
@@ -5286,6 +5281,8 @@ namespace Tpetra {
 
     std::vector<GO> srcGblColIndsScratch;
     std::vector<GO> tgtGblColIndsScratch;
+
+    execute_sync_host_uvm_access(); // protect host UVM access
     for (LO lclRowInd = 0; lclRowInd < numSameIDs; ++lclRowInd) {
       const GO srcGblRowInd = srcRowMap.getGlobalElement(lclRowInd);
       const GO tgtGblRowInd = tgtRowMap.getGlobalElement(lclRowInd);
@@ -5355,6 +5352,8 @@ namespace Tpetra {
     std::vector<GO> srcGblColIndsScratch;
     std::vector<GO> tgtGblColIndsScratch;
     const LO numPermutes = static_cast<LO>(permuteToLIDs_h.extent(0));
+
+    execute_sync_host_uvm_access(); // protect host UVM access
     for (LO whichPermute = 0; whichPermute < numPermutes; ++whichPermute) {
       const LO srcLclRowInd = permuteFromLIDs_h[whichPermute];
       const GO srcGblRowInd = srcRowMap.getGlobalElement(srcLclRowInd);
@@ -5417,7 +5416,7 @@ namespace Tpetra {
     } ();
     std::unique_ptr<padding_type> padding(
       new padding_type(myRank, numImports));
-    Kokkos::fence(); // Make sure device sees changes made by host
+
     if (imports.need_sync_host()) {
       imports.sync_host();
     }
@@ -5439,6 +5438,7 @@ namespace Tpetra {
 
     std::vector<GO> tgtGblColIndsScratch;
     size_t offset = 0;
+    execute_sync_host_uvm_access(); // protect host UVM access
     for (LO whichImport = 0; whichImport < numImports; ++whichImport) {
       // CrsGraph packs just global column indices, while CrsMatrix
       // packs bytes (first the number of entries in the row, then the
@@ -5514,7 +5514,7 @@ namespace Tpetra {
     } ();
     std::unique_ptr<padding_type> padding(
       new padding_type(myRank, numImports));
-    Kokkos::fence(); // Make sure host sees changes made by device
+
     if (imports.need_sync_host()) {
       imports.sync_host();
     }
@@ -5537,6 +5537,7 @@ namespace Tpetra {
     std::vector<GO> srcGblColIndsScratch;
     std::vector<GO> tgtGblColIndsScratch;
     size_t offset = 0;
+    execute_sync_host_uvm_access(); // protect host UVM access
     for (LO whichImport = 0; whichImport < numImports; ++whichImport) {
       // CrsGraph packs just global column indices, while CrsMatrix
       // packs bytes (first the number of entries in the row, then the
@@ -5770,8 +5771,6 @@ namespace Tpetra {
     using host_execution_space =
       typename Kokkos::View<size_t*, device_type>::
         HostMirror::execution_space;
-    using device_execution_space =
-      typename device_type::execution_space;
     const char tfecfFuncName[] = "packFillActive: ";
     const bool verbose = verbose_;
 
@@ -5787,10 +5786,6 @@ namespace Tpetra {
       (numExportLIDs != numPacketsPerLID.size (), std::runtime_error,
        "exportLIDs.size() = " << numExportLIDs << " != numPacketsPerLID.size()"
        " = " << numPacketsPerLID.size () << ".");
-
-    // We may be accessing UVM data on host below, so ensure that the
-    // device is done accessing it.
-    device_execution_space().fence ();
 
     const map_type& rowMap = * (this->getRowMap ());
     const map_type* const colMapPtr = this->colMap_.getRawPtr ();
@@ -5823,6 +5818,7 @@ namespace Tpetra {
     Kokkos::View<size_t, host_device_type> errCountView (&errCount);
     constexpr size_t ONE = 1;
 
+    execute_sync_host_uvm_access(); // protect host UVM access
     Kokkos::parallel_reduce ("Tpetra::CrsGraph::pack: totalNumPackets",
       inputRange,
       [=] (const LO& i, size_t& curTotalNumPackets) {
@@ -5952,10 +5948,6 @@ namespace Tpetra {
         }
       });
 
-    // We may have accessed UVM data on host above, so ensure that the
-    // device sees these changes.
-    device_execution_space().fence ();
-
     TEUCHOS_TEST_FOR_EXCEPTION_CLASS_FUNC
       (errCount != 0, std::logic_error, "Packing encountered "
        "one or more errors!  errCount = " << errCount
@@ -5987,7 +5979,6 @@ namespace Tpetra {
       device_type>::HostMirror::execution_space;
     using host_device_type =
       Kokkos::Device<host_execution_space, Kokkos::HostSpace>;
-    using device_execution_space = typename device_type::execution_space;
     using exports_dv_type =
       Kokkos::DualView<packet_type*, buffer_device_type>;
     const char tfecfFuncName[] = "packFillActiveNew: ";
@@ -6010,10 +6001,6 @@ namespace Tpetra {
        << numPacketsPerLID.extent (0) << ".");
     TEUCHOS_ASSERT( ! exportLIDs.need_sync_host () );
     auto exportLIDs_h = exportLIDs.view_host ();
-
-    // We may be accessing UVM data on host below, so ensure that the
-    // device is done accessing it.
-    device_execution_space().fence ();
 
     const map_type& rowMap = * (this->getRowMap ());
     const map_type* const colMapPtr = this->colMap_.getRawPtr ();
@@ -6050,6 +6037,7 @@ namespace Tpetra {
       std::cerr << os.str ();
     }
 
+    execute_sync_host_uvm_access(); // protect host UVM access
     Kokkos::parallel_reduce
       ("Tpetra::CrsGraph::pack: totalNumPackets",
        inputRange,
@@ -6108,11 +6096,6 @@ namespace Tpetra {
     exports.clear_sync_state ();
     exports.modify_host ();
     auto exports_h = exports.view_host ();
-
-    // The graph may store its data in UVM memory, so make sure that
-    // any device kernels are done modifying the graph's data before
-    // reading the data.
-    device_execution_space().fence ();
 
     errCount = 0;
     Kokkos::parallel_scan
@@ -6446,7 +6429,7 @@ namespace Tpetra {
         rangeMap = rangeMap_->replaceCommWithSubset (newComm);
       }
     }
-    if (! colMap.is_null ()) {
+    if (! colMap_.is_null ()) {
       colMap = colMap_->replaceCommWithSubset (newComm);
     }
 
@@ -7524,6 +7507,8 @@ namespace Tpetra {
   CrsGraph<LocalOrdinal, GlobalOrdinal, Node>::
   swap(CrsGraph<LocalOrdinal, GlobalOrdinal, Node>& graph)
   {
+    std::swap(graph.need_sync_host_uvm_access, this->need_sync_host_uvm_access);
+
     std::swap(graph.rowMap_, this->rowMap_);
     std::swap(graph.colMap_, this->colMap_);
     std::swap(graph.rangeMap_, this->rangeMap_);

@@ -42,8 +42,8 @@ public:
   virtual int getStageNumber() const { return stageNumber_; }
   virtual void setStageNumber(int s) { stageNumber_ = s; }
 
-  virtual Teuchos::RCP<Thyra::VectorBase<Scalar> > getStageX() {return stageX_;}
-  virtual Teuchos::RCP<const Thyra::VectorBase<Scalar> > getStageX() const  {return stageX_;}
+  virtual void setUseEmbedded(bool a) { useEmbedded_ = a; }
+  virtual bool getUseEmbedded() const { return useEmbedded_; }
 
   virtual void setAppAction(Teuchos::RCP<StepperRKAppAction<Scalar> > appAction)
   {
@@ -64,9 +64,15 @@ protected:
 
   Teuchos::RCP<RKButcherTableau<Scalar> >   tableau_;
 
+  // For Embedded RK
+  bool useEmbedded_;
+  Teuchos::RCP<Thyra::VectorBase<Scalar> >  ee_;
+  Teuchos::RCP<Thyra::VectorBase<Scalar> >  abs_u0;
+  Teuchos::RCP<Thyra::VectorBase<Scalar> >  abs_u;
+  Teuchos::RCP<Thyra::VectorBase<Scalar> >  sc;
+
   /// The current Runge-Kutta stage number, {0,...,s-1}.  -1 indicates outside stage loop.
   int stageNumber_;
-  Teuchos::RCP<Thyra::VectorBase<Scalar> >  stageX_;
   Teuchos::RCP<StepperRKAppAction<Scalar> > stepperRKAppAction_;
 
 };

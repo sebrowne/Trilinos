@@ -1,7 +1,5 @@
-
 SET(HEADERS "")
 SET(SOURCES "")
-
 
 SET_AND_INC_DIRS(DIR ${CMAKE_CURRENT_SOURCE_DIR})
 APPEND_GLOB(HEADERS ${DIR}/*.h)
@@ -240,7 +238,6 @@ else()
 	        ${CGNS_DIR}/bin
 	     )
 endif()
-
 
 if ( CGNS_CGNSLIST_BINARY )
 TRIBITS_ADD_ADVANCED_TEST(exodus64_to_unstructured_cgns
@@ -512,18 +509,6 @@ TRIBITS_ADD_ADVANCED_TEST(structured_cgns_roundtrip_reordered_zones_fields
      NUM_MPI_PROCS 1-4
      NOEXEPREFIX NOEXESUFFIX
    TEST_1 CMND ${CGNS_CGNSDIFF_BINARY} ARGS -d ${CMAKE_CURRENT_SOURCE_DIR}/test/multiple_zones_fields.cgns multiple_zones_fields-out.cgns
-     NUM_MPI_PROCS 1
-  COMM mpi serial
-  )
-
-TRIBITS_ADD_ADVANCED_TEST(structured_cgns_roundtrip_bump
-   TEST_0 EXEC io_shell ARGS ${CMAKE_CURRENT_SOURCE_DIR}/test/bump_str.cgns tmp.cgns
-     NUM_MPI_PROCS 1-4
-     NOEXEPREFIX NOEXESUFFIX
-   TEST_1 EXEC io_shell ARGS tmp.cgns bump_str_out.cgns
-     NUM_MPI_PROCS 1-4
-     NOEXEPREFIX NOEXESUFFIX
-   TEST_2 CMND ${CGNS_CGNSDIFF_BINARY} ARGS -d ${CMAKE_CURRENT_SOURCE_DIR}/test/bump_str.cgns bump_str_out.cgns
      NUM_MPI_PROCS 1
   COMM mpi serial
   )

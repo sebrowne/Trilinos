@@ -51,6 +51,7 @@
 #include <stk_mesh/base/Selector.hpp>   // for Selector
 #include <stk_mesh/base/Types.hpp>      // for MeshIndex, EntityRank, etc
 #include <stk_mesh/base/Ngp.hpp>
+#include "stk_mesh/base/NgpSpaces.hpp"
 #include <stk_mesh/baseImpl/BucketRepository.hpp>  // for BucketRepository
 #include <stk_util/parallel/Parallel.hpp>  // for ParallelMachine
 #include <string>                       // for char_traits, string
@@ -69,6 +70,7 @@
 #include "stk_mesh/baseImpl/MeshModification.hpp"
 #include "stk_mesh/baseImpl/elementGraph/GraphTypes.hpp"
 #include <stk_mesh/baseImpl/elementGraph/MeshDiagnosticObserver.hpp>
+#include "NgpProfilingBlock.hpp"
 #include "stk_mesh/baseImpl/SoloSideIdGenerator.hpp"
 #include "stk_mesh/baseImpl/SideSetImpl.hpp"
 
@@ -214,6 +216,13 @@ public:
 
   bool is_automatic_aura_on() const { return m_autoAuraOption == AUTO_AURA; }
 
+  /** \brief set option for automatic maintenance of aura ghosting.
+   *  If applyImmediately, then also create or destroy aura right now.
+   *  Otherwise aura will be created or destroyed at the next modification_end.
+   *  Synchronous/collective: must be called on all MPI ranks.
+   */
+  void set_automatic_aura_option(AutomaticAuraOption auraOption, bool applyImmediately=false);
+
 
   /** \brief  Count of the number of times that the bulk data has been
    *          parallel synchronized.  This count gets updated with
@@ -237,6 +246,7 @@ public:
    */
   bool modification_begin(const std::string description = std::string("UNSPECIFIED"))
   {
+      ProfilingBlock block("mod begin:" + description);
       notifier.notify_modification_begin();
       m_lastModificationDescription = description;
       return m_meshModification.modification_begin(description);
@@ -262,8 +272,16 @@ public:
 
   bool modification_end(ModEndOptimization modEndOpt = ModEndOptimization::MOD_END_SORT)
   {
-      notifier.notify_started_modification_end();
-      return m_meshModification.modification_end(modEndOpt);
+      bool endStatus = false;
+      {
+          ProfilingBlock block("mod end begin:"+m_lastModificationDescription);
+          notifier.notify_started_modification_end();
+      }
+      {
+          ProfilingBlock block("mod end end:"+m_lastModificationDescription);
+          endStatus = m_meshModification.modification_end(modEndOpt);
+      }
+      return endStatus;
   }
 
   void sort_entities(const stk::mesh::EntitySorterBase& sorter);
@@ -555,12 +573,6 @@ public:
   // Check if entity has a specific relation to an entity of subcell_rank
   inline bool relation_exist( const Entity entity, EntityRank subcell_rank, RelationIdentifier subcell_id );
 
-  /** \brief  Determine the polarity of the local side,
-   *          more efficient if the local_side_id is known.
-   */
-  inline bool element_side_polarity( const Entity elem ,
-      const Entity side , unsigned local_side_id ) const;
-
   inline VolatileFastSharedCommMapOneRank const& volatile_fast_shared_comm_map(EntityRank rank) const;  // CLEANUP: only used by FieldParallel.cpp
   inline const std::vector<int>& all_sharing_procs(stk::mesh::EntityRank rank) const { return m_all_sharing_procs[rank]; }
 
@@ -649,7 +661,7 @@ public:
   bool has_no_relations(Entity entity) const;
 
   inline const MeshIndex& mesh_index(Entity entity) const;
-  inline MeshIndex& mesh_index(Entity entity);                          //CLEANUP: move to protected for Partition unit test
+  inline MeshIndex& mesh_index(Entity entity);
   inline EntityId identifier(Entity entity) const;
   inline EntityRank entity_rank(Entity entity) const;
   inline EntityKey entity_key(Entity entity) const;
@@ -670,7 +682,6 @@ public:
   inline void set_global_id(stk::mesh::Entity entity, FmwkId id);
   void reserve_relation(stk::mesh::Entity entity, const unsigned num); // Mod Mark
   void erase_and_clear_if_empty(stk::mesh::Entity entity, RelationIterator rel_itr); // Mod Mark
-  void internal_verify_initialization_invariant(stk::mesh::Entity entity);
 
   inline RelationIterator internal_begin_relation(Entity entity, const Relation::RelationType relation_type) const;
   inline RelationIterator internal_end_relation(Entity entity, const Relation::RelationType relation_type) const;
@@ -772,9 +783,6 @@ public:
       return m_closure_count[entity.local_offset()] > static_cast<uint16_t>(0);
   }
 
-  size_t total_field_data_footprint(const FieldBase &f, EntityRank rank) const { return m_bucket_repository.total_field_data_footprint(f, rank); }
-  size_t total_field_data_footprint(EntityRank rank) const;
-
   // Print all mesh info, consider using:
   // std::ostringstream oss;
   // oss << "output." << parallel_rank();
@@ -788,14 +796,17 @@ public:
   // memoized version
   BucketVector const& get_buckets(EntityRank rank, Selector const& selector) const;
 
+#ifndef STK_HID_DEPRECATED_CODE // Delete after November 2020
   // non-memoized version.
-  void get_buckets(EntityRank rank, Selector const& selector, BucketVector & output_buckets) const;
+STK_DEPRECATED  void get_buckets(EntityRank rank, Selector const& selector, BucketVector & output_buckets) const;
+
+#endif
 
   //
   //  Get entities of the specified rank that satisfy the input selector.
   //  Note entities are returned in bucket order, though no particular order should be relied on
   //
-  void get_entities(EntityRank rank, Selector const& selector, EntityVector& output_entities) const;
+void get_entities(EntityRank rank, Selector const& selector, EntityVector& output_entities) const;
 
   bool use_entity_ids_for_resolving_sharing() const { return m_use_identifiers_for_resolving_sharing; }
   void set_use_entity_ids_for_resolving_sharing(bool input) { m_use_identifiers_for_resolving_sharing = input; }
@@ -981,8 +992,6 @@ protected: //functions
   /** \brief  Declare a collection of relations by simply iterating
    *          the input and calling declare_relation on each entry.
    */
-  void internal_declare_relation( Entity entity, const std::vector<Relation> & rel); // Mod Mark
-
   void internal_declare_relation( Entity entity, const std::vector<Relation> & rel,
                          OrdinalVector& scratch1); // Mod Mark
 
@@ -998,7 +1007,12 @@ protected: //functions
 
   void internal_change_entity_parts_without_propogating_to_downward_connected_entities(Entity entity, const OrdinalVector& add_parts, const OrdinalVector& remove_parts, OrdinalVector& parts_removed, OrdinalVector& newBucketPartList, OrdinalVector& scratchSpace);
   void internal_determine_inducible_parts(Entity entity, const OrdinalVector& add_parts, const OrdinalVector& parts_removed, OrdinalVector& inducible_parts_added, OrdinalVector& inducible_parts_removed);
-  void internal_determine_inducible_parts_and_propagate_to_downward_connected_entities(Entity entity, const OrdinalVector& add_parts, const OrdinalVector& parts_removed);
+  void internal_determine_inducible_parts_and_propagate_to_downward_connected_entities(
+                                                        Entity entity,
+                                                        const OrdinalVector& add_parts,
+                                                        const OrdinalVector& parts_removed,
+                                                        OrdinalVector & scratchOrdinalVec,
+                                                        OrdinalVector & scratchSpace );
 
   /*  Entity modification consequences:
    *  1) Change entity relation => update via part relation => change parts
@@ -1019,18 +1033,17 @@ protected: //functions
                                  bool is_full_regen = false); // Mod Mark
 
   void internal_change_ghosting( Ghosting & ghosts,
-                                 EntityProcMapping& entityProcMapping);
+                                 EntityProcMapping& entityProcMapping,
+                                 const EntityProcMapping& entitySharing);
 
   void internal_add_to_ghosting( Ghosting &ghosting, const std::vector<EntityProc> &add_send); // Mod Mark
 
-  //Optional parameter 'always_propagate_internal_changes' is always true except when this function
-  //is being called from the sierra-framework. The fmwk redundantly does its own propagation of the
-  //internal part changes (mostly induced-part stuff), so it's a performance optimization to avoid
-  //the propagation that stk-mesh does.
   template<typename PARTVECTOR>
   void internal_verify_and_change_entity_parts( Entity entity,
                                                 const PARTVECTOR & add_parts ,
-                                                const PARTVECTOR & remove_parts); // Mod Mark
+                                                const PARTVECTOR & remove_parts,
+                                                OrdinalVector& scratchOrdinalVec,
+                                                OrdinalVector& scratchSpace);
 
   template<typename PARTVECTOR>
   void internal_verify_and_change_entity_parts( const EntityVector& entities,
@@ -1090,12 +1103,6 @@ protected: //functions
   {
       EntityKey key = entity_key(entity);
       std::pair<EntityComm*,bool> result = m_entity_comm_map.insert(key, val, parallel_owner_rank(entity));
-      if (val.ghost_id == 0) {
-        result.first->isShared = true;
-      }
-      else {
-        result.first->isGhost = true;
-      }
       if(result.second)
       {
           m_entitycomm[entity.local_offset()] = result.first;
@@ -1152,15 +1159,14 @@ protected: //functions
    *  - a collective parallel operation.
    */
   void internal_regenerate_aura();
-  void fill_list_of_entities_to_send_for_aura_ghosting(EntityProcMapping& send);
+  void internal_remove_aura();
+  void fill_list_of_entities_to_send_for_aura_ghosting(EntityProcMapping& send,
+                                                const EntityProcMapping& entitySharing);
 
   void require_ok_to_modify() const ;
-  void internal_update_fast_comm_maps();
+  void internal_update_fast_comm_maps() const;
+  void internal_update_all_sharing_procs();
 
-  impl::BucketRepository& bucket_repository() { return m_bucket_repository; }
-
-  bool is_entity_in_sharing_comm_map(stk::mesh::Entity entity);
-  void erase_sharing_info_using_key(stk::mesh::EntityKey key, stk::mesh::BulkData::GhostingId ghostingId);
   void add_sharing_info(stk::mesh::Entity entity, stk::mesh::BulkData::GhostingId ghostingId, int sharingProc);
   void update_sharing_after_change_entity_owner(); // Mod Mark
   void get_entities_that_have_sharing(std::vector<stk::mesh::Entity> &entitiesThatHaveSharingInfo,
@@ -1175,13 +1181,6 @@ protected: //functions
 
   //reserves space for a new entity, or reclaims space from a previously-deleted entity
   virtual Entity generate_new_entity(unsigned preferred_offset = 0);
-
-  void entity_setter_debug_check(Entity entity) const
-  {
-    // The 0-th local_offset is special, it represents the invalid, 0-initialized entity.
-    // Client should never try to set properties on this entity even though it's in the index range.
-    ThrowAssert(entity.local_offset() > 0);
-  }
 
   void entity_getter_debug_check(Entity entity) const
   {
@@ -1207,8 +1206,6 @@ protected: //functions
           const stk::mesh::Selector *only_consider_second_element_from_this_selector);
 
   void fillVectorOfSharedEntitiesByProcessor(std::vector<shared_entity_type> & potentially_shared_sides, std::vector<std::vector<shared_entity_type> > &shared_entities_by_proc);
-
-  void unpack_shared_entities(stk::CommSparse &comm, std::vector< std::pair<int, shared_entity_type> > &shared_entities_and_proc);
 
   void unpackEntityFromOtherProcAndUpdateInfoIfSharedLocally(stk::CommSparse &comm, std::vector<shared_entity_type> & shared_entity_map);
 
@@ -1242,7 +1239,6 @@ protected: //functions
 
   stk::mesh::impl::BucketRepository& get_bucket_repository() { return m_bucket_repository; }
 
-  void set_modification_summary_proc_id(int proc_id) { m_modSummary.set_proc_id(proc_id); }
   virtual void notify_finished_mod_end();
 
   void use_elem_elem_graph_to_determine_shared_entities(std::vector<stk::mesh::Entity>& shared_entities);
@@ -1257,7 +1253,8 @@ private:
   void register_device_mesh() const;
   void unregister_device_mesh() const;
 
-  void create_ngp_mesh_manager() const;
+  uint8_t * get_ngp_field_sync_buffer() const;
+
   void record_entity_deletion(Entity entity);
   void break_boundary_relations_and_delete_buckets(const std::vector<impl::RelationEntityToNode> & relationsToDestroy, const stk::mesh::BucketVector & bucketsToDelete);
   void delete_buckets(const stk::mesh::BucketVector & buckets);
@@ -1348,8 +1345,6 @@ private:
 
   inline bool internal_add_node_sharing_called() const;
 
-  void internal_sync_comm_list_owners();
-
   // Forbidden
   BulkData();
   BulkData( const BulkData & );
@@ -1396,9 +1391,12 @@ private:
                                               OrdinalVector &partsThatShouldStillBeInduced,
                                               OrdinalVector &delParts); // Mod Mark
 
-  void internal_propagate_induced_part_changes_to_downward_connected_entities( Entity entity,
-                                                                               const OrdinalVector & added,
-                                                                               const OrdinalVector & removed ); // Mod Mark
+  void internal_propagate_induced_part_changes_to_downward_connected_entities(
+                                                        Entity entity,
+                                                        const OrdinalVector & added,
+                                                        const OrdinalVector & removed,
+                                                        OrdinalVector & scratchOrdinalVec,
+                                                        OrdinalVector & scratchSpace );
 
   Ghosting & internal_create_ghosting( const std::string & name );
   void internal_verify_inputs_and_change_ghosting(
@@ -1428,20 +1426,9 @@ private:
   void internal_move_entity_to_new_bucket(stk::mesh::Entity entity, const OrdinalVector &newBucketPartList,
                                           OrdinalVector& scratchSpace); // Mod Mark
 
-  void internal_verify_change_parts( const MetaData   & meta ,
-                                     const Entity entity ,
-                                     const PartVector & parts ) const; // Mod Mark
-
   void require_entity_owner( const Entity entity, int owner) const ;
 
-  bool is_good_rank_and_id(EntityRank ent_rank, EntityId ent_id) const;
-
   inline bool is_valid_connectivity(Entity entity, EntityRank rank) const;
-
-  void require_valid_relation( const char action[] ,
-                               const BulkData & mesh ,
-                               const Entity e_from ,
-                               const Entity e_to );
 
   friend class ::stk::mesh::MetaData;
   friend class ::stk::mesh::impl::BucketRepository;
@@ -1452,6 +1439,7 @@ private:
   friend class ::stk::mesh::EntityLess;
   friend class ::stk::io::StkMeshIoBroker;
   friend class stk::mesh::DeviceMesh;
+  template <typename T> friend class stk::mesh::DeviceField;
 
   // friends until it is decided what we're doing with Fields and Parallel and BulkData
   friend void communicate_field_data(const Ghosting & ghosts, const std::vector<const FieldBase *> & fields);
@@ -1477,37 +1465,7 @@ private:
                                                    stk::mesh::EntityId side_global_id, stk::mesh::ConnectivityOrdinal side_ordinal,
                                                    stk::mesh::Permutation side_permutation, const stk::mesh::PartVector& parts);
 
-  void pack_owned_verify(CommSparse & commSparse);
-  bool unpack_not_owned_verify(CommSparse & commSparse, std::ostream & error_log);
   bool verify_parallel_attributes( std::ostream & error_log );
-  bool verify_parallel_attributes_for_bucket( Bucket const& bucket, std::ostream & error_log);
-  void unpack_not_owned_verify_report_errors(Entity entity,
-                                             bool bad_key,
-                                             bool bad_own,
-                                             bool bad_part,
-                                             bool bad_rel,
-                                             bool bad_comm,
-                                             EntityKey recv_entity_key,
-                                             int recv_owner_rank,
-                                             PartVector const& recv_parts,
-                                             std::vector<Relation> const& recv_relations,
-                                             std::vector<int> const& recv_comm,
-                                             std::ostream & error_log);
-  void unpack_not_owned_verify_compare_comm_info( CommBuffer&            buf,
-                                                  Entity                 entity,
-                                                  EntityKey &            recv_entity_key,
-                                                  int       &            recv_owner_rank,
-                                                  unsigned  &            recv_comm_count,
-                                                  PartVector &    recv_parts,
-                                                  std::vector<Relation>& recv_relations,
-                                                  std::vector<int>    &  recv_comm,
-                                                  bool&                  bad_comm);
-
-
-  void fillEntityCommInfoForEntity(stk::mesh::Ghosting &ghost_id,
-                                   stk::mesh::BulkData &mesh,
-                                   std::vector<stk::mesh::EntityKey> nodes,
-                                   EntityCommInfoVector &sharing_processors);
 
   void determineEntitiesThatNeedGhosting(stk::mesh::BulkData &stkMeshBulkData,
                                          stk::mesh::Entity edge,
@@ -1562,8 +1520,11 @@ protected: //data
   mutable std::vector<RelationVector* > m_fmwk_aux_relations;   // Relations that can't be managed by STK such as PARENT/CHILD
   inline bool should_sort_faces_by_node_ids() const { return m_shouldSortFacesByNodeIds; }
   bool m_shouldSortFacesByNodeIds;
+#else
+  inline bool should_sort_faces_by_node_ids() const { return false; }
 #endif
   enum AutomaticAuraOption m_autoAuraOption;
+  bool m_turningOffAutoAura;
   stk::mesh::impl::MeshModification m_meshModification;
 
   void internal_force_protect_orphaned_node(stk::mesh::Entity entity)
@@ -1575,12 +1536,12 @@ protected: //data
   {
       m_closure_count[entity.local_offset()] -= BulkData::orphaned_node_marking;
   }
-  void set_mod_summary_proc_id(int proc_id) { m_modSummary.set_proc_id(proc_id); }
 
   Parallel m_parallel;
 
 private: // data
-  VolatileFastSharedCommMap m_volatile_fast_shared_comm_map;
+  mutable VolatileFastSharedCommMap m_volatile_fast_shared_comm_map;
+  mutable unsigned m_volatile_fast_shared_comm_map_sync_count;
   std::vector<std::vector<int> > m_all_sharing_procs;
   PartVector m_ghost_parts;
   std::list<Entity::entity_value_type> m_deleted_entities;
@@ -1604,6 +1565,8 @@ private: // data
   stk::mesh::impl::SideSetImpl<unsigned> m_sideSetData;
   mutable stk::mesh::NgpMeshManager* m_ngpMeshManager;
   mutable bool m_isDeviceMeshRegistered;
+  mutable Kokkos::View<uint8_t*, MemSpace> m_ngpFieldSyncBuffer;
+  mutable size_t m_ngpFieldSyncBufferModCount;
 
 protected:
   stk::mesh::impl::SoloSideIdGenerator m_soloSideIdGenerator;
@@ -1612,12 +1575,11 @@ protected:
 
 void dump_mesh_info(const stk::mesh::BulkData& mesh, std::ostream&out, EntityVector ev);
 
-void sync_to_host_and_mark_modified(MetaData& meta);
-
 } // namespace mesh
 } // namespace stk
 
+#include "EntityLessInlinedMethods.hpp"
 #include "BulkDataInlinedMethods.hpp"
 
-
 #endif //  stk_mesh_BulkData_hpp
+

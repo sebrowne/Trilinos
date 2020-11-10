@@ -45,6 +45,7 @@
 #include "stk_mesh/base/NgpMesh.hpp"
 #include "stk_mesh/base/NgpProfilingBlock.hpp"
 #include "stk_mesh/base/FieldSyncDebugging.hpp"
+#include "stk_mesh/base/NgpUtils.hpp"
 
 namespace stk {
 namespace mesh {
@@ -54,19 +55,19 @@ constexpr unsigned INVALID_ORDINAL = 9999999;
 template<typename T>
 class EntityFieldData {
 public:
-  KOKKOS_FUNCTION EntityFieldData(T* dataPtr, unsigned length, unsigned stride=1)
-  : fieldDataPtr(dataPtr), fieldDataLength(length), fieldDataStride(stride)
+  KOKKOS_FUNCTION EntityFieldData(T* dataPtr, unsigned length, unsigned componentStride=1)
+  : fieldDataPtr(dataPtr), fieldDataLength(length), fieldComponentStride(componentStride)
   {}
   KOKKOS_DEFAULTED_FUNCTION ~EntityFieldData() = default;
 
   KOKKOS_FUNCTION unsigned size() const { return fieldDataLength; }
-  KOKKOS_FUNCTION T& operator[](unsigned idx) { return fieldDataPtr[idx*fieldDataStride]; }
-  KOKKOS_FUNCTION const T& operator[](unsigned idx) const { return fieldDataPtr[idx*fieldDataStride]; }
+  KOKKOS_FUNCTION T& operator[](unsigned idx) { return fieldDataPtr[idx*fieldComponentStride]; }
+  KOKKOS_FUNCTION const T& operator[](unsigned idx) const { return fieldDataPtr[idx*fieldComponentStride]; }
 
 private:
   T* fieldDataPtr;
   unsigned fieldDataLength;
-  unsigned fieldDataStride;
+  unsigned fieldComponentStride;
 };
 
 template<typename T> using UnmanagedHostInnerView = Kokkos::View<T**, Kokkos::LayoutRight, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
@@ -80,11 +81,24 @@ public:
 
   HostField()
     : NgpFieldBase(),
-      field(nullptr) { }
+      field(nullptr)
+  {
+    needSyncToHost = std::make_shared<bool>(false);
+    needSyncToDevice = std::make_shared<bool>(false);
+  }
 
   HostField(const stk::mesh::BulkData& b, const stk::mesh::FieldBase& f, bool isFromGetUpdatedNgpField = false)
     : NgpFieldBase(),
-      field(&f) { }
+      field(&f)
+  {
+    needSyncToHost = std::make_shared<bool>(false);
+    needSyncToDevice = std::make_shared<bool>(false);
+  }
+
+  HostField(const HostField<T>&) = default;
+  HostField(HostField<T>&&) = default;
+  HostField<T>& operator=(const HostField<T>&) = default;
+  HostField<T>& operator=(HostField<T>&&) = default;
 
   virtual ~HostField() = default;
 
@@ -95,20 +109,24 @@ public:
   size_t num_syncs_to_host() const override { return field->num_syncs_to_host(); }
   size_t num_syncs_to_device() const override { return field->num_syncs_to_device(); }
 
-  unsigned get_stride() const { return 1; }
+  unsigned get_component_stride() const { return 1; }
 
   unsigned get_num_components_per_entity(const stk::mesh::FastMeshIndex& entity) const {
     return stk::mesh::field_scalars_per_entity(*field, entity.bucket_id);
   }
 
 #ifdef STK_DEBUG_FIELD_SYNC
+  unsigned get_bucket_offset(unsigned bucketOrdinal) const override {
+    return bucketOrdinal;
+  }
+
   void detect_device_field_modification() override {
   }
 
   void update_debug_storage(size_t hostSynchronizedCount) override {
   }
 
-  bool any_device_field_modification() const override {
+  bool lost_device_field_data() const override {
     return false;
   }
 
@@ -218,15 +236,45 @@ public:
                              });
   }
 
-  void modify_on_host() override { }
+  void modify_on_host() override { set_modify_on_host(); }
 
-  void modify_on_device() override { }
+  void modify_on_device() override { set_modify_on_device(); }
 
-  void clear_sync_state() override {}
+  void clear_sync_state() override
+  {
+    *needSyncToHost = false;
+    *needSyncToDevice = false;
+  }
 
-  void sync_to_host() override { }
+  void modify_on_host(const Selector& selector) override { set_modify_on_host(); }
 
-  void sync_to_device() override { }
+  void modify_on_device(const Selector& selector) override { set_modify_on_device(); }
+
+  void clear_host_sync_state() override
+  {
+    *needSyncToDevice = false;
+  }
+
+  void clear_device_sync_state() override
+  {
+    *needSyncToHost = false;
+  }
+
+  void sync_to_host() override
+  {
+    if (need_sync_to_host()) {
+      field->increment_num_syncs_to_host();
+      clear_sync_state();
+    }
+  }
+
+  void sync_to_device() override 
+  {
+    if (need_sync_to_device()) {
+      field->increment_num_syncs_to_device();
+      clear_sync_state();
+    }
+  }
 
   size_t synchronized_count() const override { return field->mesh_meta_data().mesh_bulk_data().synchronized_count(); }
 
@@ -234,38 +282,58 @@ public:
 
   void rotate_multistate_data() override { }
 
-  void swap(HostField<T> &sf) { }
+  void swap(HostField<T> &other) {
+    needSyncToHost.swap(other.needSyncToHost);
+    needSyncToDevice.swap(other.needSyncToDevice);
+  }
 
   stk::mesh::EntityRank get_rank() const { return field->entity_rank(); }
 
   unsigned get_ordinal() const { return field->mesh_meta_data_ordinal(); }
 
-protected:
-  bool need_sync_to_host() const { return false; }
 
-  bool need_sync_to_device() const { return false; }
+protected:
+  bool need_sync_to_host() const { return *needSyncToHost; }
+
+  bool need_sync_to_device() const { return *needSyncToDevice; }
+
+  unsigned get_contiguous_bucket_offset_end(const BucketVector& buckets, unsigned i) { return i; }
 
 private:
+  void set_modify_on_host() {
+#ifdef KOKKOS_ENABLE_DEBUG_DUALVIEW_MODIFY_CHECK
+    ThrowRequire(*needSyncToHost == false);
+#endif
+    *needSyncToDevice = true;
+  }
+
+  void set_modify_on_device() {
+#ifdef KOKKOS_ENABLE_DEBUG_DUALVIEW_MODIFY_CHECK
+    ThrowRequire(*needSyncToDevice == false);
+#endif
+    *needSyncToHost = true;
+  }
+
   void copy_host_to_device() { }
 
   void copy_device_to_host() { }
 
   const stk::mesh::FieldBase * field;
+
+  std::shared_ptr<bool> needSyncToHost;
+  std::shared_ptr<bool> needSyncToDevice;
 };
 
 template<typename T>
 class DeviceField : public NgpFieldBase
 {
 private:
-#ifdef KOKKOS_ENABLE_CUDA
-  typedef Kokkos::DualView<T***, Kokkos::LayoutRight,
-                           Kokkos::CudaSpace> FieldDataDualViewType;
-#else
-  typedef Kokkos::DualView<T***, Kokkos::LayoutRight> FieldDataDualViewType;
+  typedef Kokkos::View<T***, Kokkos::LayoutRight, MemSpace> FieldDataDeviceViewType;
+  typedef Kokkos::View<T***, Kokkos::LayoutRight, MemSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> FieldDataDeviceUnmanagedViewType;
+  typedef Kokkos::View<T***, Kokkos::LayoutRight, Kokkos::HostSpace> FieldDataHostViewType;
+#ifdef STK_DEBUG_FIELD_SYNC
+  template <typename U> using HostArrayType = Kokkos::View<U*, Kokkos::HostSpace>;
 #endif
-
-  typedef typename FieldDataDualViewType::t_dev FieldDataType;
-  typedef typename FieldDataDualViewType::t_host FieldDataHostType;
 
 public:
   typedef T value_type;
@@ -278,7 +346,11 @@ public:
       hostBulk(nullptr),
       hostField(nullptr),
       bucketCapacity(0),
-      synchronizedCount(0)
+      numBucketsForField(0),
+      maxNumScalarsPerEntity(0),
+      synchronizedCount(0),
+      userSpecifiedSelector(false),
+      syncSelector(nullptr)
   {
     const int maxStates = static_cast<int>(stk::mesh::MaximumFieldStates);
     for (int s=0; s<maxStates; ++s) {
@@ -293,19 +365,27 @@ public:
       hostBulk(&bulk),
       hostField(&field),
       bucketCapacity(0),
-      synchronizedCount(bulk.synchronized_count())
+      numBucketsForField(0),
+      maxNumScalarsPerEntity(0),
+      synchronizedCount(bulk.synchronized_count()),
+      copyCounter("copy_counter"),
+      userSpecifiedSelector(false),
+      syncSelector(new Selector())
   {
+    needSyncToHost = Kokkos::View<bool, HostExecSpace>("needSyncToHost");
+    needSyncToDevice = Kokkos::View<bool, HostExecSpace>("needSyncToDevice");
+
     const int maxStates = static_cast<int>(stk::mesh::MaximumFieldStates);
     for (int s=0; s<maxStates; ++s) {
       stateFields[s] = nullptr;
     }
     ThrowRequireMsg(isFromGetUpdatedNgpField, "NgpField must be obtained from get_updated_ngp_field()");
 
-#ifdef STK_DEBUG_FIELD_SYNC
-    ThrowErrorMsg("Field Sync Debug feature is temporarily unsupported with NgpField optimization.");
-#endif
-
     update_field();
+
+#ifdef STK_DEBUG_FIELD_SYNC
+    initialize_debug_views();
+#endif
   }
 
   void set_field_states(DeviceField<T>* fields[])
@@ -322,107 +402,141 @@ public:
     stk::mesh::Selector selector = stk::mesh::selectField(*hostField);
     const stk::mesh::BucketVector& buckets = hostBulk->get_buckets(hostField->entity_rank(), selector);
     const stk::mesh::BucketVector& allBuckets = hostBulk->buckets(hostField->entity_rank());
+    numBucketsForField = buckets.size();
+    maxNumScalarsPerEntity = hostField->max_size(rank);
 
     if (!buckets.empty()) {
       bucketCapacity = buckets[0]->capacity();
     }
 
-    unsigned numPerEntity = hostField->max_size(rank);
-
     construct_field_exist_view(allBuckets, selector);
-    if(allBuckets.size() != deviceData.extent(0)) {
-      construct_view(buckets, "deviceData_"+hostField->name(), allBuckets.size(), numPerEntity);
+    construct_num_components_per_entity_view(allBuckets);
+    construct_new_index_view(allBuckets);
+    if (numBucketsForField != deviceData.extent(0)) {
+      construct_view(buckets, "deviceData_"+hostField->name(), maxNumScalarsPerEntity);
     } else {
-      move_unmodified_buckets(buckets, numPerEntity);
+      move_unmodified_buckets(buckets, maxNumScalarsPerEntity);
     }
 
     if(needToSyncAllDataToDevice) {
-      clear_sync_state();
-      fieldData.modify_host();
+      clear_sync_state_flags();
+      set_modify_on_host();
       copy_host_to_device();
     } else {
-      copy_new_and_modified_buckets_from_host(buckets, numPerEntity);
+      copy_new_and_modified_buckets_from_host(buckets, maxNumScalarsPerEntity);
+    }
+
+#ifdef STK_DEBUG_FIELD_SYNC
+    if (lastFieldValue.extent(0) != 0) {
+      lostDeviceFieldData() = false;
+      anyPotentialDeviceFieldModification() = false;
+
+      Kokkos::deep_copy(lastFieldValue, deviceData);
+
+      if (needToSyncAllDataToDevice) {
+        reset_last_modification_state(LastModLocation::HOST_OR_DEVICE);
+      }
+
+      hostSynchronizedCount() = hostBulk->synchronized_count();
+    }
+
+    isFieldLayoutConsistent = true;
+#endif
+
+    for(auto * bucket : allBuckets)
+    {
+      bucket->set_ngp_field_bucket_id(get_ordinal(), INVALID_BUCKET_ID);
+    }
+    for(auto * bucket : buckets)
+    {
+      bucket->set_ngp_field_bucket_id(get_ordinal(), bucket->bucket_id());
     }
 
     synchronizedCount = hostBulk->synchronized_count();
-
-#ifdef STK_DEBUG_FIELD_SYNC
-    std::strcpy(fieldName.data(), hostField->name().data());
-    Kokkos::deep_copy(lastFieldValue, hostData);
-    reset_last_modification_state(LastModLocation::HOST | LastModLocation::DEVICE);
-    hostSynchronizedCount() = hostBulk->synchronized_count();
-    anyDeviceFieldModification() = false;
-    anyPotentialDeviceFieldModification() = false;
-    isFieldLayoutConsistent = true;
-#endif
+    hostSelectedBucketOffset = newHostSelectedBucketOffset;
+    deviceSelectedBucketOffset = newDeviceSelectedBucketOffset;
+    reset_sync_selector();
   }
 
-
-  void fill_host_view(Bucket* bucket, UnmanagedHostInnerView<T>& unHostInnerView, unsigned numPerEntity)
-  {
-    T* hostFieldPtr = static_cast<T*>(field_data(*hostField, *bucket));
-    unsigned numEntities = bucket->size();
-
-    for(unsigned i = 0; i < numEntities; i++) {
-      for(unsigned j = 0; j < numPerEntity; j++) {
-        unHostInnerView(ORDER_INDICES(i,j)) = hostFieldPtr[i * numPerEntity + j];
-      }
-    }
-  }
-
-  template<typename DataView, typename UnmanagedView>
-  void copy_moved_bucket_data(DataView destView, DataView srcView, unsigned oldBucketId, unsigned newBucketId, unsigned numPerEntity)
-  {
-    T* srcPtr = srcView.data() + oldBucketId * bucketCapacity * numPerEntity;
-    T* destPtr = destView.data() + newBucketId * bucketCapacity * numPerEntity;
-
-    UnmanagedView unInnerSrcView(srcPtr, ORDER_INDICES(bucketCapacity, numPerEntity));
-    UnmanagedView unInnerDestView(destPtr, ORDER_INDICES(bucketCapacity, numPerEntity));
-    Kokkos::deep_copy(unInnerDestView, unInnerSrcView);
-  }
-
-  void copy_bucket_from_host_to_device(Bucket* bucket, unsigned numPerEntity)
-  {
-    UnmanagedHostInnerView<T> unHostInnerView(&hostData(bucket->bucket_id(),0,0), ORDER_INDICES(bucketCapacity, numPerEntity));
-
-    fill_host_view(bucket, unHostInnerView, numPerEntity);
-    unsigned bucketId = bucket->bucket_id();
-    T* ptr = deviceData.data() + bucketId * bucketCapacity * numPerEntity;
-    UnmanagedDevInnerView<T> unDevInnerView(ptr, ORDER_INDICES(bucketCapacity, numPerEntity));
-
-    Kokkos::deep_copy(unDevInnerView, unHostInnerView);
-  }
-
-  void copy_new_and_modified_buckets_from_host(const BucketVector& buckets, unsigned numPerEntity)
-  {
-    for(unsigned bucketIdx = 0; bucketIdx < buckets.size(); bucketIdx++) {
-      Bucket* bucket = buckets[bucketIdx];
-      unsigned oldBucketId = bucket->get_ngp_field_bucket_id(get_ordinal());
-
-      if(oldBucketId == INVALID_BUCKET_ID || bucket->get_ngp_field_bucket_is_modified(get_ordinal())) {
-        copy_bucket_from_host_to_device(bucket, numPerEntity);
-      }
-
-      bucket->set_ngp_field_bucket_id(get_ordinal(), bucket->bucket_id());
-    }
-  }
 
   size_t num_syncs_to_host() const override { return hostField->num_syncs_to_host(); }
   size_t num_syncs_to_device() const override { return hostField->num_syncs_to_device(); }
 
   void modify_on_host() override
   {
-    fieldData.modify_host();
+    set_modify_on_host();
+    userSpecifiedSelector = false;
+    *syncSelector = Selector(hostBulk->mesh_meta_data().universal_part());
+  }
+
+  void modify_on_host(const Selector& selector) override
+  {
+#ifdef STK_DEBUG_FIELD_SYNC
+    ThrowErrorMsg("Field Sync Debugging is not supported with Selector-based modify_on_host().");
+#endif
+    set_modify_on_host();
+    userSpecifiedSelector = true;
+    *syncSelector |= selector;
   }
 
   void modify_on_device() override
   {
-    fieldData.modify_device();
+    set_modify_on_device();
+    userSpecifiedSelector = false;
+    *syncSelector = Selector(hostBulk->mesh_meta_data().universal_part());
+  }
+
+  void modify_on_device(const Selector& selector) override
+  {
+#ifdef STK_DEBUG_FIELD_SYNC
+    ThrowErrorMsg("Field Sync Debugging is not supported with Selector-based modify_on_device().");
+#endif
+    set_modify_on_device();
+    userSpecifiedSelector = true;
+    *syncSelector |= selector;
   }
 
   void clear_sync_state() override
   {
-    fieldData.clear_sync_state();
+#ifdef STK_DEBUG_FIELD_SYNC
+    if (hostBulk->synchronized_count() != synchronizedCount) {
+      update_field(need_sync_to_device());
+    }
+    Kokkos::deep_copy(lastFieldValue, deviceData);
+    lostDeviceFieldData() = false;
+    anyPotentialDeviceFieldModification() = false;
+    reset_last_modification_state(LastModLocation::HOST_OR_DEVICE);
+#endif
+    clear_sync_state_flags();
+    reset_sync_selector();
+  }
+
+  void clear_host_sync_state() override
+  {
+#ifdef STK_DEBUG_FIELD_SYNC
+    set_last_modification_state_bit(LastModLocation::DEVICE);
+#endif
+    if (need_sync_to_device()) {
+      clear_sync_state_flags();
+      reset_sync_selector();
+    }
+  }
+
+  void clear_device_sync_state() override
+  {
+#ifdef STK_DEBUG_FIELD_SYNC
+    if (hostBulk->synchronized_count() != synchronizedCount) {
+      update_field(need_sync_to_device());
+    }
+    Kokkos::deep_copy(lastFieldValue, deviceData);
+    lostDeviceFieldData() = false;
+    anyPotentialDeviceFieldModification() = false;
+    set_last_modification_state_bit(LastModLocation::HOST);
+#endif
+    if (need_sync_to_host()) {
+      clear_sync_state_flags();
+      reset_sync_selector();
+    }
   }
 
   void sync_to_host() override
@@ -432,10 +546,11 @@ public:
       copy_device_to_host();
 #ifdef STK_DEBUG_FIELD_SYNC
       Kokkos::deep_copy(lastFieldValue, deviceData);
-      reset_last_modification_state(LastModLocation::HOST | LastModLocation::DEVICE);
-      anyDeviceFieldModification() = false;
+      reset_last_modification_state(LastModLocation::HOST_OR_DEVICE);
+      lostDeviceFieldData() = false;
       anyPotentialDeviceFieldModification() = false;
 #endif
+      reset_sync_selector();
     }
   }
 
@@ -448,29 +563,34 @@ public:
         copy_host_to_device();
 #ifdef STK_DEBUG_FIELD_SYNC
         Kokkos::deep_copy(lastFieldValue, deviceData);
-        reset_last_modification_state(LastModLocation::HOST | LastModLocation::DEVICE);
-        anyDeviceFieldModification() = false;
+        reset_last_modification_state(LastModLocation::HOST_OR_DEVICE);
+        lostDeviceFieldData() = false;
         anyPotentialDeviceFieldModification() = false;
 #endif
       }
       else {
         update_field(needToSyncToDevice);
       }
+      reset_sync_selector();
     }
   }
 
   size_t synchronized_count() const override { return synchronizedCount; }
 
   KOKKOS_DEFAULTED_FUNCTION DeviceField(const DeviceField &) = default;
+  KOKKOS_DEFAULTED_FUNCTION DeviceField<T>& operator=(const DeviceField<T>&) = default;
+  KOKKOS_DEFAULTED_FUNCTION DeviceField<T>& operator=(DeviceField<T>&&) = default;
 
   KOKKOS_FUNCTION virtual ~DeviceField()
   {
 #ifdef KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST
-
+    if (is_last_field_copy()) {
+      delete syncSelector;
+    }
 #endif
   }
 
-  unsigned get_stride() const
+  unsigned get_component_stride() const
   {
     unsigned stride = 1;
 #ifdef KOKKOS_ENABLE_CUDA
@@ -482,35 +602,65 @@ public:
   KOKKOS_FUNCTION
   unsigned get_num_components_per_entity(const stk::mesh::FastMeshIndex& entityIndex) const {
     const unsigned bucketId = entityIndex.bucket_id;
-    if (deviceFieldExistsOnBucket[bucketId]) {
-#ifdef KOKKOS_ENABLE_CUDA
-    return deviceData.extent(1);
-#else
-    return deviceData.extent(2);
-#endif
-    }
-    else {
-      return 0;
-    }
+    return deviceNumComponentsPerEntity[bucketId];
   }
 
 #ifdef STK_DEBUG_FIELD_SYNC
-
-  void construct_debug_views(unsigned numBuckets, unsigned numPerEntity) {
-#ifdef KOKKOS_ENABLE_CUDA
-    lastFieldValue = FieldDataType(hostField->name()+"_lastValue", numBuckets, numPerEntity, bucketCapacity);
-    lastFieldModLocation = LastFieldModLocationType(hostField->name()+"_lastModLocation",
-                                                    numBuckets, numPerEntity, bucketCapacity);
-#else
-    lastFieldValue = FieldDataType(hostField->name()+"_lastValue", numBuckets, bucketCapacity, numPerEntity);
-    lastFieldModLocation = LastFieldModLocationType(hostField->name()+"_lastModLocation",
-                                                    numBuckets, bucketCapacity, numPerEntity);
-#endif
-    hostField->set_last_modification_view(lastFieldModLocation);
+  unsigned get_bucket_offset(unsigned bucketOrdinal) const override {
+    return debugHostSelectedBucketOffset(bucketOrdinal);
   }
 
-  bool any_device_field_modification() const override {
-    return anyDeviceFieldModification();
+  void initialize_debug_views() {
+    stk::mesh::Selector selector = stk::mesh::selectField(*hostField);
+    const stk::mesh::BucketVector& allBuckets = hostBulk->buckets(hostField->entity_rank());
+    const stk::mesh::BucketVector& buckets = hostBulk->get_buckets(hostField->entity_rank(), selector);
+    unsigned numPerEntity = hostField->max_size(rank);
+
+    construct_debug_views(allBuckets, buckets, numPerEntity);
+
+    std::strcpy(fieldName.data(), hostField->name().data());
+    lostDeviceFieldData() = false;
+    anyPotentialDeviceFieldModification() = false;
+
+    debugHostSelectedBucketOffset = newHostSelectedBucketOffset;
+    debugDeviceSelectedBucketOffset = newDeviceSelectedBucketOffset;
+
+    Kokkos::deep_copy(lastFieldValue, deviceData);
+
+    reset_last_modification_state(LastModLocation::HOST_OR_DEVICE);
+
+    hostSynchronizedCount() = hostBulk->synchronized_count();
+    isFieldLayoutConsistent = true;
+  }
+
+  void construct_debug_views(const BucketVector & allBuckets, const BucketVector & buckets, unsigned numPerEntity) {
+    if (buckets.size() != allBuckets.size()) {
+      ThrowErrorMsg("Field Sync Debugging is not supported with partial Field allocations.");
+    }
+    if (buckets.size() != 0) {
+      FieldDataDeviceViewType tempLastFieldValue = FieldDataDeviceViewType(hostField->name()+"_lastValue", buckets.size(),
+                                                                           ORDER_INDICES(bucketCapacity, numPerEntity));
+      LastFieldModLocationType tempLastFieldModLocation = LastFieldModLocationType(hostField->name()+"_lastModLocation", buckets.size(),
+                                                                                   ORDER_INDICES(bucketCapacity, numPerEntity));
+      HostArrayType<unsigned> tempLastMeshModBucketId = HostArrayType<unsigned>("lastMeshModBucketId", allBuckets.size());
+
+      lastFieldValue = tempLastFieldValue;
+      lastFieldModLocation = tempLastFieldModLocation;
+      lastMeshModBucketId = tempLastMeshModBucketId;
+    }
+
+    hostField->set_last_modification_view(lastFieldModLocation);
+
+    if (fieldName.extent(0) == 0u) {
+      fieldName = FieldNameType(hostField->name()+"_name", hostField->name().size()+1);
+      hostSynchronizedCount = ScalarUvmType<size_t>(hostField->name()+"_hostSyncCount");
+      lostDeviceFieldData = ScalarUvmType<bool>(hostField->name()+"_anyDeviceFieldMod");
+      anyPotentialDeviceFieldModification = ScalarUvmType<bool>(hostField->name()+"_anyPotentialDeviceFieldMod");
+    }
+  }
+
+  bool lost_device_field_data() const override {
+    return lostDeviceFieldData();
   }
 
   void detect_device_field_modification() {
@@ -525,23 +675,26 @@ public:
     stk::mesh::NgpMesh & ngpMesh = hostBulk->get_updated_ngp_mesh();
     const stk::mesh::MetaData & meta = hostBulk->mesh_meta_data();
 
-    FieldDataType & localDeviceData = deviceData;
-    FieldDataType & localLastFieldValue = lastFieldValue;
+    UnsignedViewType & localDeviceNumComponentsPerEntity = deviceNumComponentsPerEntity;
+    FieldDataDeviceViewType & localDeviceData = deviceData;
+    FieldDataDeviceViewType & localLastFieldValue = lastFieldValue;
     LastFieldModLocationType & localLastFieldModLocation = lastFieldModLocation;
+    ScalarUvmType<bool> & localLostDeviceFieldData = lostDeviceFieldData;
+    const bool inModCycle = hostBulk->in_modifiable_state();
 
     stk::mesh::for_each_entity_run(ngpMesh, rank, meta.locally_owned_part(),
                                    KOKKOS_LAMBDA(const stk::mesh::FastMeshIndex& index)
     {
-#ifdef KOKKOS_ENABLE_CUDA
-      const unsigned numComponents = localDeviceData.extent(1);
-#else
-      const unsigned numComponents = localDeviceData.extent(2);
-#endif
+      const unsigned bucketId = index.bucket_id;
+      const unsigned numComponents = localDeviceNumComponentsPerEntity(bucketId);
       for (unsigned component = 0; component < numComponents; ++component) {
         if (localDeviceData(index.bucket_id, ORDER_INDICES(index.bucket_ord, component)) !=
             localLastFieldValue(index.bucket_id, ORDER_INDICES(index.bucket_ord, component)))
         {
           localLastFieldModLocation(index.bucket_id, ORDER_INDICES(index.bucket_ord, component)) = LastModLocation::DEVICE;
+          if (inModCycle) {
+            localLostDeviceFieldData() = true;
+          }
         }
       }
     });
@@ -550,61 +703,51 @@ public:
     Kokkos::fence();
   }
 
-  void detect_any_device_field_modification() {
-    FieldDataType & localDeviceData = deviceData;
-    FieldDataType & localLastFieldValue = lastFieldValue;
-    ScalarUvmType<bool> & localAnyDeviceFieldModification = anyDeviceFieldModification;
-    localAnyDeviceFieldModification() = false;
-
-    Kokkos::parallel_for(1, KOKKOS_LAMBDA(unsigned ) {
-      for (size_t i = 0; i < localDeviceData.extent(0); ++i) {
-        for (size_t j = 0; j < localDeviceData.extent(1); ++j) {
-          for (size_t k = 0; k < localDeviceData.extent(2); ++k) {
-            if (localDeviceData(i, j, k) != localLastFieldValue(i, j, k)) {
-              localAnyDeviceFieldModification() = true;
-              return;
-            }
-          }
-        }
-      }
-    });
-
-    Kokkos::fence();
-  }
-
   void update_debug_storage(size_t hostSyncCount) {
     hostSynchronizedCount() = hostSyncCount;
 
-    if (isFieldLayoutConsistent) {
-      detect_any_device_field_modification();
-      isFieldLayoutConsistent = false;
-    }
-
-    const unsigned numBuckets = hostBulk->buckets(hostField->entity_rank()).size();
+    stk::mesh::Selector selector = stk::mesh::selectField(*hostField);
+    const stk::mesh::BucketVector & allBuckets = hostBulk->buckets(hostField->entity_rank());
+    const stk::mesh::BucketVector & buckets = hostBulk->get_buckets(hostField->entity_rank(), selector);
     const unsigned numPerEntity = hostField->max_size(rank);
-    construct_debug_views(numBuckets, numPerEntity);
 
-    if (anyDeviceFieldModification()) {
-      reset_last_modification_state(LastModLocation::DEVICE);
-    }
-    else {
-      reset_last_modification_state(LastModLocation::HOST | LastModLocation::DEVICE);
+    construct_new_index_view(allBuckets);
+    construct_debug_views(allBuckets, buckets, numPerEntity);
+
+    debugHostSelectedBucketOffset = newHostSelectedBucketOffset;
+    debugDeviceSelectedBucketOffset = newDeviceSelectedBucketOffset;
+    isFieldLayoutConsistent = false;
+  }
+
+  void set_last_modification_state_bit(LastModLocation value) {
+    for (size_t i = 0; i < lastFieldModLocation.extent(0); ++i) {
+      for (size_t j = 0; j < lastFieldModLocation.extent(1); ++j) {
+        for (size_t k = 0; k < lastFieldModLocation.extent(2); ++k) {
+          lastFieldModLocation(i, j, k) = static_cast<LastModLocation>(lastFieldModLocation(i, j, k) | value);
+        }
+      }
     }
   }
 
-  void reset_last_modification_state(uint8_t value) {
-    Kokkos::deep_copy(lastFieldModLocation, static_cast<LastModLocation>(value));
+  void reset_last_modification_state(LastModLocation value) {
+    Kokkos::deep_copy(lastFieldModLocation, value);
   }
 
   STK_INLINE_FUNCTION
-  bool last_modification_not_on_device(const stk::mesh::FastMeshIndex & index, int component) const {
+  bool data_is_stale_on_device(const stk::mesh::FastMeshIndex & index, int component) const {
     return !(lastFieldModLocation(index.bucket_id, ORDER_INDICES(index.bucket_ord, component)) &
              LastModLocation::DEVICE);
   }
 
   STK_INLINE_FUNCTION
-  bool last_modification_not_on_device(const stk::mesh::DeviceMesh::MeshIndex & index, int component) const {
+  bool data_is_stale_on_device(const stk::mesh::DeviceMesh::MeshIndex & index, int component) const {
     return !(lastFieldModLocation(index.bucket->bucket_id(), ORDER_INDICES(index.bucketOrd, component)) &
+             LastModLocation::DEVICE);
+  }
+
+  STK_INLINE_FUNCTION
+  bool data_is_stale_on_device(int bucketId, int bucketOrdinal, int component) const {
+    return !(lastFieldModLocation(bucketId, ORDER_INDICES(bucketOrdinal, component)) &
              LastModLocation::DEVICE);
   }
 
@@ -619,13 +762,13 @@ public:
   }
 
   STK_INLINE_FUNCTION
-  void print_unsynchronized_field_warning(const char * fileName, int lineNumber) const
+  void print_unupdated_field_warning(const char * fileName, int lineNumber) const
   {
     if (lineNumber == -1) {
-      printf("*** WARNING: Accessing unsynchronized Field %s on Device after mesh modification\n", fieldName.data());
+      printf("*** WARNING: Accessing un-updated Field %s on Device after mesh modification\n", fieldName.data());
     }
     else {
-      printf("%s:%i *** WARNING: Accessing unsynchronized Field %s on Device after mesh modification\n",
+      printf("%s:%i *** WARNING: Accessing un-updated Field %s on Device after mesh modification\n",
              fileName, lineNumber, fieldName.data());
     }
   }
@@ -647,16 +790,29 @@ public:
   }
 
   STK_INLINE_FUNCTION
+  void print_stale_data_warning_without_field_values(unsigned bucketId, unsigned bucketOrdinal, int component,
+                                                     const char * fileName, int lineNumber) const
+  {
+    if (lineNumber == -1) {
+      printf("*** WARNING: Accessing stale data on Device for Field %s[%i]\n", fieldName.data(), component);
+    }
+    else {
+      printf("%s:%i *** WARNING: Accessing stale data on Device for Field %s[%i]\n",
+             fileName, lineNumber, fieldName.data(), component);
+    }
+  }
+
+  STK_INLINE_FUNCTION
   void check_stale_field_access(const stk::mesh::FastMeshIndex & index, int component, const char * fileName, int lineNumber) const
   {
     anyPotentialDeviceFieldModification() = true;
 
     if (field_not_updated_after_mesh_mod()) {
-      print_unsynchronized_field_warning(fileName, lineNumber);
+      print_unupdated_field_warning(fileName, lineNumber);
       return;
     }
 
-    if (last_modification_not_on_device(index, component)) {
+    if (data_is_stale_on_device(index, component)) {
       print_stale_data_warning(index.bucket_id, index.bucket_ord, component, fileName, lineNumber);
     }
   }
@@ -667,11 +823,11 @@ public:
     anyPotentialDeviceFieldModification() = true;
 
     if (field_not_updated_after_mesh_mod()) {
-      print_unsynchronized_field_warning(fileName, lineNumber);
+      print_unupdated_field_warning(fileName, lineNumber);
       return;
     }
 
-    if (last_modification_not_on_device(index, component)) {
+    if (data_is_stale_on_device(index, component)) {
       print_stale_data_warning(index.bucket->bucket_id(), index.bucketOrd, component, fileName, lineNumber);
     }
   }
@@ -682,13 +838,34 @@ public:
     anyPotentialDeviceFieldModification() = true;
 
     if (field_not_updated_after_mesh_mod()) {
-      print_unsynchronized_field_warning(fileName, lineNumber);
+      print_unupdated_field_warning(fileName, lineNumber);
       return;
     }
 
     for (unsigned component = 0; component < get_num_components_per_entity(index); ++component) {
-      if (last_modification_not_on_device(index, component)) {
+      if (data_is_stale_on_device(index, component)) {
         print_stale_data_warning(index.bucket_id, index.bucket_ord, component, fileName, lineNumber);
+      }
+    }
+  }
+
+  STK_INLINE_FUNCTION
+  void check_stale_field_access(const char * fileName, int lineNumber) const
+  {
+    anyPotentialDeviceFieldModification() = true;
+
+    if (field_not_updated_after_mesh_mod()) {
+      print_unupdated_field_warning(fileName, lineNumber);
+      return;
+    }
+
+    for (size_t i = 0; i < lastFieldModLocation.extent(0); ++i) {
+      for (size_t j = 0; j < lastFieldModLocation.extent(1); ++j) {
+        for (size_t k = 0; k < lastFieldModLocation.extent(2); ++k) {
+          if (data_is_stale_on_device(i, ORDER_INDICES(j, k))) {
+            print_stale_data_warning_without_field_values(i, ORDER_INDICES(j, k), fileName, lineNumber);
+          }
+        }
       }
     }
   }
@@ -706,7 +883,7 @@ public:
          const char * fileName = DEVICE_DEBUG_FILE_NAME, int lineNumber = DEVICE_DEBUG_LINE_NUMBER) const
   {
     check_stale_field_access(entity, component, fileName, lineNumber);
-    return deviceData(entity.bucket_id, ORDER_INDICES(entity.bucket_ord, component));
+    return deviceData(deviceSelectedBucketOffset(entity.bucket_id), ORDER_INDICES(entity.bucket_ord, component));
   }
 
   template <typename MeshIndex> KOKKOS_FUNCTION
@@ -714,7 +891,7 @@ public:
          const char * fileName = DEVICE_DEBUG_FILE_NAME, int lineNumber = DEVICE_DEBUG_LINE_NUMBER) const
   {
     check_stale_field_access(entity, component, fileName, lineNumber);
-    return deviceData(entity.bucket->bucket_id(), ORDER_INDICES(entity.bucketOrd, component));
+    return deviceData(deviceSelectedBucketOffset(entity.bucket->bucket_id()), ORDER_INDICES(entity.bucketOrd, component));
   }
 
   KOKKOS_FUNCTION
@@ -722,7 +899,7 @@ public:
                 const char * fileName = DEVICE_DEBUG_FILE_NAME, int lineNumber = DEVICE_DEBUG_LINE_NUMBER) const
   {
     check_stale_field_access(index, component, fileName, lineNumber);
-    return deviceData(index.bucket_id, ORDER_INDICES(index.bucket_ord, component));
+    return deviceData(deviceSelectedBucketOffset(index.bucket_id), ORDER_INDICES(index.bucket_ord, component));
   }
 
   template <typename MeshIndex> KOKKOS_FUNCTION
@@ -730,7 +907,7 @@ public:
                 const char * fileName = DEVICE_DEBUG_FILE_NAME, int lineNumber = DEVICE_DEBUG_LINE_NUMBER) const
   {
     check_stale_field_access(index, component, fileName, lineNumber);
-    return deviceData(index.bucket->bucket_id(), ORDER_INDICES(index.bucketOrd, component));
+    return deviceData(deviceSelectedBucketOffset(index.bucket->bucket_id()), ORDER_INDICES(index.bucketOrd, component));
   }
 
   KOKKOS_FUNCTION
@@ -738,9 +915,19 @@ public:
                                 const char * fileName = DEVICE_DEBUG_FILE_NAME, int lineNumber = DEVICE_DEBUG_LINE_NUMBER) const
   {
     check_stale_field_access(index, fileName, lineNumber);
-    T* dataPtr = &deviceData(index.bucket_id, ORDER_INDICES(index.bucket_ord, 0));
+    T* dataPtr = &deviceData(deviceSelectedBucketOffset(index.bucket_id), ORDER_INDICES(index.bucket_ord, 0));
     const unsigned numScalars = get_num_components_per_entity(index);
-    return EntityFieldData<T>(dataPtr, numScalars, get_stride());
+    return EntityFieldData<T>(dataPtr, numScalars, get_component_stride());
+  }
+
+  template <typename Mesh>
+  void set_all(const Mesh& ngpMesh, const T& value,
+               const char * fileName = DEVICE_DEBUG_FILE_NAME, int lineNumber = DEVICE_DEBUG_LINE_NUMBER)
+  {
+    check_stale_field_access(fileName, lineNumber);
+    Kokkos::deep_copy(deviceData, value);
+    modify_on_device();
+    anyPotentialDeviceFieldModification() = true;
   }
 
 #else
@@ -755,47 +942,44 @@ public:
   KOKKOS_FUNCTION
   T& get(stk::mesh::FastMeshIndex entity, int component) const
   {
-    return deviceData(entity.bucket_id, ORDER_INDICES(entity.bucket_ord, component));
+    return deviceData(deviceSelectedBucketOffset(entity.bucket_id), ORDER_INDICES(entity.bucket_ord, component));
   }
 
   template <typename MeshIndex> KOKKOS_FUNCTION
   T& get(MeshIndex entity, int component) const
   {
-    return deviceData(entity.bucket->bucket_id(), ORDER_INDICES(entity.bucketOrd, component));
+    return deviceData(deviceSelectedBucketOffset(entity.bucket->bucket_id()), ORDER_INDICES(entity.bucketOrd, component));
   }
 
   KOKKOS_FUNCTION
   T& operator()(const stk::mesh::FastMeshIndex& index, int component) const
   {
-    return deviceData(index.bucket_id, ORDER_INDICES(index.bucket_ord, component));
+    unsigned offset = deviceSelectedBucketOffset(index.bucket_id);
+    return deviceData(offset, ORDER_INDICES(index.bucket_ord, component));
   }
 
   template <typename MeshIndex> KOKKOS_FUNCTION
   T& operator()(const MeshIndex& index, int component) const
   {
-    return deviceData(index.bucket->bucket_id(), ORDER_INDICES(index.bucketOrd, component));
+    return deviceData(deviceSelectedBucketOffset(index.bucket->bucket_id()), ORDER_INDICES(index.bucketOrd, component));
   }
 
   KOKKOS_FUNCTION
   EntityFieldData<T> operator()(const stk::mesh::FastMeshIndex& index) const
   {
-    T* dataPtr = &deviceData(index.bucket_id, ORDER_INDICES(index.bucket_ord, 0));
+    T* dataPtr = &deviceData(deviceSelectedBucketOffset(index.bucket_id), ORDER_INDICES(index.bucket_ord, 0));
     const unsigned numScalars = get_num_components_per_entity(index);
-    return EntityFieldData<T>(dataPtr, numScalars, get_stride());
+    return EntityFieldData<T>(dataPtr, numScalars, get_component_stride());
   }
-
-#endif
 
   template <typename Mesh>
   void set_all(const Mesh& ngpMesh, const T& value)
   {
-    Kokkos::deep_copy(hostData, value);
     Kokkos::deep_copy(deviceData, value);
-    clear_sync_state();
-#ifdef STK_DEBUG_FIELD_SYNC
-    anyPotentialDeviceFieldModification() = true;
-#endif
+    modify_on_device();
   }
+
+#endif
 
   KOKKOS_FUNCTION
   stk::mesh::EntityRank get_rank() const { return rank; }
@@ -812,49 +996,110 @@ public:
   }
 
   KOKKOS_FUNCTION
-  void swap(DeviceField<T> &sf)
+  void swap(DeviceField<T> &other)
   {
-    swap_views(hostData,   sf.hostData);
-    swap_views(deviceData, sf.deviceData);
-    swap_views(fieldData,  sf.fieldData);
+    swap_views(hostData,   other.hostData);
+    swap_views(deviceData, other.deviceData);
+    swap_views(needSyncToHost, other.needSyncToHost);
+    swap_views(needSyncToDevice, other.needSyncToDevice);
   }
 
 protected:
   bool need_sync_to_host() const
   {
-    return fieldData.need_sync_host();
+    return needSyncToHost();
   }
 
   bool need_sync_to_device() const
   {
-    return fieldData.need_sync_device();
+    return needSyncToDevice();
+  }
+
+  unsigned get_contiguous_bucket_offset_end(const BucketVector& buckets, unsigned i)
+  {
+    unsigned prevOffset = newHostSelectedBucketOffset(buckets[i]->bucket_id());
+    unsigned endIndex = i;
+
+    for(unsigned bucketIdx = i+1; bucketIdx < buckets.size(); bucketIdx++) {
+       unsigned currOffset = newHostSelectedBucketOffset(buckets[bucketIdx]->bucket_id());
+       if(currOffset == prevOffset+1) {
+         prevOffset = currOffset;
+         endIndex = bucketIdx;
+       } else {
+         break;
+       }
+    }
+
+    return endIndex;
   }
 
 private:
 
+  STK_FUNCTION
+  bool is_last_field_copy() const
+  {
+    return (copyCounter.use_count() == 1);
+  }
+
+  void reset_sync_selector()
+  {
+    userSpecifiedSelector = false;
+    *syncSelector = Selector();
+  }
+
+  void set_modify_on_host()
+  {
+#ifdef KOKKOS_ENABLE_DEBUG_DUALVIEW_MODIFY_CHECK
+    ThrowRequire(needSyncToHost() == false);
+#endif
+    needSyncToDevice() = true;
+  }
+
+  void set_modify_on_device()
+  {
+#ifdef KOKKOS_ENABLE_DEBUG_DUALVIEW_MODIFY_CHECK
+    ThrowRequire(needSyncToDevice() == false);
+#endif
+    needSyncToHost() = true;
+  }
+
+  void clear_sync_state_flags()
+  {
+    needSyncToHost() = false;
+    needSyncToDevice() = false;
+  }
+
   void move_unmodified_buckets_in_range_from_back(const BucketVector& buckets, unsigned numPerEntity, unsigned& currBaseIndex)
   {
-    unsigned startIndex = currBaseIndex;
-    unsigned endIndex = buckets.size() - 1;
+    int startIndex = currBaseIndex;
+    int endIndex = buckets.size() - 1;
     unsigned oldBucketId, newBucketId;
+    unsigned oldBucketOffset, newBucketOffset;
 
     for(unsigned j = currBaseIndex; j < buckets.size(); j++) {
       oldBucketId = buckets[j]->get_ngp_field_bucket_id(get_ordinal());
       newBucketId = buckets[j]->bucket_id();
 
-      if(oldBucketId >= newBucketId || buckets[j]->get_ngp_field_bucket_is_modified(get_ordinal())) {
+      if(oldBucketId == INVALID_BUCKET_ID) {
+        endIndex = j - 1;
+        break;
+      }
+
+      oldBucketOffset = hostSelectedBucketOffset(oldBucketId);
+      newBucketOffset = newHostSelectedBucketOffset(newBucketId);
+
+      if(oldBucketOffset >= newBucketOffset || buckets[j]->get_ngp_field_bucket_is_modified(get_ordinal())) {
         endIndex = j - 1;
         break;
       }
     }
 
-    for(unsigned j = endIndex; j >= startIndex; j--) {
+    for(int j = endIndex; j >= startIndex; j--) {
       oldBucketId = buckets[j]->get_ngp_field_bucket_id(get_ordinal());
       newBucketId = buckets[j]->bucket_id();
 
-      copy_moved_bucket_data<FieldDataHostType, UnmanagedHostInnerView<T>>(hostData, hostData, oldBucketId, newBucketId, numPerEntity);
-      copy_moved_bucket_data<FieldDataType, UnmanagedDevInnerView<T>>(deviceData, deviceData, oldBucketId, newBucketId, numPerEntity);
-      buckets[j]->set_ngp_field_bucket_id(get_ordinal(), newBucketId);
+      copy_moved_host_bucket_data<FieldDataHostViewType, UnmanagedHostInnerView<T>>(hostData, hostData, oldBucketId, newBucketId, numPerEntity);
+      copy_moved_device_bucket_data<FieldDataDeviceViewType, UnmanagedDevInnerView<T>>(deviceData, deviceData, oldBucketId, newBucketId, numPerEntity);
     }
     currBaseIndex = endIndex;
   }
@@ -866,20 +1111,24 @@ private:
         unsigned oldBucketId = buckets[i]->get_ngp_field_bucket_id(get_ordinal());
         unsigned newBucketId = buckets[i]->bucket_id();
 
-        if(oldBucketId != INVALID_BUCKET_ID && oldBucketId != newBucketId && !buckets[i]->get_ngp_field_bucket_is_modified(get_ordinal())) {
-          if(oldBucketId > newBucketId) {
-            copy_moved_bucket_data<FieldDataHostType, UnmanagedHostInnerView<T>>(hostData, hostData, oldBucketId, newBucketId, numPerEntity);
-            copy_moved_bucket_data<FieldDataType, UnmanagedDevInnerView<T>>(deviceData, deviceData, oldBucketId, newBucketId, numPerEntity);
+        if(oldBucketId == INVALID_BUCKET_ID) { continue; }
+
+        unsigned oldBucketOffset = hostSelectedBucketOffset(oldBucketId);
+        unsigned newBucketOffset = newHostSelectedBucketOffset(newBucketId);
+
+        if(oldBucketOffset != newBucketOffset && !buckets[i]->get_ngp_field_bucket_is_modified(get_ordinal())) {
+          if(oldBucketOffset > newBucketOffset) {
+            copy_moved_host_bucket_data<FieldDataHostViewType, UnmanagedHostInnerView<T>>(hostData, hostData, oldBucketId, newBucketId, numPerEntity);
+            copy_moved_device_bucket_data<FieldDataDeviceViewType, UnmanagedDevInnerView<T>>(deviceData, deviceData, oldBucketId, newBucketId, numPerEntity);
           } else {
             move_unmodified_buckets_in_range_from_back(buckets, numPerEntity, i);
           }
-          buckets[i]->set_ngp_field_bucket_id(get_ordinal(), newBucketId);
         }
       }
     }
   }
 
-  void copy_unmodified_buckets(const BucketVector& buckets, FieldDataType destDevView, FieldDataHostType destHostView, unsigned numPerEntity)
+  void copy_unmodified_buckets(const BucketVector& buckets, FieldDataDeviceViewType destDevView, FieldDataHostViewType destHostView, unsigned numPerEntity)
   {
     for(unsigned i = 0; i < buckets.size(); i++) {
       if(hostFieldExistsOnBucket(buckets[i]->bucket_id())) {
@@ -887,39 +1136,162 @@ private:
         unsigned newBucketId = buckets[i]->bucket_id();
 
         if(!buckets[i]->get_ngp_field_bucket_is_modified(get_ordinal())) {
-          ThrowRequire(hostData.extent(0) != 0);
-          copy_moved_bucket_data<FieldDataHostType, UnmanagedHostInnerView<T>>(destHostView, hostData, oldBucketId, newBucketId, numPerEntity);
-          copy_moved_bucket_data<FieldDataType, UnmanagedDevInnerView<T>>(destDevView, deviceData, oldBucketId, newBucketId, numPerEntity);
-          buckets[i]->set_ngp_field_bucket_id(get_ordinal(), newBucketId);
+          ThrowRequire(hostData.extent(0) != 0 && hostSelectedBucketOffset.extent(0) != 0);
+          copy_moved_host_bucket_data<FieldDataHostViewType, UnmanagedHostInnerView<T>>(destHostView, hostData, oldBucketId, newBucketId, numPerEntity);
+          copy_moved_device_bucket_data<FieldDataDeviceViewType, UnmanagedDevInnerView<T>>(destDevView, deviceData, oldBucketId, newBucketId, numPerEntity);
         }
       }
     }
   }
 
-  void construct_view(const BucketVector& buckets, const std::string& name, unsigned numBuckets, unsigned numPerEntity)
+  void fill_host_view(Bucket* bucket, UnmanagedHostInnerView<T>& unHostInnerView, unsigned numPerEntity)
   {
-    FieldDataType tempDataView = FieldDataType(Kokkos::ViewAllocateWithoutInitializing(name), numBuckets, ORDER_INDICES(bucketCapacity, numPerEntity));
-    FieldDataHostType tempDataViewMirror = Kokkos::create_mirror_view(tempDataView);
-
-    copy_unmodified_buckets(buckets, tempDataView, tempDataViewMirror, numPerEntity);
-
-    deviceData = tempDataView;
-    hostData = tempDataViewMirror;
-    fieldData = FieldDataDualViewType(deviceData, hostData);
-
 #ifdef STK_DEBUG_FIELD_SYNC
-    fieldName = FieldNameType(hostField->name()+"_name", hostField->name().size()+1);
-    hostSynchronizedCount = ScalarUvmType<size_t>(hostField->name()+"_hostSyncCount");
-    anyDeviceFieldModification = ScalarUvmType<bool>(hostField->name()+"_anyDeviceFieldMod");
-    anyPotentialDeviceFieldModification = ScalarUvmType<bool>(hostField->name()+"_anyPotentialDeviceFieldMod");
-    construct_debug_views(numBuckets, numPerEntity);
+      T* hostFieldPtr = static_cast<T*>(stk::mesh::ngp_debug_field_data(*hostField, *bucket));
+#else
+      T* hostFieldPtr = static_cast<T*>(stk::mesh::field_data(*hostField, *bucket));
 #endif
+    unsigned numEntities = bucket->size();
+
+    for(unsigned i = 0; i < numEntities; i++) {
+      for(unsigned j = 0; j < numPerEntity; j++) {
+        unHostInnerView(i,j) = hostFieldPtr[i * numPerEntity + j];
+      }
+    }
+  }
+
+  template<typename DataView, typename UnmanagedView>
+  void copy_moved_host_bucket_data(DataView destView, DataView srcView, unsigned oldBucketId, unsigned newBucketId, unsigned numPerEntity)
+  {
+    unsigned oldSelectedOffset = hostSelectedBucketOffset(oldBucketId);
+    unsigned newSelectedOffset = newHostSelectedBucketOffset(newBucketId);
+
+    T* srcPtr = srcView.data() + oldSelectedOffset * bucketCapacity * numPerEntity;
+    T* destPtr = destView.data() + newSelectedOffset * bucketCapacity * numPerEntity;
+
+    UnmanagedView unInnerSrcView(srcPtr, bucketCapacity, numPerEntity);
+    UnmanagedView unInnerDestView(destPtr, bucketCapacity, numPerEntity);
+    Kokkos::deep_copy(unInnerDestView, unInnerSrcView);
+  }
+
+  template<typename DataView, typename UnmanagedView>
+  void copy_moved_device_bucket_data(DataView destView, DataView srcView, unsigned oldBucketId, unsigned newBucketId, unsigned numPerEntity)
+  {
+    unsigned oldSelectedOffset = hostSelectedBucketOffset(oldBucketId);
+    unsigned newSelectedOffset = newHostSelectedBucketOffset(newBucketId);
+
+    T* srcPtr = srcView.data() + oldSelectedOffset * bucketCapacity * numPerEntity;
+    T* destPtr = destView.data() + newSelectedOffset * bucketCapacity * numPerEntity;
+
+    UnmanagedView unInnerSrcView(srcPtr, ORDER_INDICES(bucketCapacity, numPerEntity));
+    UnmanagedView unInnerDestView(destPtr, ORDER_INDICES(bucketCapacity, numPerEntity));
+    Kokkos::deep_copy(unInnerDestView, unInnerSrcView);
+  }
+
+  void copy_bucket_from_device_to_host(Bucket* bucket, unsigned numPerEntity, unsigned numContiguousBuckets = 1)
+  {
+    unsigned selectedBucketOffset = newHostSelectedBucketOffset(bucket->bucket_id());
+
+    T* devicePtr = deviceData.data() + selectedBucketOffset * bucketCapacity * numPerEntity;
+    UnmanagedDevInnerView<T> unDeviceInnerView(devicePtr, ORDER_INDICES(bucketCapacity*numContiguousBuckets, numPerEntity));
+
+    T* bufferPtr = deviceBuffer.data() + selectedBucketOffset * bucketCapacity * numPerEntity;
+    UnmanagedDevInnerView<T> unBufferInnerView(bufferPtr, bucketCapacity*numContiguousBuckets, numPerEntity);
+
+    transpose_contiguous_device_data_into_buffer(bucketCapacity*numContiguousBuckets, numPerEntity, unDeviceInnerView, unBufferInnerView);
+    Kokkos::fence();
+
+    UnmanagedHostInnerView<T> unHostInnerView(&hostData(selectedBucketOffset,0,0),
+                                              bucketCapacity*numContiguousBuckets, numPerEntity);
+    Kokkos::deep_copy(unHostInnerView, unBufferInnerView);
+  }
+
+  void copy_bucket_from_host_to_device(Bucket* bucket, unsigned numPerEntity, unsigned numContiguousBuckets = 1)
+  {
+    unsigned selectedBucketOffset = newHostSelectedBucketOffset(bucket->bucket_id());
+
+    UnmanagedHostInnerView<T> unHostInnerView(&hostData(selectedBucketOffset,0,0),
+                                              bucketCapacity*numContiguousBuckets, numPerEntity);
+
+    fill_host_view(bucket, unHostInnerView, numPerEntity);
+
+    T* bufferPtr = deviceBuffer.data() + selectedBucketOffset * bucketCapacity * numPerEntity;
+    UnmanagedDevInnerView<T> unBufferInnerView(bufferPtr, bucketCapacity*numContiguousBuckets, numPerEntity);
+    Kokkos::deep_copy(unBufferInnerView, unHostInnerView);
+
+    T* devicePtr = deviceData.data() + selectedBucketOffset * bucketCapacity * numPerEntity;
+    UnmanagedDevInnerView<T> unDeviceInnerView(devicePtr, ORDER_INDICES(bucketCapacity*numContiguousBuckets, numPerEntity));
+
+    transpose_buffer_into_contiguous_device_data(bucketCapacity*numContiguousBuckets, numPerEntity, unBufferInnerView, unDeviceInnerView);
+    Kokkos::fence();
+  }
+
+  void reset_device_buffer()
+  {
+    deviceBuffer = FieldDataDeviceUnmanagedViewType(reinterpret_cast<T*>(hostBulk->get_ngp_field_sync_buffer()),
+                                                    hostData.extent(0), hostData.extent(1), hostData.extent(2));
+  }
+
+  void copy_new_and_modified_buckets_from_host(const BucketVector& buckets, unsigned numPerEntity)
+  {
+    reset_device_buffer();
+
+    for(unsigned bucketIdx = 0; bucketIdx < buckets.size(); bucketIdx++) {
+      Bucket* bucket = buckets[bucketIdx];
+      unsigned oldBucketId = bucket->get_ngp_field_bucket_id(get_ordinal());
+
+      if(oldBucketId == INVALID_BUCKET_ID || bucket->get_ngp_field_bucket_is_modified(get_ordinal())) {
+        copy_bucket_from_host_to_device(bucket, numPerEntity);
+      }
+    }
+  }
+
+  void construct_view(const BucketVector& buckets, const std::string& name, unsigned numPerEntity)
+  {
+    unsigned numBuckets = buckets.size();
+#ifdef STK_DEBUG_FIELD_SYNC
+    FieldDataDeviceViewType tempDataDeviceView = FieldDataDeviceViewType(name, numBuckets,
+                                                                         ORDER_INDICES(bucketCapacity, numPerEntity));
+    FieldDataHostViewType tempDataHostView = FieldDataHostViewType(name, numBuckets,
+                                                                   bucketCapacity, numPerEntity);
+#else
+    FieldDataDeviceViewType tempDataDeviceView = FieldDataDeviceViewType(Kokkos::view_alloc(Kokkos::WithoutInitializing, name), numBuckets,
+                                                                         ORDER_INDICES(bucketCapacity, numPerEntity));
+    FieldDataHostViewType tempDataHostView = FieldDataHostViewType(Kokkos::view_alloc(Kokkos::WithoutInitializing, name), numBuckets,
+                                                                   bucketCapacity, numPerEntity);
+#endif
+
+    copy_unmodified_buckets(buckets, tempDataDeviceView, tempDataHostView, numPerEntity);
+
+    deviceData = tempDataDeviceView;
+    hostData = tempDataHostView;
+  }
+
+  void construct_new_index_view(const BucketVector& allBuckets)
+  {
+    Selector selector(*hostField);
+    unsigned bucketIndex = 0;
+
+    newDeviceSelectedBucketOffset = UnsignedViewType(Kokkos::view_alloc(Kokkos::WithoutInitializing, hostField->name() + "_bucket_offset"),
+                                                     allBuckets.size());
+    newHostSelectedBucketOffset = Kokkos::create_mirror_view(Kokkos::HostSpace(), newDeviceSelectedBucketOffset, Kokkos::WithoutInitializing);
+
+    for(unsigned i = 0; i < allBuckets.size(); i++) {
+      if(selector(*allBuckets[i])) {
+        newHostSelectedBucketOffset(i) = bucketIndex++;
+      } else {
+        newHostSelectedBucketOffset(i) = INVALID_BUCKET_ID;
+      }
+    }
+
+    Kokkos::deep_copy(newDeviceSelectedBucketOffset, newHostSelectedBucketOffset);
   }
 
   void construct_field_exist_view(const BucketVector& allBuckets, const Selector& selector)
   {
-    deviceFieldExistsOnBucket = BoolViewType(Kokkos::ViewAllocateWithoutInitializing(hostField->name() + "_exists_on_bucket"), allBuckets.size());
-    hostFieldExistsOnBucket = Kokkos::create_mirror_view(deviceFieldExistsOnBucket);
+    deviceFieldExistsOnBucket = BoolViewType(Kokkos::view_alloc(Kokkos::WithoutInitializing, hostField->name() + "_exists_on_bucket"),
+                                             allBuckets.size());
+    hostFieldExistsOnBucket = Kokkos::create_mirror_view(Kokkos::HostSpace(), deviceFieldExistsOnBucket, Kokkos::WithoutInitializing);
     Kokkos::deep_copy(hostFieldExistsOnBucket, false);
     for (size_t i = 0; i < allBuckets.size(); ++i) {
       if(selector(*allBuckets[i])) {
@@ -929,20 +1301,113 @@ private:
     Kokkos::deep_copy(deviceFieldExistsOnBucket, hostFieldExistsOnBucket);
   }
 
+  void construct_num_components_per_entity_view(const BucketVector & allBuckets) {
+    if (deviceNumComponentsPerEntity.extent(0) != allBuckets.size()) {
+      deviceNumComponentsPerEntity = UnsignedViewType(Kokkos::ViewAllocateWithoutInitializing(hostField->name() + "_numComponentsPerEntity"),
+                                                      allBuckets.size());
+      hostNumComponentsPerEntity = Kokkos::create_mirror_view(deviceNumComponentsPerEntity);
+    }
+
+    for (stk::mesh::Bucket * bucket : allBuckets) {
+      hostNumComponentsPerEntity[bucket->bucket_id()] = stk::mesh::field_scalars_per_entity(*hostField, *bucket);
+    }
+
+    Kokkos::deep_copy(deviceNumComponentsPerEntity, hostNumComponentsPerEntity);
+  }
+
+  void copy_contiguous_buckets_from_device_to_host(const BucketVector& buckets, unsigned numPerEntity, unsigned& i)
+  {
+    unsigned endIndex = get_contiguous_bucket_offset_end(buckets, i);
+
+    unsigned numCopyBucketCount = endIndex - i + 1;
+
+    copy_bucket_from_device_to_host(buckets[i], numPerEntity, numCopyBucketCount);
+    i = endIndex;
+  }
+
+  void copy_selected_buckets_to_host()
+  {
+    if(hostField) {
+      Selector selector = selectField(*hostField) & *syncSelector;
+      const BucketVector& buckets = hostBulk->get_buckets(rank, selector);
+
+      for(unsigned i = 0; i < buckets.size(); i++) {
+        copy_contiguous_buckets_from_device_to_host(buckets, maxNumScalarsPerEntity, i);
+      }
+    }
+  }
+
+  void sync_to_host_using_selector()
+  {
+    reset_device_buffer();
+
+    if (!userSpecifiedSelector) {
+      transpose_all_device_data_into_buffer(*hostField, deviceData, deviceBuffer);
+      Kokkos::fence();
+
+      Kokkos::deep_copy(hostData, deviceBuffer);
+    }
+    else {
+      copy_selected_buckets_to_host();
+    }
+    clear_sync_state_flags();
+  }
 
   void copy_device_to_host()
   {
-    fieldData.sync_host();  // New Kokkos API
-
     if (hostField) {
       stk::mesh::Selector selector = stk::mesh::selectField(*hostField);
       const stk::mesh::BucketVector& buckets = hostBulk->get_buckets(hostField->entity_rank(), selector);
+
+      if(userSpecifiedSelector) {
+        selector &= *syncSelector;
+      }
+
+      sync_to_host_using_selector();
+
       hostField->increment_num_syncs_to_host();
       copy_data(buckets, [](T &hostFieldData, T &stkFieldData){
-        //printf("copy_device_to_host, hostFieldData: %d\n", (int)hostFieldData);
         stkFieldData = hostFieldData;
-      });
+      }, selector);
     }
+  }
+
+  void copy_contiguous_buckets_from_host_to_device(const BucketVector& buckets, unsigned numPerEntity, unsigned& i)
+  {
+    unsigned endIndex = get_contiguous_bucket_offset_end(buckets, i);
+
+    unsigned numCopyBucketCount = endIndex - i + 1;
+
+    copy_bucket_from_host_to_device(buckets[i], numPerEntity, numCopyBucketCount);
+    i = endIndex;
+  }
+
+  void copy_selected_buckets_to_device()
+  {
+    if(hostField) {
+      Selector selector = selectField(*hostField) & *syncSelector;
+      const BucketVector& buckets = hostBulk->get_buckets(rank, selector);
+
+      for(unsigned i = 0; i < buckets.size(); i++) {
+        copy_contiguous_buckets_from_host_to_device(buckets, maxNumScalarsPerEntity, i);
+      }
+    }
+  }
+
+  void sync_to_device_using_selector()
+  {
+    reset_device_buffer();
+
+    if (!userSpecifiedSelector) {
+      Kokkos::deep_copy(deviceBuffer, hostData);
+
+      transpose_buffer_into_all_device_data(*hostField, deviceBuffer, deviceData);
+      Kokkos::fence();
+    }
+    else {
+      copy_selected_buckets_to_device();
+    }
+    clear_sync_state_flags();
   }
 
   void copy_host_to_device()
@@ -950,14 +1415,17 @@ private:
     if (hostField) {
       stk::mesh::Selector selector = stk::mesh::selectField(*hostField);
       const stk::mesh::BucketVector& buckets = hostBulk->get_buckets(hostField->entity_rank(), selector);
+
+      if(userSpecifiedSelector) {
+        selector &= *syncSelector;
+      }
+
       hostField->increment_num_syncs_to_device();
       copy_data(buckets, [](T &hostFieldData, T &stkFieldData){
-        //printf("copy_host_to_device, stkFieldData: %d\n", (int)stkFieldData);
         hostFieldData = stkFieldData;
-      });
+      }, selector);
+      sync_to_device_using_selector();
     }
-
-    fieldData.sync_device();  // New Kokkos API
   }
 
   template <typename ViewType>
@@ -976,20 +1444,18 @@ private:
     host = Kokkos::create_mirror_view(view);
   }
 
-  void create_device_field_data(const T& initialValue)
-  {
-    Kokkos::deep_copy(hostData, initialValue);
-    Kokkos::deep_copy(deviceData, hostData);
-  }
-
   template <typename Assigner>
-  void copy_data(const stk::mesh::BucketVector& buckets, const Assigner &assigner)
+  void copy_data(const stk::mesh::BucketVector& buckets, const Assigner &assigner, const Selector& selector)
   {
     ProfilingBlock prof("copy_data for " + hostField->name());
     for(size_t iBucket=0; iBucket<buckets.size(); iBucket++)
     {
       const stk::mesh::Bucket &bucket = *buckets[iBucket];
+
+      if(selector(bucket) == false) { continue; }
+
       const unsigned numPerEntity = stk::mesh::field_scalars_per_entity(*hostField, bucket);
+      unsigned selectedBucketOffset = newHostSelectedBucketOffset(bucket.bucket_id());
 
 #ifdef STK_DEBUG_FIELD_SYNC
       T* data = static_cast<T*>(stk::mesh::ngp_debug_field_data(*hostField, bucket));
@@ -1000,18 +1466,27 @@ private:
       {
         for(unsigned j=0; j<numPerEntity; j++)
         {
-          assigner(hostData(bucket.bucket_id(), ORDER_INDICES(iEntity,j) ), data[iEntity*numPerEntity + j]);
+          assigner(hostData(selectedBucketOffset, iEntity, j), data[iEntity*numPerEntity + j]);
         }
       }
     }
   }
 
-  FieldDataHostType hostData;
-  FieldDataType deviceData;
-  FieldDataDualViewType fieldData;
+  FieldDataHostViewType hostData;
+  FieldDataDeviceViewType deviceData;
+  FieldDataDeviceUnmanagedViewType deviceBuffer;
+  Kokkos::View<bool, Kokkos::HostSpace> needSyncToHost;
+  Kokkos::View<bool, Kokkos::HostSpace> needSyncToDevice;
 
   typename BoolViewType::HostMirror hostFieldExistsOnBucket;
   BoolViewType deviceFieldExistsOnBucket;
+
+  typename UnsignedViewType::HostMirror hostSelectedBucketOffset;
+  UnsignedViewType deviceSelectedBucketOffset;
+  typename UnsignedViewType::HostMirror newHostSelectedBucketOffset;
+  UnsignedViewType newDeviceSelectedBucketOffset;
+  typename UnsignedViewType::HostMirror hostNumComponentsPerEntity;
+  UnsignedViewType deviceNumComponentsPerEntity;
 
   stk::mesh::EntityRank rank;
   unsigned ordinal;
@@ -1019,9 +1494,15 @@ private:
   const stk::mesh::BulkData* hostBulk;
   const stk::mesh::FieldBase* hostField;
   unsigned bucketCapacity;
+  unsigned numBucketsForField;
+  unsigned maxNumScalarsPerEntity;
   size_t synchronizedCount;
 
   DeviceField<T>* stateFields[MaximumFieldStates];
+
+  Kokkos::View<int[1], Kokkos::HostSpace> copyCounter;
+  bool userSpecifiedSelector;
+  Selector* syncSelector;
 
 #ifdef STK_DEBUG_FIELD_SYNC
   using FieldNameType = Kokkos::View<char*, UVMMemSpace>;
@@ -1030,10 +1511,13 @@ private:
   FieldNameType fieldName;
   bool isFieldLayoutConsistent;
   ScalarUvmType<size_t> hostSynchronizedCount;
-  ScalarUvmType<bool> anyDeviceFieldModification;
+  ScalarUvmType<bool> lostDeviceFieldData;
   ScalarUvmType<bool> anyPotentialDeviceFieldModification;
+  HostArrayType<unsigned> lastMeshModBucketId;
   LastFieldModLocationType lastFieldModLocation;
-  FieldDataType lastFieldValue;
+  FieldDataDeviceViewType lastFieldValue;
+  typename UnsignedViewType::HostMirror debugHostSelectedBucketOffset;
+  UnsignedViewType debugDeviceSelectedBucketOffset;
 #endif
 };
 

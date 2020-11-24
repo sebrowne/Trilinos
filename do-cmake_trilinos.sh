@@ -43,6 +43,7 @@ elif [[ "${set_arg}" == "seacas" ]] ; then
   exit 1
 else
   echo "ERROR: First argument must be 'full', 'mini', or 'seacas'!"
+  exit 1
 fi
 
 # Configure Trilinos

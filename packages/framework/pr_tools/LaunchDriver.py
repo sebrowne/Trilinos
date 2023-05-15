@@ -100,6 +100,8 @@ def main(argv):
   # reaches this check.
   if args.build_name.startswith("ats2_cuda"):
       args.driver = "./Trilinos/packages/framework/pr_tools/PullRequestLinuxCudaVortexDriver.sh"
+  elif args.build_name.startswith("cts1"):
+      args.driver = "./Trilinos/packages/framework/pr_tools/PullRequestLinuxCTS1.sh"
 
   cmd = launch_env + launch_cmd + args.driver + driver_args
 

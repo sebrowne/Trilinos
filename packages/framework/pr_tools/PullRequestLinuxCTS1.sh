@@ -2,7 +2,9 @@
 
 if [ "${SLURM_CTEST_TIME_LIMIT}" == "" ] ; then
   # 12 hrs * 60 min = 720 minutes
-  export SLURM_CTEST_TIME_LIMIT=720
+  # export SLURM_CTEST_TIME_LIMIT=720
+  # but the short queue has a limit of 2 hours
+  export SLURM_CTEST_TIME_LIMIT=240
 fi
 
 if [ "${Trilinos_CTEST_DO_ALL_AT_ONCE}" == "" ] ; then

@@ -48,6 +48,7 @@ function bootstrap_modules() {
         module load aue/git/2.38.1
         module load aue/python/3.9.16
         get_python_packages pip3
+        export PYTHON_EXE=python3
     else
         source /projects/sems/modulefiles/utils/sems-archive-modules-init.sh
         execute_command_checked "module unload sems-archive-git"

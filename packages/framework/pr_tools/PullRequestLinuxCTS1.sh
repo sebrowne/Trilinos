@@ -14,8 +14,6 @@ fi
 # comment out sh and add what we need individually.
 #source $WORKSPACE/Trilinos/packages/framework/pr_tools/atdm/load-env.sh $JOB_NAME
 
-set -x
-
 stdout=job_stdout.log
 stderr=job_stderr.log
 

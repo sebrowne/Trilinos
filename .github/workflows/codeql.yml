@@ -71,7 +71,7 @@ jobs:
     - run: |
         mkdir mybuild
         cd mybuild
-        cmake -DTrilinos_ENABLE_ALL_PACKAGES=ON -DTPL_ENABLE_Boost=OFF ..
+        cmake -DTrilinos_ENABLE_ALL_PACKAGES=ON -DTPL_ENABLE_Boost=OFF -DTrilinos_ENABLE_SEACAS=OFF ..
         make -j4
 
     - name: Perform CodeQL Analysis

@@ -166,7 +166,10 @@ def merge_branch(source_url, target_branch, sourceSHA):
     check_call_wrapper(['git', 'fetch', 'origin', target_branch])
     check_call_wrapper(['git', 'reset', '--hard', 'HEAD'])
     check_call_wrapper(['git', 'checkout', '-B', target_branch, 'origin/' + target_branch])
-    check_call_wrapper(['git', 'merge', '--no-edit', sourceSHA]),
+    try:
+        check_call_wrapper(['git', 'merge', '--no-edit', sourceSHA]),
+    except subprocess.CalledProcessError:
+        check_call_wrapper(['git', 'merge', '--no-edit', 'source_remote/' + sourceSHA]),
 
     return 0
 

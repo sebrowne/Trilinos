@@ -456,10 +456,13 @@ class TrilinosPRConfigurationBase(object):
         This is equvalent to running `make -j <concurrency_build>` from the command line.
         """
         if self._concurrency_build is None:
-            si = SysInfo()
+            if self.args.build_processors:
+                self._concurrency_build = self.args.build_processors
+            else:
+                si = SysInfo()
 
-            self._concurrency_build = si.compute_num_usable_cores(req_mem_gb_per_core = self.arg_req_mem_per_core,
-                                                                  max_cores_allowed   = self.max_cores_allowed)
+                self._concurrency_build = si.compute_num_usable_cores(req_mem_gb_per_core = self.arg_req_mem_per_core,
+                                                                      max_cores_allowed   = self.max_cores_allowed)
 
         return self._concurrency_build
 

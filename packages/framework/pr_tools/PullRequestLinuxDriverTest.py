@@ -41,6 +41,7 @@ sys.dont_write_bytecode = True
 import argparse
 import os
 import sys
+import pprint
 
 import trilinosprhelpers
 
@@ -255,6 +256,13 @@ def parse_args():
                           default="",
                           help="Extra arguments that will be passed to CMake for configuring Trilinos.")
 
+    optional.add_argument("--build-processors",
+                          dest="build_processors",
+                          action="store",
+                          default=None,
+                          type=int,
+                          help="Explicit number of processors (-j PROCESSORS) to use when building.")
+
     arguments = parser.parse_args()
 
     # Type conversions
@@ -263,38 +271,13 @@ def parse_args():
     arguments.req_mem_per_core     = float(arguments.req_mem_per_core)
 
     # Print the arguments to the console
-    print("\n")
+    print()
     print("+" + "="*78 + "+")
-    print("| PullRequestLinuxDriverTest Parameters")
+    print("| PullRequestLinuxDriverTest Arguments Namespace")
     print("+" + "="*78 + "+")
-    print("| - [R] source-repo-url             : {source_repo_url}".format(**vars(arguments)))
-    print("| - [R] target_repo_url             : {target_repo_url}".format(**vars(arguments)))
-    print("| - [R] target_branch_name          : {target_branch_name}".format(**vars(arguments)))
-    print("| - [R] pullrequest-build-name      : {pullrequest_build_name}".format(**vars(arguments)))
-    print("| - [R] genconfig-build-name        : {genconfig_build_name}".format(**vars(arguments)))
-    print("| - [R] pullrequest-number          : {pullrequest_number}".format(**vars(arguments)))
-    print("| - [R] jenkins-job-number          : {jenkins_job_number}".format(**vars(arguments)))
-    print("| - [R] source-dir                  : {source_dir}".format(**vars(arguments)))
-    print("| - [R] build-dir                   : {build_dir}".format(**vars(arguments)))
-    print("| - [R] ctest-driver                : {ctest_driver}".format(**vars(arguments)))
-    print("| - [R] ctest-drop-site             : {ctest_drop_site}".format(**vars(arguments)))
-    print("|")
-    print("| - [O] dry-run                     : {dry_run}".format(**vars(arguments)))
-    print("| - [O] enable-ccache               : {ccache_enable}".format(**vars(arguments)))
-    print("| - [O] filename-packageenables     : {filename_packageenables}".format(**vars(arguments)))
-    print("| - [O] max-cores-allowed           : {max_cores_allowed}".format(**vars(arguments)))
-    print("| - [O] num-concurrent-tests        : {num_concurrent_tests}".format(**vars(arguments)))
-    print("| - [O] pullrequest-cdash-track     : {pullrequest_cdash_track}".format(**vars(arguments)))
-    print("| - [O] pullrequest-env-config-file : {pullrequest_env_config_file}".format(**vars(arguments)))
-    print("| - [O] pullrequest-gen-config-file : {pullrequest_gen_config_file}".format(**vars(arguments)))
-    print("| - [O] req-mem-per-core            : {req_mem_per_core}".format(**vars(arguments)))
-    print("| - [O] test-mode                   : {test_mode}".format(**vars(arguments)))
-    print("| - [O] workspace-dir               : {workspace_dir}".format(**vars(arguments)))
-    print("| - [O] extra_configure_args        : {extra_configure_args}".format(**vars(arguments)))
-    print("| - [O] dashboard_build_name        : {dashboard_build_name}".format(**vars(arguments)))
-    print("| - [O] use_explicit_cachefile       : {use_explicit_cachefile}".format(**vars(arguments)))
-    #print("| - [O] : {}".format(**vars(arguments)))
+    pprint.pprint(vars(arguments))
     print("+" + "="*78 + "+")
+    print()
 
     return arguments
 

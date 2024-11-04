@@ -85,6 +85,8 @@ def main(argv):
                       help="Build is requiring to pull the current develop of kokkos and kokkos-kernels packages")
   parser.add_argument("--extra-configure-args",
                       help="Extra arguments that will be passed to CMake for configuring Trilinos.")
+  parser.add_argument("--build-processors", type=int,
+                        help="Explicit number of processors (-j PROCESSORS) to use when building.")
   args = parser.parse_args(argv)
 
   if os.getenv("TRILINOS_DIR") == None:
@@ -118,6 +120,9 @@ def main(argv):
 
   if args.extra_configure_args:
      cmd += f" --extra-configure-args=\"{args.extra_configure_args}\""
+
+  if args.build_processors:
+     cmd += f" --build-processors={args.build_processors}"
 
   print("LaunchDriver> EXEC: " + cmd, flush=True)
 

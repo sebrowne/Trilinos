@@ -89,6 +89,7 @@ ARGS=$(getopt -n PullRequestLinuxDriver.sh \
  --longoptions on-ats2,on_ats2 \
  --longoptions kokkos-develop \
  --longoptions extra-configure-args: \
+ --longoptions build-processors: \
  --longoptions no-bootstrap -- "${@}") || exit $?
 
 eval set -- "${ARGS}"
@@ -118,6 +119,10 @@ do
         ;;
     (--extra-configure-args)
         extra_configure_args=$2
+        shift 2
+        ;;
+    (--build-processors)
+        build_processors=$2
         shift 2
         ;;
     (-h|--help)
@@ -260,7 +265,12 @@ test_cmd_options=(
 
 if [[ ${extra_configure_args} ]]
 then
-    test_cmd_options+=( "--extra-configure-args=\"${extra_configure_args}\"")
+    test_cmd_options+=( "--extra-configure-args=\"${extra_configure_args}\" ")
+fi
+
+if [[ ${build_processors} ]]
+then
+    test_cmd_options+=( "--build-processors=${build_processors} ")
 fi
 
 if [[ ${GENCONFIG_BUILD_NAME} == *"gnu"* ]]

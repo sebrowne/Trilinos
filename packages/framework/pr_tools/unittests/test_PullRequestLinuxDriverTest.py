@@ -14,17 +14,9 @@ from textwrap import dedent
 
 import unittest
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
-try:
-    import mock
-except ImportError:  # pragma nocover
-    import unittest.mock as mock
-
-import re
+import unittest.mock as mock
 
 from argparse import Namespace
 
@@ -157,14 +149,10 @@ class Test_parse_args(unittest.TestCase):
         '''
         No inputs
         '''
-        import difflib
-        with self.m_argv, self.stdoutRedirect as m_stdout:
+        with self.m_argv:
             returned_default = PullRequestLinuxDriverTest.parse_args()
 
         self.assertEqual(self.default_options, returned_default)
-
-        self.assertIn(self.default_stdout, m_stdout.getvalue())
-        return
 
 
     def test_parse_args_uses_workspace_environ(self):
@@ -174,16 +162,10 @@ class Test_parse_args(unittest.TestCase):
         l_options               = self.default_options
         l_options.workspace_dir = tmp_workspace_dir
 
-        l_stdout = self.default_stdout
-        l_stdout = l_stdout.replace('workspace-dir               : /dev/null/Trilinos_clone',
-                                    'workspace-dir               : /dev/null/Trilinos_workspace')
-
-        with self.m_argv, mock.patch.dict(os.environ, {'WORKSPACE': tmp_workspace_dir}, clear=True), self.stdoutRedirect as m_stdout:
+        with self.m_argv, mock.patch.dict(os.environ, {'WORKSPACE': tmp_workspace_dir}, clear=True):
             returned_default = PullRequestLinuxDriverTest.parse_args()
 
         self.assertEqual(l_options, returned_default)
-        self.assertIn(l_stdout, m_stdout.getvalue())
-        return
 
 
 

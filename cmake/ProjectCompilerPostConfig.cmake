@@ -72,7 +72,6 @@ set(explicitly_disabled_warnings
     inline
 )
 set(upcoming_warnings
-    shadow
     ${Trilinos_ADDITIONAL_WARNINGS}
 )
 set(promoted_warnings
@@ -90,6 +89,7 @@ set(promoted_warnings
     reorder
     return-type
     sequence-point
+    shadow
     sign-compare
     strict-aliasing
     switch
@@ -102,6 +102,9 @@ set(promoted_warnings
     variadic-macros
     write-strings
 )
+
+# Set unpromote_<warningname>_for_these_packages <package1> <...>) to back off -Werror for specific warning/package combinations
+set(unpromote_shadow_for_these_packages Sacado Shards Galeri NOX Pamgen Stokhos TrilinosCouplings ROL Amesos2 Intrepid2 STK Percept Krino ShyLU_DD Piro Panzer)
 
 if("${Trilinos_WARNINGS_MODE}" STREQUAL "WARN")
     enable_warnings("${upcoming_warnings}")

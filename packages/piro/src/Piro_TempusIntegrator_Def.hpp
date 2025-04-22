@@ -77,7 +77,7 @@ template <typename Scalar>
 Teuchos::RCP<Tempus::Stepper<Scalar>>
 Piro::TempusIntegrator<Scalar>::getStepper() const
 {
-  Teuchos::RCP<Tempus::Stepper<Scalar>> stepper;
+  Teuchos::RCP<Tempus::Stepper<Scalar>> stepper = Teuchos::null;
   if (basicIntegrator_ != Teuchos::null) {
     stepper = basicIntegrator_->getStepper();
   }
@@ -94,7 +94,7 @@ template <typename Scalar>
 bool
 Piro::TempusIntegrator<Scalar>::advanceTime(const Scalar time_final)
 {
-  bool out;
+  bool out = false;
   if (basicIntegrator_ != Teuchos::null) {
     out = basicIntegrator_->advanceTime(time_final);
   }
@@ -111,7 +111,7 @@ template <typename Scalar>
 Scalar
 Piro::TempusIntegrator<Scalar>::getTime() const
 {
-  Scalar time;
+  Scalar time = 0.0;
   if (basicIntegrator_ != Teuchos::null) {
     time = basicIntegrator_->getTime();
   }
@@ -128,7 +128,7 @@ template <typename Scalar>
 Teuchos::RCP<const Thyra::VectorBase<Scalar>>
 Piro::TempusIntegrator<Scalar>::getX() const
 {
-  Teuchos::RCP<const Thyra::VectorBase<Scalar>> x;
+  Teuchos::RCP<const Thyra::VectorBase<Scalar>> x = Teuchos::null;
   if (basicIntegrator_ != Teuchos::null) {
     x = basicIntegrator_->getX();
   }
@@ -145,7 +145,7 @@ template <typename Scalar>
 Teuchos::RCP<const Thyra::VectorBase<Scalar>>
 Piro::TempusIntegrator<Scalar>::getXDot() const
 {
-  Teuchos::RCP<const Thyra::VectorBase<Scalar>> xdot;
+  Teuchos::RCP<const Thyra::VectorBase<Scalar>> xdot = Teuchos::null;
   if (basicIntegrator_ != Teuchos::null) {
     xdot = basicIntegrator_->getXDot();
   }
@@ -162,7 +162,7 @@ template <typename Scalar>
 Teuchos::RCP<const Thyra::VectorBase<Scalar>>
 Piro::TempusIntegrator<Scalar>::getXDotDot() const
 {
-  Teuchos::RCP<const Thyra::VectorBase<Scalar>> xdotdot;
+  Teuchos::RCP<const Thyra::VectorBase<Scalar>> xdotdot = Teuchos::null;
   if (basicIntegrator_ != Teuchos::null) {
     xdotdot = basicIntegrator_->getXDotDot();
   }
@@ -179,7 +179,7 @@ template <typename Scalar>
 Teuchos::RCP<const Tempus::SolutionHistory<Scalar>>
 Piro::TempusIntegrator<Scalar>::getSolutionHistory() const
 {
-  Teuchos::RCP<const Tempus::SolutionHistory<Scalar>> soln_history;
+  Teuchos::RCP<const Tempus::SolutionHistory<Scalar>> soln_history = Teuchos::null;
   if (basicIntegrator_ != Teuchos::null) {
     soln_history = basicIntegrator_->getSolutionHistory();
   }
@@ -196,7 +196,7 @@ template <typename Scalar>
 Teuchos::RCP<const Tempus::TimeStepControl<Scalar>>
 Piro::TempusIntegrator<Scalar>::getTimeStepControl() const
 {
-  Teuchos::RCP<const Tempus::TimeStepControl<Scalar>> ts_control;
+  Teuchos::RCP<const Tempus::TimeStepControl<Scalar>> ts_control = Teuchos::null;
   if (basicIntegrator_ != Teuchos::null) {
     ts_control = basicIntegrator_->getTimeStepControl();
   }
@@ -294,7 +294,7 @@ template <typename Scalar>
 Tempus::Status
 Piro::TempusIntegrator<Scalar>::getStatus() const
 {
-  Tempus::Status status;
+  Tempus::Status status = 0;
   if (basicIntegrator_ != Teuchos::null) {
     status = basicIntegrator_->getStatus();
   }

@@ -116,11 +116,12 @@ const RCP<TempusSolver<double> > solverNew(
   tempusPL->sublist("Demo Stepper").set("Zero Initial Guess", false);
   tempusPL->sublist("Demo Stepper").set("Solver Name", "Demo Solver");
   tempusPL->sublist("Demo Stepper").sublist("Demo Solver").sublist("NOX").sublist("Direction").set("Method","Newton");
-  SENS_METHOD sens_method; 
-  if (sens_method_string == "None") sens_method = Piro::NONE; 
-  else if (sens_method_string == "Forward") sens_method = Piro::FORWARD; 
-  else if (sens_method_string == "Adjoint") sens_method = Piro::ADJOINT; 
-  Teuchos::RCP<Piro::TempusIntegrator<double> > integrator 
+  SENS_METHOD sens_method;
+  if (sens_method_string == "None") sens_method = Piro::NONE;
+  else if (sens_method_string == "Forward") sens_method = Piro::FORWARD;
+  else if (sens_method_string == "Adjoint") sens_method = Piro::ADJOINT;
+  else sens_method = Piro::NONE;
+  Teuchos::RCP<Piro::TempusIntegrator<double> > integrator
       = Teuchos::rcp(new Piro::TempusIntegrator<double>(tempusPL, thyraModel, sens_method));
   const RCP<Thyra::NonlinearSolverBase<double> > stepSolver = Teuchos::null;
 

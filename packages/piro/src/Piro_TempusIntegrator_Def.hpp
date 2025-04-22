@@ -94,34 +94,30 @@ template <typename Scalar>
 bool
 Piro::TempusIntegrator<Scalar>::advanceTime(const Scalar time_final)
 {
-  bool out;
   if (basicIntegrator_ != Teuchos::null) {
-    out = basicIntegrator_->advanceTime(time_final);
+    return basicIntegrator_->advanceTime(time_final);
   }
   if (fwdSensIntegrator_ != Teuchos::null) {
-    out = fwdSensIntegrator_->advanceTime(time_final);
+    return fwdSensIntegrator_->advanceTime(time_final);
   }
   if (adjSensIntegrator_ != Teuchos::null) {
-    out = adjSensIntegrator_->advanceTime(time_final);
+    return adjSensIntegrator_->advanceTime(time_final);
   }
-  return out;
 }
 
 template <typename Scalar>
 Scalar
 Piro::TempusIntegrator<Scalar>::getTime() const
 {
-  Scalar time;
   if (basicIntegrator_ != Teuchos::null) {
-    time = basicIntegrator_->getTime();
+    return basicIntegrator_->getTime();
   }
   if (fwdSensIntegrator_ != Teuchos::null) {
-    time = fwdSensIntegrator_->getTime();
+    return fwdSensIntegrator_->getTime();
   }
   if (adjSensIntegrator_ != Teuchos::null) {
-    time = adjSensIntegrator_->getTime();
+    return adjSensIntegrator_->getTime();
   }
-  return time;
 }
 
 template <typename Scalar>

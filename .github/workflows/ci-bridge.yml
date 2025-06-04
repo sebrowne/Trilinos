@@ -7,25 +7,26 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/spack/ci-bridge:0.0.45
     timeout-minutes: 20  # Terminate any running job after 20 minutes
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set up environment variables
+      - name: Sync
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Replace with your secret name
           GITLAB_SSH_KEY_BASE64: ${{ secrets.SPACK_GITLAB_SSH_KEY }}  # Replace with your secret name
         run: |
           echo "Setting up environment variables"
           # Decode the SSH key if necessary
+          mkdir ~/.ssh
           echo "${GITLAB_SSH_KEY_BASE64}" | base64 --decode > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          # Add GitLab to known hosts
-          ssh-keyscan gitlab.spack.io >> ~/.ssh/known_hosts
-
-      - name: Sync
-        run: |
-          # Replace with the actual sync command
-          ./sync_script.sh "sebrowne/Trilinos" "ssh://git@ssh.gitlab.spack.io/sebrown/trilinos" "https://gitlab.spack.io" "sebrown/trilinos" "--sync-draft-prs"
+          #echo "Add GitLab to known hosts"
+          #ssh-keyscan gitlab.spack.io >> ~/.ssh/known_hosts
+          cd && ls -al
+          cd / && ls -al
+          python3 /scripts/SpackCIBridge.py "sebrowne/Trilinos" "ssh://git@ssh.gitlab.spack.io/sebrown/trilinos" "https://gitlab.spack.io" "sebrown/trilinos" "--sync-draft-prs"

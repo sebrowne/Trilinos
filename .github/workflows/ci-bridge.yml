@@ -1,0 +1,33 @@
+name: Sync GitHub and GitLab
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Runs every 5 minutes
+  pull_request:
+    types: [opened, synchronized, reopened]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20  # Terminate any running job after 20 minutes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up environment variables
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Replace with your secret name
+          GITLAB_SSH_KEY_BASE64: ${{ secrets.SPACK_GITLAB_SSH_KEY }}  # Replace with your secret name
+        run: |
+          echo "Setting up environment variables"
+          # Decode the SSH key if necessary
+          echo "${GITLAB_SSH_KEY_BASE64}" | base64 --decode > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # Add GitLab to known hosts
+          ssh-keyscan gitlab.spack.io >> ~/.ssh/known_hosts
+
+      - name: Sync
+        run: |
+          # Replace with the actual sync command
+          ./sync_script.sh "sebrowne/Trilinos" "ssh://git@ssh.gitlab.spack.io/sebrown/trilinos" "https://gitlab.spack.io" "sebrown/trilinos" "--sync-draft-prs"

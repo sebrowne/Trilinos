@@ -39,35 +39,6 @@ def find_and_process_files(directory, words_to_remove):
                 print(f"Processing file: {file_path}")
                 process_file(file_path, words_to_remove)
 
-def remove_if_statements(text):
-    # Regex pattern to match if statements with conditions containing "Epetra"
-    pattern = r'if\s*\(([^)]+Epetra[^)]+)\)\s*([\s\S]*?)(?=\n\s*endif|\n\s*else|\n\s*if|\n\s*$)'
-
-    # Use re.sub to remove matching if statements and their bodies
-    modified_text = re.sub(pattern, '', text, flags=re.MULTILINE)
-    print(modified_text)
-    return modified_text
-
-def process_lists_file(file_path):
-    # Read the content of the file
-    with open(file_path, 'r') as file:
-        content = file.read()
-
-    # Remove specified if statements
-    modified_content = remove_if_statements(content)
-
-    # Write the modified content back to the file
-    with open(file_path, 'w') as file:
-        file.write(modified_content)
-
-def find_and_process_lists_files(directory):
-    # Walk through the directory to find all CMakeLists.txt files
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            if file == 'CMakeLists.txt':
-                file_path = os.path.join(root, file)
-                print(f"Processing file: {file_path}")
-                process_lists_file(file_path)
 
 if __name__ == "__main__":
     # Specify the directory to search
@@ -77,5 +48,3 @@ if __name__ == "__main__":
 
     # Find and process all Dependencies.cmake files
     find_and_process_files(target_directory, words_to_remove)
-
-    #find_and_process_lists_files(target_directory)

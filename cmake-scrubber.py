@@ -783,7 +783,7 @@ def find_cmake_files_with_words(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Tool to iterate through 'CMakeLists.txt' files and attempt to remove conditional code related to deprecated Trilinos packages.\nWILL NOT WORK IN ALL CASES.\nWill not remove comments related to deprecated packages.\n\nThe tool will them summarize REMAINING deprecated-package-related words that are left in CMakeList.txt and *.cmake files.")
+    parser = argparse.ArgumentParser(description="Tool to iterate through 'CMakeLists.txt' files and attempt to remove conditional code related to deprecated Trilinos packages.\nWILL NOT WORK IN ALL CASES.\nWill not remove comments related to deprecated packages.\n\nThe tool will them summarize REMAINING deprecated-package-related words that are left in CMakeList.txt and *.cmake files.  Run this in a directory and it will iterate that directory (e.g. `packages/tpetra`).")
     parser.parse_args()
     target_directory = os.getcwd()
 

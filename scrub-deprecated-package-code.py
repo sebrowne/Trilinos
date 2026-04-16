@@ -49,6 +49,7 @@ def find_macros_to_remove(directory, regex_pattern):
 
 def run_unifdef(directory, macros_to_remove):
     print("\nUsing `unifdef` to remove preprocessor macros")
+    print("\n`unifdef` may report warnings/errors if it detects suspicious behavior (e.g. no newline at end of file + comment on previous line will warn about 'EOF encountered in comment')\n")
 
     with open('undef_macros.tmp', 'w') as temp_file:
         for macro in macros_to_remove:

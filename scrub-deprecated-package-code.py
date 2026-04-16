@@ -129,7 +129,7 @@ def scan_and_write_macro_file(target_directory, macro_file):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Scan for preprocessor macros related to deprecated Trilinos packages and remove them appropriately with `unifdef`.  Run this in a directory and it will iterate that directory (e.g. `packages/tpetra`).")
     parser.add_argument("-f", "--fresh", action="store_true", help="Explicitly can for preprocessor macros")
-    parser.add_argument("-r", "--remove", action="store_true", help="Run `unifdef` to remove all macros from all C/C++ source/header files")
+    parser.add_argument("-r", "--remove", action="store_true", help="Run `unifdef` to remove all macros from all C/C++ source/header files (this will likely only work on x86_64 architectures, it contains a bundled binary of `unifdef`)")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     _VERBOSE = args.verbose

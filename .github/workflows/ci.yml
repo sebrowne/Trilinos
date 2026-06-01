@@ -139,7 +139,7 @@ jobs:
 
           if [ -n "${{ inputs.extra-pr-driver-args }}" ]
           then
-            extra_pr_driver_args="${{ inputs.extra-pr-driver-args }}"
+            extra_pr_driver_args=${{ inputs.extra-pr-driver-args }}
           else
             extra_pr_driver_args=""
           fi

@@ -51,34 +51,42 @@ void AlltoAllCount(
 
     // Post receives
     RCP<CommRequest<int> > *requests = new RCP<CommRequest<int> > [nprocs];
-    for (int cnt = 0, i = 0; i < nprocs; i++) {
-      if (i != rank) {
-        try {
+    bool requestsAllocated = false;
+    try {
+      for (int cnt = 0, i = 0; i < nprocs; i++) {
+        if (i != rank) {
           requests[cnt++] = Teuchos::ireceive<int,int>(comm,
-                                                     rcp(&(recvCount[i]),false),
-                                                     i);
+                                                   rcp(&(recvCount[i]),false),
+                                                   i);
         }
-        Z2_THROW_OUTSIDE_ERROR(env);
       }
-    }
+      requestsAllocated = true;
 
-    Teuchos::barrier<int>(comm);
+      Teuchos::barrier<int>(comm);
 
-    // Send data; can use readySend since receives are posted.
-    for (int i = 0; i < nprocs; i++) {
-      if (i != rank) {
-        try {
+      // Send data; can use readySend since receives are posted.
+      for (int i = 0; i < nprocs; i++) {
+        if (i != rank) {
           Teuchos::readySend<int,int>(comm, sendCount[i], i);
         }
-        Z2_THROW_OUTSIDE_ERROR(env);
       }
-    }
 
-    // Wait for messages to return.
-    try {
+      // Wait for messages to return.
       Teuchos::waitAll<int>(comm, arrayView(requests, nprocs-1));
+      
     }
-    Z2_THROW_OUTSIDE_ERROR(env);
+    catch (...) {
+      if (requestsAllocated) {
+        // Clean up any requests that were created before rethrowing
+        for (int i = 0; i < nprocs-1; i++) {
+          if (requests[i].is_null() == false) {
+            requests[i]->wait();
+          }
+        }
+      }
+      delete [] requests;
+      throw;
+    }
 
     delete [] requests;
   }
@@ -102,82 +110,95 @@ void AlltoAllv(const Comm<int> &comm,
 {
   int nprocs = comm.getSize();
   int *newCount = new int [nprocs];
-  memset(newCount, 0, sizeof(int) * nprocs);
-  ArrayView<const int> newSendCount(newCount, nprocs);
-
-  size_t numStrings = sendBuf.size();
-  size_t numChars = 0;
-  bool fail=false;
-
-  for (int p=0, i=0; !fail && p < nprocs; p++){
-    for (int c=0; !fail && c < sendCount[p]; c++, i++){
-      size_t nchars = sendBuf[i].size();
-      if (nchars > SCHAR_MAX)
-        fail = true;
-      else
-        newCount[p] += nchars;
-    }
-    newCount[p] += sendCount[p];
-    numChars += newCount[p];
-  }
-
-  if (fail)
-    throw std::runtime_error("id string length exceeds SCHAR_MAX");
-
   char *sbuf = NULL;
-  if (numChars > 0)
-    sbuf = new char [numChars];
-  char *sbufptr = sbuf;
-
-  ArrayView<const char> newSendBuf(sbuf, numChars);
-
-  for (size_t i=0; i < numStrings; i++){
-    size_t nchars = sendBuf[i].size();
-    *sbufptr++ = static_cast<char>(nchars);
-    for (size_t j=0; j < nchars; j++)
-      *sbufptr++ = sendBuf[i][j];
-  }
-
-  ArrayRCP<char> newRecvBuf;
-  Array<int> newRecvCount(nprocs, 0);
-
-  AlltoAllv<char>(comm, env, newSendBuf, newSendCount,
-                  newRecvBuf, newRecvCount());
-
-  delete [] sbuf;
-  delete [] newCount;
-
-  char *inBuf = newRecvBuf.getRawPtr();
-
-  int numNewStrings = 0;
-  char *buf = inBuf;
-  char *endChar = inBuf + newRecvBuf.size();
-  while (buf < endChar){
-    int slen = static_cast<int>(*buf++);
-    buf += slen;
-    numNewStrings++;
-  }
-
-  // Data to return
-  std::string *newStrings = new std::string [numNewStrings];
-
-  buf = inBuf;
-  int next = 0;
-
-  for (int p=0; p < nprocs; p++){
-    int nchars = newRecvCount[p];
-    endChar = buf + nchars;
-    while (buf < endChar){
-      int slen = *buf++;
-      std::string nextString;
-      for (int i=0; i < slen; i++)
-        nextString.push_back(*buf++);
-      newStrings[next++] = nextString;
-      recvCount[p]++;
+  std::string *newStrings = NULL;
+  
+  try {
+    memset(newCount, 0, sizeof(int) * nprocs);
+    ArrayView<const int> newSendCount(newCount, nprocs);
+    
+    size_t numStrings = sendBuf.size();
+    size_t numChars = 0;
+    bool fail=false;
+    
+    for (int p=0, i=0; !fail && p < nprocs; p++){
+      for (int c=0; !fail && c < sendCount[p]; c++, i++){
+        size_t nchars = sendBuf[i].size();
+        if (nchars > SCHAR_MAX)
+          fail = true;
+        else
+          newCount[p] += nchars;
+      }
+      newCount[p] += sendCount[p];
+      numChars += newCount[p];
     }
-  }
+    
+    if (fail)
+      throw std::runtime_error("id string length exceeds SCHAR_MAX");
+    
+    if (numChars > 0)
+      sbuf = new char [numChars];
+    char *sbufptr = sbuf;
 
-  recvBuf = arcp<std::string>(newStrings, 0, numNewStrings, true);
+    ArrayView<const char> newSendBuf(sbuf, numChars);
+    
+    for (size_t i=0; i < numStrings; i++){
+      size_t nchars = sendBuf[i].size();
+      *sbufptr++ = static_cast<char>(nchars);
+      for (size_t j=0; j < nchars; j++)
+        *sbufptr++ = sendBuf[i][j];
+    }
+    
+    ArrayRCP<char> newRecvBuf;
+    Array<int> newRecvCount(nprocs, 0);
+    
+    AlltoAllv<char>(comm, env, newSendBuf, newSendCount,
+                    newRecvBuf, newRecvCount());
+    
+    char *inBuf = newRecvBuf.getRawPtr();
+    
+    int numNewStrings = 0;
+    char *buf = inBuf;
+    char *endChar = inBuf + newRecvBuf.size();
+    while (buf < endChar){
+      int slen = static_cast<int>(*buf++);
+      buf += slen;
+      numNewStrings++;
+    }
+    
+    // Data to return
+    newStrings = new std::string [numNewStrings];
+    
+    buf = inBuf;
+    int next = 0;
+    
+    for (int p=0; p < nprocs; p++){
+      int nchars = newRecvCount[p];
+      endChar = buf + nchars;
+      while (buf < endChar){
+        int slen = *buf++;
+        std::string nextString;
+        for (int i=0; i < slen; i++)
+          nextString.push_back(*buf++);
+        newStrings[next++] = nextString;
+        recvCount[p]++;
+      }
+    }
+    
+    recvBuf = arcp<std::string>(newStrings, 0, numNewStrings, true);
+    
+    // Clean up
+    delete [] sbuf;
+    delete [] newCount;
+    // newStrings is now owned by recvBuf, so we don't delete it
+  }
+  catch (...) {
+    // Clean up any allocated memory
+    delete [] sbuf;
+    delete [] newCount;
+    delete [] newStrings;
+    throw;
+  }
 }
 
 

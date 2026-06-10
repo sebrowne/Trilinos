@@ -466,20 +466,26 @@ MPI_Status status;
 
     int ack = 0;
 
-    if (myData.get_num_my_objects() > 0){
-      int *mygids = new int [myData.get_num_my_objects()];
+  if (myData.get_num_my_objects() > 0){
+    int *mygids = new int [myData.get_num_my_objects()];
 #ifdef MPICPP
-      MPI::COMM_WORLD.Send(&ack, 1, MPI::INT, 0, obj_ack_tag);
-      MPI::COMM_WORLD.Recv(mygids, myData.get_num_my_objects(), MPI::INT, 0, 
-               obj_id_tag, status);
+    MPI::COMM_WORLD.Send(&ack, 1, MPI::INT, 0, obj_ack_tag);
+    MPI::COMM_WORLD.Recv(mygids, myData.get_num_my_objects(), MPI::INT, 0, 
+             obj_id_tag, status);
 #else
-      MPI_Send(&ack, 1, MPI_INT, 0, obj_ack_tag, MPI_COMM_WORLD);
-      MPI_Recv(mygids, myData.get_num_my_objects(), MPI_INT, 0, 
-               obj_id_tag, MPI_COMM_WORLD, &status);
+    MPI_Send(&ack, 1, MPI_INT, 0, obj_ack_tag, MPI_COMM_WORLD);
+    MPI_Recv(mygids, myData.get_num_my_objects(), MPI_INT, 0, 
+             obj_id_tag, MPI_COMM_WORLD, &status);
 #endif
 
-      myData.set_my_global_ids(mygids);
+    myData.set_my_global_ids(mygids);
+  } else {
+    // Ensure cleanup of any previously allocated memory
+    if (myData.get_my_global_ids() != NULL) {
+      delete[] myData.get_my_global_ids();
+      myData.set_my_global_ids(NULL);
     }
+  }
     else if (myData.get_num_my_objects() == 0){
 #ifdef MPICPP
       MPI::COMM_WORLD.Send(&ack, 1, MPI::INT, 0, obj_ack_tag);

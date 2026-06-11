@@ -337,10 +337,13 @@ bool IDs<id_t>::ZoltanDDTest()
   // For now, we'll just do the update (which does a replace-like operation).
   zz.Update(zgids, NULL, (char*)(nIds ? &(user[0]) : NULL), NULL, inIds);
 
-  // Retrieve the result for all local IDs.
-  zz.Find(zgids, NULL, (char*)(nIds ? &(user[0]) : NULL), NULL, inIds, NULL);
+   // Retrieve the result for all local IDs.
+   zz.Find(zgids, NULL, (char*)(nIds ? &(user[0]) : NULL), NULL, inIds, NULL);
+   
+   // Clean up the memory allocated by ASSIGN_ARRAY
+   Zoltan2::TPL_Traits<ZOLTAN_ID_PTR, id_t>::DELETE_ARRAY(&zgids);
 
-  // The following step is needed only to test the results;
+   // The following step is needed only to test the results;
   // for general use, if user[i] > 1 in the summation, id[i] is shared.
   size_t cntShared = 0;
   std::unordered_set<id_t> alreadyCounted;

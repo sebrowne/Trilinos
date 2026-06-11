@@ -337,13 +337,21 @@ int main(int argc, char* argv[])
              xhat[i] = y[i] - xhat[i];
     }
     
-    std::cout << "||X||: " << norm2<Int,Entry>(n,x)
-              << " ||Y-AX||: " << norm2<Int,Entry>(m,xhat)
-              << std::endl;
+     std::cout << "||X||: " << norm2<Int,Entry>(n,x)
+               << " ||Y-AX||: " << norm2<Int,Entry>(m,xhat)
+               << std::endl;
 
-    mybasker.Finalize();
-  }
+     mybasker.Finalize();
+   }
 */
+   
+  // Clean up allocated memory to prevent leaks
+  delete[] col_ptr;
+  delete[] row_idx;
+  delete[] val;
+  delete[] x;
+  delete[] xhat;
+  delete[] y;
   
   Kokkos::finalize();
 

@@ -916,9 +916,10 @@ void AdapterFactory::InitializeVectorData(const RCP<T> &data,
   //    printf("}\n");
   //  }
   
-  //  printf("clean up coordarr and tpetravectors...\n\n\n");
-  delete [] petravectors;
-}
+   //  printf("clean up coordarr and tpetravectors...\n\n\n");
+   delete [] coordarr;
+   delete [] petravectors;
+ }
 
 // pamgen adapter
 AdapterWithTemplateName

@@ -1020,8 +1020,8 @@ namespace Zoltan2 {
 
       // Partition with MJ
       // Get the number of weights from the adapter to ensure the solution has the correct number of weight dimensions
-      modelFlag_t flags;
-      CoordinateModel<mvector_adapter_t> coordModel(adapcoordinates, env_, comm2, flags);
+      modelFlag_t coordFlags;
+      CoordinateModel<mvector_adapter_t> coordModel(adapcoordinates, env_, comm2, coordFlags);
       int numWeights = coordModel.getNumWeightsPerCoordinate();
       int numUserWeights = numWeights > 0 ? numWeights : 1;
       Teuchos::RCP<solution_t> vectorsolution( new solution_t(env_, comm2, numUserWeights, mj));

@@ -916,9 +916,8 @@ void AdapterFactory::InitializeVectorData(const RCP<T> &data,
   //    printf("}\n");
   //  }
   
-   //  printf("clean up coordarr and tpetravectors...\n\n\n");
-   delete [] coordarr;
-   delete [] petravectors;
+    // Note: coordarr and petravectors memory is now owned by the caller
+    // through the coords and weights vectors. Do not free here.
  }
 
 // pamgen adapter

@@ -570,16 +570,22 @@ namespace Zoltan2 {
 
       Sphynx::eigenvecsToCoords(eigenVectors_, computedNumEv, coordinates);
 
-      // Get the weights from the adapter
+       // Get the weights from the adapter
       std::vector<const weight_t *> weights;
       std::vector<int> wstrides;
       Sphynx::computeWeights(weights, wstrides);
 
-
+      
       // Compute the partition using MJ on coordinates
       Sphynx::MJwrapper(coordinates, weights, wstrides, solution);
+      
+      // Clean up the weights memory allocated by computeWeights
+      for (size_t i = 0; i < weights.size(); i++) {
+        delete[] const_cast<weight_t*>(weights[i]);
+      }
+      weights.clear();
 
-    }
+     }
 
   ///////////////////////////////////////////////////////////////////////////
   // Call LOBPCG on the Laplacian matrix.

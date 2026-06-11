@@ -214,7 +214,10 @@ public:
                    object.
     \return true if part sizes are uniform for this criteria.
  */
-  bool criteriaHasUniformPartSizes(int idx) const { return pSizeUniform_[idx];}
+  bool criteriaHasUniformPartSizes(int idx) const {
+    if (idx < 0 || idx >= pSizeUniform_.size()) return false;
+    return pSizeUniform_[idx];
+  }
 
 /*! \brief Get the size for a given weight index and a given part.
 
@@ -228,9 +231,8 @@ public:
       \todo It would be useful to algorithms to get the sum of
            part sizes from a to b, or the sum or a list of parts.
  */
-  scalar_t getCriteriaPartSize(int idx, part_t part) const {
-    if (pSizeUniform_[idx])
-      return 1.0 / nGlobalParts_;
+   scalar_t getCriteriaPartSize(int idx, part_t part) const {
+     if (idx < 0 || idx >= pSizeUniform_.size() || pSizeUniform_[idx])
     else if (pCompactIndex_[idx].size())
       return pSize_[idx][pCompactIndex_[idx][part]];
     else

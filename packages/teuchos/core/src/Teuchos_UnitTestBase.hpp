@@ -19,12 +19,16 @@
 #include "Teuchos_Describable.hpp"
 #include "Teuchos_FancyOStream.hpp"
 
+// Forward declaration
+class UnitTestRepository;
+
 
 namespace Teuchos {
 
 
 /** \brief Unit test base class. */
 class TEUCHOSCORE_LIB_DLL_EXPORT UnitTestBase : public Describable {
+  friend class UnitTestRepository;
 public:
 
   /** \brief . */

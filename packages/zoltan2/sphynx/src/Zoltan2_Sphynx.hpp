@@ -579,7 +579,7 @@ namespace Zoltan2 {
       // Compute the partition using MJ on coordinates
       Sphynx::MJwrapper(coordinates, weights, wstrides, solution);
       
-      // Clean up the weights memory allocated by computeWeights
+       // Clean up the weights memory allocated by computeWeights
       for (size_t i = 0; i < weights.size(); i++) {
         delete[] const_cast<weight_t*>(weights[i]);
       }

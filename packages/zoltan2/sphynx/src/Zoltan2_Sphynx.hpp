@@ -162,8 +162,8 @@ namespace Zoltan2 {
           int computedNumEv,
           Teuchos::RCP<mvector_t> &coordinates);
 
-      void computeWeights(std::vector<const weight_t *> vecweights,
-          std::vector<int> strides);
+      void computeWeights(std::vector<const weight_t *> &vecweights,
+          std::vector<int> &strides);
 
       void MJwrapper(const Teuchos::RCP<const mvector_t> &coordinates,
           std::vector<const weight_t *> weights,

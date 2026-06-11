@@ -257,13 +257,14 @@ int readHB_info(const char* filename, int* M, int* N, int* nz, char** Type,
   char Title[73], Key[9], Rhstype[4];
   char Ptrfmt[17], Indfmt[17], Valfmt[21], Rhsfmt[21];
 
-  mat_type = (char*)malloc(4);
-  if (mat_type == NULL) IOHBTerminate("Insufficient memory for mat_type\n");
+   mat_type = (char*)malloc(4);
+   if (mat_type == NULL) IOHBTerminate("Insufficient memory for mat_type\n");
 
-  if ((in_file = std::fopen(filename, "r")) == NULL) {
-    std::fprintf(stderr, "Error: Cannot open file: %s\n", filename);
-    return 0;
-  }
+   if ((in_file = std::fopen(filename, "r")) == NULL) {
+     std::fprintf(stderr, "Error: Cannot open file: %s\n", filename);
+     free(mat_type);
+     return 0;
+   }
 
   readHB_header(in_file, Title, Key, mat_type, &Nrow, &Ncol, &Nnzero, Nrhs,
                 Ptrfmt, Indfmt, Valfmt, Rhsfmt,

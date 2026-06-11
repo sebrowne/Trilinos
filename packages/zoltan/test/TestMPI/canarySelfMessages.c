@@ -66,12 +66,19 @@ int main(int narg, char**arg)
            my_proc, status.MPI_SOURCE, ucount);
   }
 
-  for (i = 0; i < nrecvs; i++)
-    printf("%d procs_from %d vals_from %d %s \n",
-           my_proc, procs_from[i], vals_from[i], 
-           (vals_from[i] < 0 ? "FAIL FAIL FAIL" : " "));
+   for (i = 0; i < nrecvs; i++)
+     printf("%d procs_from %d vals_from %d %s \n",
+            my_proc, procs_from[i], vals_from[i], 
+            (vals_from[i] < 0 ? "FAIL FAIL FAIL" : " "));
 
-  MPI_Comm_free(&comm);
-  MPI_Finalize();
-  return 0;
+   /* Free allocated memory to prevent leaks */
+   free(vals_from);
+   free(vals_to);
+   free(procs_from);
+   free(procs_to);
+   free(req);
+
+   MPI_Comm_free(&comm);
+   MPI_Finalize();
+   return 0;
 }

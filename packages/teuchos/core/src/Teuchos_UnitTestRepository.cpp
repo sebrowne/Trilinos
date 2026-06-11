@@ -503,9 +503,7 @@ UnitTestRepository::InstanceData& UnitTestRepository::getData()
 bool UnitTestRepository::runUnitTestImpl(const UnitTestBase &unitTest,
   FancyOStream &out)
 {
-  bool success = true;
-  unitTest.runUnitTestImpl(out, success);
-  const bool result = success;
+  const bool result = unitTest.runUnitTest(out);
   if (getData().globallyReduceUnitTestResult) {
     const int globalSum = GlobalMPISession::sum(result ? 0 : 1);
     if (globalSum == 0) {

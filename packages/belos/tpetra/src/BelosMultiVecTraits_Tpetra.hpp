@@ -97,11 +97,17 @@ struct PoolStatus {
 
   // Whether the multivector pool is allocated.
   static bool IsAllocated;
+  
+  // Whether the multivector pool is being finalized.
+  static bool IsFinalizing;
 
 };
 
 template<class Scalar, class LO, class GO, class Node>
 bool PoolStatus<Scalar, LO, GO, Node>::IsAllocated = false;
+
+template<class Scalar, class LO, class GO, class Node>
+bool PoolStatus<Scalar, LO, GO, Node>::IsFinalizing = false;
 
 
 template<class Scalar, class LO, class GO, class Node>
@@ -115,7 +121,11 @@ public:
     Kokkos::push_finalize_hook([this]() {
       if (PoolStatus<Scalar, LO, GO, Node>::IsAllocated) {
         // Pool has not yet been deallocated, release the stored Kokkos views
+        // First mark the pool as finalizing to prevent race conditions
+        PoolStatus<Scalar, LO, GO, Node>::IsFinalizing = true;
         this->availableDVs.clear();
+        PoolStatus<Scalar, LO, GO, Node>::IsAllocated = false;
+        PoolStatus<Scalar, LO, GO, Node>::IsFinalizing = false;
       }
     });
   }
@@ -172,8 +182,9 @@ private:
         using global_ordinal_type = typename MV::global_ordinal_type;
         using node_type = typename MV::node_type;
 
-        if (PoolStatus<scalar_type, local_ordinal_type, global_ordinal_type, node_type>::IsAllocated) {
-          // Pool is still allocated, push DV back to it
+        if (PoolStatus<scalar_type, local_ordinal_type, global_ordinal_type, node_type>::IsAllocated &&
+            !PoolStatus<scalar_type, local_ordinal_type, global_ordinal_type, node_type>::IsFinalizing) {
+          // Pool is still allocated and not finalizing, push DV back to it
           dv_pool.push_back(dv);
         }
         delete mv_ptr;

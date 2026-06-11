@@ -924,8 +924,8 @@ namespace Zoltan2 {
   // If user didn't provide weights but told us to use degree as weight, do so.
   // If user neither provided weights nor told us what to do, use degree as weight.
   template <typename Adapter>
-    void Sphynx<Adapter>::computeWeights(std::vector<const weight_t *> vecweights,
-        std::vector<int> strides)
+    void Sphynx<Adapter>::computeWeights(std::vector<const weight_t *> &vecweights,
+        std::vector<int> &strides)
     {
 
       int numWeights = adapter_->getNumWeightsPerVertex();
@@ -971,13 +971,18 @@ namespace Zoltan2 {
               weights[j][i] = wgt[i];
           }
 
-          vecweights.push_back(weights[j]);
-          strides.push_back(1);
+           vecweights.push_back(weights[j]);
+           strides.push_back(1);
 
-        }
-      }
+         }
+       }
 
-    }
+      // Clean up the locally allocated weights array
+      for(int j = 0; j < numConstraints; j++)
+        delete[] weights[j];
+      delete[] weights;
+
+     }
 
 
   ///////////////////////////////////////////////////////////////////////////
@@ -1020,11 +1025,6 @@ namespace Zoltan2 {
       Teuchos::ArrayRCP<part_t> parts(myNumVertices);
       for(size_t i = 0; i < myNumVertices; i++) parts[i] = vectorsolution->getPartListView()[i];
       solution->setParts(parts);
-      
-      // Clean up allocated memory
-      for(int j = 0; j < numConstraints; j++)
-        delete[] weights[j];
-      delete[] weights;
     }
 
 } // namespace Zoltan2

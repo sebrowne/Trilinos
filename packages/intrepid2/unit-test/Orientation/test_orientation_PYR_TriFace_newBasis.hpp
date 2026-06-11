@@ -561,7 +561,9 @@ int OrientationPyrTriFaceNewBasis(const bool verbose) {
               for (std::size_t k=0; k<nodeCount; ++k)
               {
                 auto pyrNode = pyramid.getNodeMap(2,is,k);
-                face[k]= pyrs_rotated[i][pyrNode];
+                if (k < face.size()) {
+                  face[k]= pyrs_rotated[i][pyrNode];
+                }
               }
 
               //rotate and flip

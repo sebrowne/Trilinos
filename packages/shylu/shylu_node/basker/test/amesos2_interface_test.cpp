@@ -268,10 +268,13 @@ int main(int argc, char* argv[])
     }
 
   }
-  delete [] y;
-  delete [] x;
-  delete [] xhat;
-  
-  Kokkos::finalize();
+   delete [] y;
+   delete [] x;
+   delete [] xhat;
+   
+   // Free matrix data
+   freeMatrix<Int,Entry>(col_ptr, row_idx, val);
+   
+   Kokkos::finalize();
 
 }//end main

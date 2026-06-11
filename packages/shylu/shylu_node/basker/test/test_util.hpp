@@ -35,6 +35,18 @@ double totalTime(double start, double end)
 }
 
 template <class Int, class Entry>
+void freeMatrix(
+  Int *col_ptr,
+  Int *row_idx,
+  Entry *val
+)
+{
+  delete [] col_ptr;
+  delete [] row_idx;
+  delete [] val;
+}
+
+template <class Int, class Entry>
 void readMatrix
 (
  std::string fname, 

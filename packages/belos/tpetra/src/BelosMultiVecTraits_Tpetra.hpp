@@ -118,16 +118,16 @@ public:
     TEUCHOS_ASSERT(!(PoolStatus<Scalar, LO, GO, Node>::IsAllocated));
     PoolStatus<Scalar, LO, GO, Node>::IsAllocated = true;
 
-    Kokkos::push_finalize_hook([this]() {
-      if (PoolStatus<Scalar, LO, GO, Node>::IsAllocated) {
-        // Pool has not yet been deallocated, release the stored Kokkos views
-        // First mark the pool as finalizing to prevent race conditions
-        PoolStatus<Scalar, LO, GO, Node>::IsFinalizing = true;
-        this->availableDVs.clear();
-        PoolStatus<Scalar, LO, GO, Node>::IsAllocated = false;
-        PoolStatus<Scalar, LO, GO, Node>::IsFinalizing = false;
-      }
-    });
+     Kokkos::push_finalize_hook([this]() {
+       if (PoolStatus<Scalar, LO, GO, Node>::IsAllocated) {
+         // Pool has not yet been deallocated, release the stored Kokkos views
+         // First mark the pool as finalizing to prevent race conditions
+         PoolStatus<Scalar, LO, GO, Node>::IsFinalizing = true;
+         this->availableDVs.clear();
+         PoolStatus<Scalar, LO, GO, Node>::IsAllocated = false;
+         // Keep IsFinalizing = true to prevent any further access to the invalidated pool
+       }
+     });
   }
 
   ~MultiVecPool() {
@@ -175,21 +175,22 @@ private:
   using dv_t = typename MV::dual_view_type;
   struct RCPDeleter
   {
-    void free(MV * mv_ptr) {
-      if(mv_ptr) {
-        using scalar_type = typename MV::scalar_type;
-        using local_ordinal_type = typename MV::local_ordinal_type;
-        using global_ordinal_type = typename MV::global_ordinal_type;
-        using node_type = typename MV::node_type;
+     void free(MV * mv_ptr) {
+       if(mv_ptr) {
+         using scalar_type = typename MV::scalar_type;
+         using local_ordinal_type = typename MV::local_ordinal_type;
+         using global_ordinal_type = typename MV::global_ordinal_type;
+         using node_type = typename MV::node_type;
 
-        if (PoolStatus<scalar_type, local_ordinal_type, global_ordinal_type, node_type>::IsAllocated &&
-            !PoolStatus<scalar_type, local_ordinal_type, global_ordinal_type, node_type>::IsFinalizing) {
-          // Pool is still allocated and not finalizing, push DV back to it
-          dv_pool.push_back(dv);
-        }
-        delete mv_ptr;
-      }
-    }
+         // Check if pool is still valid before attempting to access it
+         if (PoolStatus<scalar_type, local_ordinal_type, global_ordinal_type, node_type>::IsAllocated &&
+             !PoolStatus<scalar_type, local_ordinal_type, global_ordinal_type, node_type>::IsFinalizing) {
+           // Pool is still allocated and not finalizing, push DV back to it
+           dv_pool.push_back(dv);
+         }
+         delete mv_ptr;
+       }
+     }
     std::vector<dv_t> & dv_pool;
     dv_t dv;
   };

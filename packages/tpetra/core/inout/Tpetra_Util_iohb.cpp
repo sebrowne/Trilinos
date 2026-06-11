@@ -543,6 +543,11 @@ int readHB_newmat_double(const char* filename, int* M, int* N, int* nonzeros,
   char* Type;
 
   if (readHB_info(filename, M, N, nonzeros, &Type, &Nrhs) == 0) {
+    // readHB_info failed, but it may have allocated memory for Type
+    // We need to free it before returning
+    if (Type != NULL) {
+      free(Type);
+    }
     return 0;
   }
 

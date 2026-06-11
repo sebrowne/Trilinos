@@ -1020,6 +1020,11 @@ namespace Zoltan2 {
       Teuchos::ArrayRCP<part_t> parts(myNumVertices);
       for(size_t i = 0; i < myNumVertices; i++) parts[i] = vectorsolution->getPartListView()[i];
       solution->setParts(parts);
+      
+      // Clean up allocated memory
+      for(int j = 0; j < numConstraints; j++)
+        delete[] weights[j];
+      delete[] weights;
     }
 
 } // namespace Zoltan2

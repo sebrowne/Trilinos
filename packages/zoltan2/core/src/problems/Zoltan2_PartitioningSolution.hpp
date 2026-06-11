@@ -231,13 +231,14 @@ public:
       \todo It would be useful to algorithms to get the sum of
            part sizes from a to b, or the sum or a list of parts.
  */
-   scalar_t getCriteriaPartSize(int idx, part_t part) const {
-     if (idx < 0 || idx >= pSizeUniform_.size() || pSizeUniform_[idx])
+    scalar_t getCriteriaPartSize(int idx, part_t part) const {
+      if (idx < 0 || idx >= pSizeUniform_.size() || pSizeUniform_[idx])
+        return 1.0 / nGlobalParts_;
     else if (pCompactIndex_[idx].size())
       return pSize_[idx][pCompactIndex_[idx][part]];
     else
       return pSize_[idx][part];
-  }
+   }
 
 /*! \brief Return true if the two weight indices have the same
  *          part size information.

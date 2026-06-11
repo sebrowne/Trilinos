@@ -977,11 +977,6 @@ namespace Zoltan2 {
          }
        }
 
-      // Clean up the locally allocated weights array
-      for(int j = 0; j < numConstraints; j++)
-        delete[] weights[j];
-      delete[] weights;
-
      }
 
 

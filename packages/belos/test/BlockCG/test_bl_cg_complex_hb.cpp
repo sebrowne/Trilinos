@@ -198,11 +198,10 @@ int main(int argc, char *argv[]) {
     if (proc_verbose)
       std::cout << "Achieved tol : "<<ach_tol<<std::endl;
 
-    // Clean up.
-    delete [] dvals;
-    delete [] colptr;
-    delete [] rowind;
-    delete [] cvals;
+     // Clean up.
+     free(colptr);
+     free(rowind);
+     free(cvals);
 
     success = ret==Belos::Converged && !norm_failure;
 

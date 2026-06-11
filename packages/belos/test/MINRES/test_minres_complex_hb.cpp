@@ -181,11 +181,10 @@ bool proc_verbose = false;
     }
   }
 
-  // Clean up.
-  delete [] dvals;
-  delete [] colptr;
-  delete [] rowind;
-  delete [] cvals;
+     // Clean up.
+     free(colptr);
+     free(rowind);
+     free(cvals);
 
 success = ret==Belos::Converged && !norm_failure;
 

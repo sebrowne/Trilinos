@@ -235,11 +235,10 @@ int main(int argc, char *argv[]) {
       std::cout << "Final abs 2-norm / rhs 2-norm : " << residualLog[residualLog.size()-1] / norm_denom[0] << std::endl;
     }
 
-    // Clean up.
-    delete [] dvals;
-    delete [] colptr;
-    delete [] rowind;
-    delete [] cvals;
+     // Clean up.
+     free(colptr);
+     free(rowind);
+     free(cvals);
 
     success = ret==Belos::Converged && !norm_failure;
     if (success) {

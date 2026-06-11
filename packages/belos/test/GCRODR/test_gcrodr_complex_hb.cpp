@@ -175,11 +175,10 @@ int main(int argc, char *argv[]) {
     solver.reset(Belos::Problem);
     ret = solver.solve();
     numIters3=solver.getNumIters();
-    // Clean up.
-    delete [] dvals;
-    delete [] colptr;
-    delete [] rowind;
-    delete [] cvals;
+     // Clean up.
+     free(colptr);
+     free(rowind);
+     free(cvals);
     // Test for failures
     if ( ret!=Belos::Converged || norm_failure || numIters1 < numIters2 || numIters2 < numIters3 ) {
       success = false;

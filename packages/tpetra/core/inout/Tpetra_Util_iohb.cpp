@@ -568,10 +568,16 @@ int readHB_newmat_double(const char* filename, int* M, int* N, int* nonzeros,
       /* Malloc enough space for real array val[] */
       *val = (double*)malloc(*nonzeros * sizeof(double));
       if (*val == NULL) IOHBTerminate("Insufficient memory for val.\n");
-    }
-  } /* No val[] space needed if pattern only */
-  return readHB_mat_double(filename, *colptr, *rowind, *val);
-}
+     }
+   } /* No val[] space needed if pattern only */
+   
+   // Free the Type memory allocated by readHB_info
+   if (Type != NULL) {
+     free(Type);
+   }
+   
+   return readHB_mat_double(filename, *colptr, *rowind, *val);
+ }
 
 int readHB_aux_double(const char* filename, const char AuxType, double b[]) {
   /****************************************************************************/
@@ -772,10 +778,15 @@ int readHB_newaux_double(const char* filename, const char AuxType, double** b) {
     } else {
       *b = (double*)malloc(M * Nrhs * sizeof(double));
       if (*b == NULL) IOHBTerminate("Insufficient memory for rhs.\n");
-      return readHB_aux_double(filename, AuxType, *b);
-    }
-  }
-}
+       return readHB_aux_double(filename, AuxType, *b);
+     }
+   }
+   
+   // Free the Type memory allocated by readHB_info
+   if (Type != NULL) {
+     free(Type);
+   }
+ }
 
 int writeHB_mat_double(const char* filename, int M, int N,
                        int nz, const int colptr[], const int rowind[],

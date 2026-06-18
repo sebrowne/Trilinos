@@ -551,8 +551,8 @@ int main(int argc, char* argv[]) {
   p0.set("dense_rows", dense_rows);
   p0.set("processors", procs);
 
-  auto pl = get_timer_stats(comm);
-  p0.set("Timing", pl);
+  // auto pl = get_timer_stats(comm);
+  // p0.set("Timing", pl);
 
   std::ostringstream f;
   f << "UnpackLongRows_"

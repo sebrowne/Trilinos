@@ -576,9 +576,10 @@ int main_(int argc, char *argv[]) {
          nnzPerRowUpperBound_h_capped[i] = cappedValue;
        }
      }
-      nnzPerRowUpperBound.modify_host();
-      Kokkos::deep_copy(nnzPerRowUpperBound.view_host(), nnzPerRowUpperBound_h_capped);
-      nnzPerRowUpperBound.sync_device();
+      auto nnzPerRowUpperBound_h = nnzPerRowUpperBound.view_host();
+      for (size_t i = 0; i < nnzPerRowUpperBound_h_capped.size(); ++i) {
+        nnzPerRowUpperBound_h[i] = nnzPerRowUpperBound_h_capped[i];
+      }
    }
    
    RCP<Tpetra_FECrsGraph> StiffGraph = rcp(new Tpetra_FECrsGraph(globalMapG,ownedPlusSharedMapG,nnzPerRowUpperBound));

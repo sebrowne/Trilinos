@@ -488,7 +488,7 @@ void time_single_row_unpack() {
       os << "Standalone test: parallel: " << test_row_length;
       Teuchos::RCP<Teuchos::Time> st = Teuchos::TimeMonitor::getNewCounter(os.str());
       Teuchos::TimeMonitor tm(*st);
-      if (test_row_length > 0) {
+      if (test_row_length > 0 && a.data() != nullptr && c.data() != nullptr) {
         Kokkos::parallel_for(
             test_row_length,
             KOKKOS_LAMBDA(const size_t i) {
@@ -507,7 +507,7 @@ void time_single_row_unpack() {
       os << "Standalone test: one row: " << test_row_length;
       Teuchos::RCP<Teuchos::Time> st = Teuchos::TimeMonitor::getNewCounter(os.str());
       Teuchos::TimeMonitor tm(*st);
-      if (test_row_length > 0) {
+      if (test_row_length > 0 && a.data() != nullptr && c.data() != nullptr) {
         Kokkos::parallel_for(
             1,
             KOKKOS_LAMBDA(const size_t i) {

@@ -276,6 +276,11 @@ int SimpleObjectDB<T>::removeRCP(int &index)
 template <class T>
 RCP<T> SimpleObjectDB<T>::getNonconstObjRCP(const int index)
 {
+  // Check bounds first to avoid null pointer dereference
+  if (tableOfObjects_.size() == 0) {
+    TEUCHOS_TEST_FOR_EXCEPTION(true, RangeError,
+      "Error, attempting to access object at index " << index << " in empty table");
+  }
   validateIndex(index);
   return tableOfObjects_[index].getNonconstObj();
 }
@@ -284,6 +289,11 @@ RCP<T> SimpleObjectDB<T>::getNonconstObjRCP(const int index)
 template <class T>
 RCP<const T> SimpleObjectDB<T>::getConstObjRCP(const int index) const
 {
+  // Check bounds first to avoid null pointer dereference
+  if (tableOfObjects_.size() == 0) {
+    TEUCHOS_TEST_FOR_EXCEPTION(true, RangeError,
+      "Error, attempting to access object at index " << index << " in empty table");
+  }
   validateIndex(index);
   return tableOfObjects_[index].getConstObj();
 }

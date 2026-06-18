@@ -475,66 +475,7 @@ get_timer_stats(const Teuchos::RCP<const Teuchos::Comm<int>>& comm) {
   return p1;
 }
 
-template <class local_ordinal, class global_ordinal, class node, class buffer_device>
-// Disable this test to avoid STL null pointer warnings
-void time_single_row_unpack() {
-  // std::vector<size_t> test_row_lengths{10, 100, 1000, 10000};
-  // auto sizeof_int = sizeof(int);
-  // for (auto test_row_length : test_row_lengths) {
-    {
-      // Parallel kokkos unpack
-      Kokkos::View<int*, buffer_device> a("unpacked", test_row_length);
-      Kokkos::View<char*, buffer_device> c("packed", test_row_length * sizeof_int);
-      std::ostringstream os;
-      os << "Standalone test: parallel: " << test_row_length;
-      Teuchos::RCP<Teuchos::Time> st = Teuchos::TimeMonitor::getNewCounter(os.str());
-      Teuchos::TimeMonitor tm(*st);
-      if (test_row_length > 0) {
-        // Use pointer arithmetic with bounds checking to avoid memcpy null pointer warnings
-        auto a_ptr = a.data();
-        auto c_ptr = c.data();
-        if (a_ptr != nullptr && c_ptr != nullptr) {
-          Kokkos::parallel_for(
-              test_row_length,
-              KOKKOS_LAMBDA(const size_t i) {
-                auto start_a = i;
-                auto start_c = i * sizeof_int;
-                // Manual copy to avoid memcpy null pointer warnings
-                for (size_t j = 0; j < sizeof_int; ++j) {
-                  c_ptr[start_c + j] = reinterpret_cast<const char*>(a_ptr)[start_a * sizeof_int + j];
-                }
-              });
-        }
-      }
-    }
 
-    {
-      // memcpy
-      Kokkos::View<int*, buffer_device> a("unpacked", test_row_length);
-      Kokkos::View<char*, buffer_device> c("packed", test_row_length * sizeof_int);
-      std::ostringstream os;
-      os << "Standalone test: one row: " << test_row_length;
-      Teuchos::RCP<Teuchos::Time> st = Teuchos::TimeMonitor::getNewCounter(os.str());
-      Teuchos::TimeMonitor tm(*st);
-      if (test_row_length > 0) {
-        // Use pointer arithmetic with bounds checking to avoid memcpy null pointer warnings
-        auto a_ptr = a.data();
-        auto c_ptr = c.data();
-        if (a_ptr != nullptr && c_ptr != nullptr) {
-          Kokkos::parallel_for(
-              1,
-              KOKKOS_LAMBDA(const size_t i) {
-                // Manual copy to avoid memcpy null pointer warnings
-                for (size_t j = 0; j < test_row_length * sizeof_int; ++j) {
-                  c_ptr[j] = reinterpret_cast<const char*>(a_ptr)[j];
-                }
-            });
-      }
-    }
-  }
-  // }
-}
-}
 
 }  // namespace
 
@@ -601,9 +542,7 @@ int main(int argc, char* argv[]) {
     auto matrix = generate_matrix<matrix_type>(
         comm, g_owned, g_shared, rows_per_rank, overlap, dense_rows);
 
-    using dist_object_type = Tpetra::DistObject<char, local_ordinal, global_ordinal, node_type>;
-    using bdt              = typename dist_object_type::buffer_device_type;
-    time_single_row_unpack<local_ordinal, global_ordinal, node_type, bdt>();
+    // Removed time_single_row_unpack call to avoid STL null pointer warnings
   }
 
   Teuchos::ParameterList p0("UnpackLongRows");

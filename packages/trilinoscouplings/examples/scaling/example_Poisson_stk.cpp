@@ -576,7 +576,6 @@ int main_(int argc, char *argv[]) {
          nnzPerRowUpperBound_h_capped[i] = cappedValue;
        }
      }
-      auto nnzPerRowUpperBound_h = nnzPerRowUpperBound.view_host();
       for (size_t i = 0; i < nnzPerRowUpperBound_h_capped.size(); ++i) {
         nnzPerRowUpperBound_h[i] = nnzPerRowUpperBound_h_capped[i];
       }

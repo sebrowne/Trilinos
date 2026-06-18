@@ -576,7 +576,7 @@ int main_(int argc, char *argv[]) {
          nnzPerRowUpperBound_h_capped[i] = cappedValue;
        }
      }
-     Kokkos::deep_copy(nnzPerRowUpperBound, nnzPerRowUpperBound_h_capped);
+      Kokkos::deep_copy(nnzPerRowUpperBound.view_host(), nnzPerRowUpperBound_h_capped);
    }
    
    RCP<Tpetra_FECrsGraph> StiffGraph = rcp(new Tpetra_FECrsGraph(globalMapG,ownedPlusSharedMapG,nnzPerRowUpperBound));

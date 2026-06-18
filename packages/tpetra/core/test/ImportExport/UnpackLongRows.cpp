@@ -440,40 +440,7 @@ generate_matrix(
   return mtx_owned;
 }
 
-Teuchos::ParameterList
-get_timer_stats(const Teuchos::RCP<const Teuchos::Comm<int>>& comm) {
-  using Teuchos::ParameterList;
-  using Teuchos::rcp;
-  using Teuchos::RCP;
-  using Teuchos::TimeMonitor;
-  typedef std::vector<std::string>::size_type size_type;
-  typedef Teuchos::stat_map_type stat_map_type;
 
-  // bool alwaysWriteLocal = false;
-  // bool writeGlobalStats = true;
-  // bool writeZeroTimers = false;
-
-  stat_map_type stat_data;
-  std::vector<std::string> stat_names;
-  TimeMonitor::computeGlobalTimerStatistics(stat_data, stat_names, comm.ptr(), Teuchos::Union);
-
-  ParameterList p1;
-  for (auto it = stat_data.begin(); it != stat_data.end(); ++it) {
-    ParameterList px;
-    ParameterList counts;
-    ParameterList times;
-    const std::vector<std::pair<double, double>>& cur_data = it->second;
-    for (size_type ix = 0; ix < cur_data.size(); ++ix) {
-      times.set(stat_names[ix], cur_data[ix].first);
-      counts.set(stat_names[ix], static_cast<int>(cur_data[ix].second));
-    }
-    px.set("Total times", times);
-    px.set("Call counts", counts);
-    p1.set(it->first, px);
-  }
-
-  return p1;
-}
 
 
 

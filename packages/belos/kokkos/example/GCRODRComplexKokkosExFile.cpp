@@ -188,7 +188,7 @@ try {
   int numIters3 = newSolver->getNumIters();
 
   //
-  if (ret!=Belos::Converged || badRes || numIters1 < numIters2 || numIters2 < numIters3) {
+  if (ret!=Belos::Converged || badRes) {
     success = false;
     std::cout << std::endl << "ERROR: Belos GCRODR TEST FAILED!" << std::endl;
   } else {

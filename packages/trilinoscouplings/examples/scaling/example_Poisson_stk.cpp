@@ -549,9 +549,38 @@ int main_(int argc, char *argv[]) {
       }
     });
 
-  // Build the Graph
-  RCP<Tpetra_FECrsGraph> StiffGraph = rcp(new Tpetra_FECrsGraph(globalMapG,ownedPlusSharedMapG,nnzPerRowUpperBound));
-  Tpetra::beginAssembly(*StiffGraph);
+   // Build the Graph
+   // Add bounds checking to prevent excessive memory allocation
+   size_t totalNNZEstimate = 0;
+   for (size_t i = 0; i < nnzPerRowUpperBound_h.size(); ++i) {
+     totalNNZEstimate += nnzPerRowUpperBound_h[i];
+   }
+   
+   // Limit the total NNZ estimate to prevent memory exhaustion
+   // This is a safety check - the actual graph construction will handle the real NNZ count
+   const size_t MAX_NNZ_LIMIT = 100000000; // 100M entries limit
+   if (totalNNZEstimate > MAX_NNZ_LIMIT) {
+     if (MyPID == 0) {
+       std::cout << "Warning: NNZ estimate " << totalNNZEstimate 
+                 << " exceeds safety limit. Capping at " << MAX_NNZ_LIMIT << std::endl;
+     }
+     // Cap the estimate to prevent memory allocation issues
+     auto nnzPerRowUpperBound_h_capped = nnzPerRowUpperBound_h;
+     size_t remainingNNZ = MAX_NNZ_LIMIT;
+     for (size_t i = 0; i < nnzPerRowUpperBound_h_capped.size(); ++i) {
+       if (remainingNNZ <= 0) {
+         nnzPerRowUpperBound_h_capped[i] = 0;
+       } else {
+         size_t cappedValue = std::min(nnzPerRowUpperBound_h_capped[i], remainingNNZ);
+         remainingNNZ -= cappedValue;
+         nnzPerRowUpperBound_h_capped[i] = cappedValue;
+       }
+     }
+     Kokkos::deep_copy(nnzPerRowUpperBound, nnzPerRowUpperBound_h_capped);
+   }
+   
+   RCP<Tpetra_FECrsGraph> StiffGraph = rcp(new Tpetra_FECrsGraph(globalMapG,ownedPlusSharedMapG,nnzPerRowUpperBound));
+   Tpetra::beginAssembly(*StiffGraph);
   stk::mesh::for_each_entity_run(bulkData, ELEMENT_RANK, locallyOwnedSelector,
     [&](const stk::mesh::BulkData& mesh, stk::mesh::Entity elem)
     {

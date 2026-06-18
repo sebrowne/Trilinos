@@ -155,7 +155,7 @@ try {
   //
   Belos::ReturnType ret;
   ret = newSolver->solve();
-  int numIters1 = newSolver->getNumIters();
+  (void)newSolver->getNumIters();
 
   //
   // Compute actual residuals.
@@ -179,13 +179,13 @@ try {
   X->MvInit(0.0);
   newSolver->reset(Belos::Problem);
   ret = newSolver->solve();
-  int numIters2 = newSolver->getNumIters();
+  (void)newSolver->getNumIters();
 
   // Resolve linear system (again) with same rhs and recycled space
   X->MvInit(0.0);
   newSolver->reset(Belos::Problem);
   ret = newSolver->solve();
-  int numIters3 = newSolver->getNumIters();
+  (void)newSolver->getNumIters();
 
   //
   if (ret!=Belos::Converged || badRes) {

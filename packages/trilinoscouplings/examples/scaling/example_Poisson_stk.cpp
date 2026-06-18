@@ -579,6 +579,7 @@ int main_(int argc, char *argv[]) {
       for (size_t i = 0; i < nnzPerRowUpperBound_h_capped.size(); ++i) {
         nnzPerRowUpperBound_h[i] = nnzPerRowUpperBound_h_capped[i];
       }
+      nnzPerRowUpperBound.sync_device();
    }
    
    RCP<Tpetra_FECrsGraph> StiffGraph = rcp(new Tpetra_FECrsGraph(globalMapG,ownedPlusSharedMapG,nnzPerRowUpperBound));

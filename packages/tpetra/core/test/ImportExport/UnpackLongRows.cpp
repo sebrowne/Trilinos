@@ -7,6 +7,10 @@
 // *****************************************************************************
 // @HEADER
 
+// Disable nonnull warning for this file due to false positives in STL
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnonnull"
+
 #include <numeric>
 
 #include "Kokkos_Core.hpp"
@@ -537,3 +541,5 @@ int main(int argc, char* argv[]) {
 }
 
 #undef INFO
+
+#pragma GCC diagnostic pop

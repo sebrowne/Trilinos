@@ -326,10 +326,13 @@ void SimpleObjectDB<T>::validateIndex(const int index) const
     RangeError,
     "Error, the object index = " << index << " falls outside of the range"
     << " of valid objects [0,"<<tableOfObjects_.size()<<"]");
-  const RCP<const T> &obj = tableOfObjects_[index].getConstObj();
-  TEUCHOS_TEST_FOR_EXCEPTION(is_null(obj), NullReferenceError,
-    "Error, the object at index "<<index<<" of type "
-    <<TypeNameTraits<T>::name()<<" has already been deleted!");
+  // Check if the table is empty to avoid accessing out-of-bounds elements
+  if (tableOfObjects_.size() > 0) {
+    const RCP<const T> &obj = tableOfObjects_[index].getConstObj();
+    TEUCHOS_TEST_FOR_EXCEPTION(is_null(obj), NullReferenceError,
+      "Error, the object at index "<<index<<" of type "
+      <<TypeNameTraits<T>::name()<<" has already been deleted!");
+  }
 }
 
 

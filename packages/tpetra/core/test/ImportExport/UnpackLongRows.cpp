@@ -488,13 +488,15 @@ void time_single_row_unpack() {
       os << "Standalone test: parallel: " << test_row_length;
       Teuchos::RCP<Teuchos::Time> st = Teuchos::TimeMonitor::getNewCounter(os.str());
       Teuchos::TimeMonitor tm(*st);
-      Kokkos::parallel_for(
-          test_row_length,
-          KOKKOS_LAMBDA(const size_t i) {
-            auto start_a = i;
-            auto start_c = i * sizeof_int;
-            memcpy(c.data() + start_c, a.data() + start_a, sizeof_int);
-          });
+      if (test_row_length > 0) {
+        Kokkos::parallel_for(
+            test_row_length,
+            KOKKOS_LAMBDA(const size_t i) {
+              auto start_a = i;
+              auto start_c = i * sizeof_int;
+              memcpy(c.data() + start_c, a.data() + start_a, sizeof_int);
+            });
+      }
     }
 
     {
@@ -505,11 +507,13 @@ void time_single_row_unpack() {
       os << "Standalone test: one row: " << test_row_length;
       Teuchos::RCP<Teuchos::Time> st = Teuchos::TimeMonitor::getNewCounter(os.str());
       Teuchos::TimeMonitor tm(*st);
-      Kokkos::parallel_for(
-          1,
-          KOKKOS_LAMBDA(const size_t i) {
-            memcpy(c.data(), a.data(), test_row_length * sizeof_int);
-          });
+      if (test_row_length > 0) {
+        Kokkos::parallel_for(
+            1,
+            KOKKOS_LAMBDA(const size_t i) {
+              memcpy(c.data(), a.data(), test_row_length * sizeof_int);
+            });
+      }
     }
   }
 }
